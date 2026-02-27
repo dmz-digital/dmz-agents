@@ -42,7 +42,7 @@ export default function AgentsPage() {
     return (
         <div className="max-w-7xl mx-auto px-6 pt-12">
             <div className="mb-10">
-                <h1 className="text-3xl font-extrabold tracking-tight text-dmz-text mb-1">Squad Agents</h1>
+                <h1 className="text-3xl font-extrabold tracking-tight text-dmz-text mb-1">DMZ OS Squad agents</h1>
                 <p className="text-dmz-muted">Manage and monitor your specialized AI workforce.</p>
             </div>
 
