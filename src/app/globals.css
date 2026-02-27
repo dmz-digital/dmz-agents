@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  --font-jakarta: "Plus Jakarta Sans", ui-sans-serif, system-ui;
+  
+  --color-dmz-bg: #F7F7F5;
+  --color-dmz-accent: #E85D2F;
+  --color-dmz-secondary: #7C3AED;
+  --color-dmz-border: #F0F0E8;
+  --color-dmz-card: #FFFFFF;
+  --color-dmz-text: #1A1A18;
+  --color-dmz-muted: #9A9A95;
+}
+
+:root {
+  --background: var(--color-dmz-bg);
+  --foreground: var(--color-dmz-text);
+  --border: var(--color-dmz-border);
+  --accent: var(--color-dmz-accent);
+}
+
+body {
+  background: var(--color-dmz-bg);
+  color: var(--color-dmz-text);
+  font-family: var(--font-jakarta);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+  * {
+    @apply border-[--border];
+  }
+}
+
+/* Custom Nav Floating Pill Styles */
+.nav-pill {
+  @apply fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 p-2 
+         bg-white/80 backdrop-blur-md border border-neutral-200 shadow-xl 
+         rounded-full z-50 transition-all hover:bg-white;
+}
+
+.nav-item {
+  @apply flex items-center justify-center p-3 rounded-full text-neutral-400 
+         transition-all hover:text-[--accent] hover:bg-neutral-50;
+}
+
+.nav-item-active {
+  @apply text-[--accent] bg-orange-50;
+}
