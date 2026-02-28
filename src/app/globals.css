@@ -2,7 +2,7 @@
 
 @theme {
   --font-jakarta: "Plus Jakarta Sans", ui-sans-serif, system-ui;
-  
+
   --color-dmz-bg: #F7F7F5;
   --color-dmz-accent: #E85D2F;
   --color-dmz-secondary: #7C3AED;
@@ -35,16 +35,43 @@ body {
 
 /* Custom Nav Floating Pill Styles */
 .nav-pill {
-  @apply fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 p-2 
-         bg-white/80 backdrop-blur-md border border-neutral-200 shadow-xl 
-         rounded-full z-50 transition-all hover:bg-white;
+  @apply fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 p-2 bg-white/80 backdrop-blur-md border border-neutral-200 shadow-xl rounded-full z-50 transition-all hover:bg-white;
 }
 
 .nav-item {
-  @apply flex items-center justify-center p-3 rounded-full text-neutral-400 
-         transition-all hover:text-[--accent] hover:bg-neutral-50;
+  @apply flex items-center justify-center p-3 rounded-full text-neutral-400 transition-all hover:text-[--accent] hover:bg-neutral-50;
 }
 
 .nav-item-active {
   @apply text-[--accent] bg-orange-50;
+}
+
+/* Scrollbar slim */
+::-webkit-scrollbar {
+  width: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #E5E7EB;
+  border-radius: 99px;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+[style*="animation: pulse"] {
+  animation: pulse 1.5s ease-in-out infinite;
 }

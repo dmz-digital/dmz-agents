@@ -14,7 +14,7 @@ async function runSQL() {
         await client.connect();
         console.log("Connected to Supabase Postgres.");
 
-        const sqlPath = path.join(process.cwd(), 'docs', 'populate_agents.sql');
+        const sqlPath = path.join(process.cwd(), 'docs', 'seed_prompts.sql');
         const sql = fs.readFileSync(sqlPath, 'utf8');
 
         console.log("Executing SQL script...");
