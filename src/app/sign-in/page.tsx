@@ -52,7 +52,7 @@ export default function SignInPage() {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between px-1">
                                 <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Senha</label>
-                                <Link href="/forgot-password" size={11} className="text-[11px] font-bold text-dmz-accent hover:underline">Esqueceu a senha?</Link>
+                                <Link href="/forgot-password" className="text-[11px] font-bold text-dmz-accent hover:underline">Esqueceu a senha?</Link>
                             </div>
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" size={18} />
