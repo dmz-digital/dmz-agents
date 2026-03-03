@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
     Brain, Search, Clock, FileText, Bot,
     Activity, Database, BookOpen, Zap, Tag as TagIcon,
-    FolderOpen, Filter,
+    FolderOpen, Filter, ArrowRight
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -90,14 +90,28 @@ export default function MemoryPage() {
 
     return (
         <div className="max-w-7xl mx-auto px-6 pt-12 pb-24">
-            {/* Header */}
-            <div style={{ marginBottom: "32px" }}>
-                <h1 style={{ fontSize: "26px", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em", lineHeight: 1.1 }}>
-                    Memory
-                </h1>
-                <p style={{ fontSize: "13px", color: "#9CA3AF", marginTop: "3px" }}>
-                    Memória de trabalho dos agentes nos seus projetos
-                </p>
+            {/* Page header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px" }}>
+                <div>
+                    <h1 style={{ fontSize: "26px", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em", lineHeight: 1.1 }}>
+                        Memory
+                    </h1>
+                    <p style={{ fontSize: "13px", color: "#9CA3AF", marginTop: "3px" }}>
+                        Memória de trabalho dos agentes nos seus projetos
+                    </p>
+                </div>
+                <a
+                    href="/app/projects"
+                    style={{
+                        display: "flex", alignItems: "center", gap: "8px",
+                        background: "linear-gradient(135deg, #E85D2F, #D14D22)", color: "#FFFFFF",
+                        border: "none", borderRadius: "10px", padding: "10px 20px",
+                        fontSize: "13px", fontWeight: 700, textDecoration: "none",
+                        boxShadow: "0 2px 12px rgba(232,93,47,0.3)", transition: "all 0.15s"
+                    }}
+                >
+                    Utilizar Agentes <ArrowRight size={15} />
+                </a>
             </div>
 
             {/* Stats */}

@@ -821,13 +821,15 @@ function ProjectsPageContent() {
     return (
         <div className="max-w-7xl mx-auto px-6 pt-12 pb-24">
             {/* Page header */}
-            <div style={{ marginBottom: "32px" }}>
-                <h1 style={{ fontSize: "26px", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em", lineHeight: 1.1 }}>
-                    Projects
-                </h1>
-                <p style={{ fontSize: "13px", color: "#9CA3AF", marginTop: "3px" }}>
-                    Crie projetos e configure sua squad de agentes
-                </p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px" }}>
+                <div>
+                    <h1 style={{ fontSize: "26px", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em", lineHeight: 1.1 }}>
+                        Projects
+                    </h1>
+                    <p style={{ fontSize: "13px", color: "#9CA3AF", marginTop: "3px" }}>
+                        Crie projetos e configure sua squad de agentes
+                    </p>
+                </div>
             </div>
 
             {view === "landing" && (

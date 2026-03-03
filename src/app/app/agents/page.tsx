@@ -207,7 +207,7 @@ function AgentPanel({ agent, onClose }: { agent: any; onClose: () => void }) {
 
             {/* Add to project CTA */}
             <button
-                onClick={() => router.push(`/projects?add=${agent.id}`)}
+                onClick={() => router.push(`/app/projects?add=${agent.id}`)}
                 style={{
                     width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
                     background: "linear-gradient(135deg, #E85D2F, #D14D22)", color: "#FFFFFF",
@@ -417,7 +417,7 @@ export default function AgentsPage() {
                     <p style={{ fontSize: "13px", color: "#9CA3AF", marginTop: "3px" }}>Manage your squad specialists</p>
                 </div>
                 <a
-                    href="/projects"
+                    href="/app/projects"
                     style={{
                         display: "flex", alignItems: "center", gap: "8px",
                         background: "linear-gradient(135deg, #E85D2F, #D14D22)", color: "#FFFFFF",

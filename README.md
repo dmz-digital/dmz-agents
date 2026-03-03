@@ -13,7 +13,9 @@
 
 ---
 
-### 🔥 Instalação Instantânea
+### 🔥 Instalação Instantânea & Wizard Inteligente
+O DMZ OS agora conta com um setup interativo que configura tudo para você em segundos.
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/eldanielsantos-git/dmz-agents/main/install.sh | bash
 ```
@@ -23,15 +25,15 @@ curl -fsSL https://raw.githubusercontent.com/eldanielsantos-git/dmz-agents/main/
 ---
 
 ## 🚀 A Visão: AI-Native Organization
-O **DMZ - OS Agents** não é apenas uma coleção de chatbots. É uma camada de infraestrutura que transforma seu repositório em uma entidade viva. 
+O **DMZ - OS Agents** não é apenas uma ferramenta; é a materialização de uma organização autônoma. É uma camada de infraestrutura viva que transforma repositórios estáticos em sistemas inteligentes e proativos.
 
-Imagine um squad de **18 especialistas** que não apenas escrevem código, mas gerenciam o backlog, auditam a segurança, garantem a experiência do usuário (UX) e extraem SOPs (Standard Operating Procedures) automaticamente enquanto você trabalha. 
+Imagine um squad de **18 especialistas** que operam de forma assíncrona, orquestrados por uma inteligência central (`@orch`) que entende o contexto total do seu projeto. Eles não apenas escrevem código; eles projetam, testam, auditam, documentam e planejam o próximo grande salto do seu produto.
 
-### Por que DMZ - OS?
-- **Hierarquia Real:** Agentes operam em níveis de reporte claros, evitando ruído e alucinações cruzadas.
-- **Memória de Longo Prazo:** Cada decisão e raciocínio é persistido no Supabase, criando uma base de conhecimento eterna do projeto.
-- **Rastreabilidade Total:** Acompanhe cada "pensamento" do `@orch` (Orchestrator Master) através do Dashboard em tempo real.
-- **Integração Profunda:** Funciona via CLI diretamente no seu repositório, lendo seu código e contexto atual.
+### O Potencial do DMZ OS:
+- **Escalabilidade Infinita:** Adicione especialistas ao seu squad conforme a necessidade cresce.
+- **Conhecimento Eterno:** Cada decisão técnica, mudança de design ou insight de mercado é persistido em uma memória de longo prazo.
+- **Orquestração de Elite:** O `@orch` (Orchestrator) elimina o ruído da delegação, garantindo que cada tarefa chegue ao agente mais capaz.
+- **Segurança Nativa:** Do Cyber Chief (`@constantine`) ao Legal Chief (`@theron`), seu produto nasce protegido e em conformidade.
 
 ---
 
@@ -39,108 +41,87 @@ Imagine um squad de **18 especialistas** que não apenas escrevem código, mas g
 
 | Feature | Descrição |
 |---|---|
-| **Orchestration** | O `@orch` master planifica demandas complexas e delega para sub-operadores. |
-| **Multi-LLM Engine** | Suporte nativo a **Claude 3.7**, **GPT-4o** e **Gemini 2.5 Pro** com fallback automático. |
-| **Interactive CLI** | Gerencie seu squad via terminal com comandos como `dmz-os start`, `status` e `tasks`. |
-| **Real-time Dashboard** | Visualização completa de Master Plan, Checklist e Work History. |
-| **Knowledge Persistence** | Sistema de memória vetorial e relacional integrada via Supabase. |
+| **Intelligent Orchestration** | O `@orch` master planeja demandas de alto nível e gerencia o grafo de execução entre os agentes. |
+| **Specialized Skills** | Cada agente possui um conjunto de competências (skills) refinadas e mapeadas no banco de dados. |
+| **MCP Toolset** | Integração nativa com Model Context Protocol para controle de GitHub, Notion, Vercel e mais. |
+| **Persistent Memory** | Memória vetorial e relacional que permite aos agentes "lembrarem" de conversas e decisões passadas. |
+| **Interactive CLI Wizard** | Setup interativo via terminal que valida chaves, conexões e prepara o ambiente de trabalho. |
 
 ---
 
 ## 🛠️ Guia de Início Rápido
 
-### 1. Instalação via CLI (Recomendado)
-A forma mais rápida de injetar o squad em qualquer projeto:
+### 1. Inicie o Wizard de Instalação
+A forma mais rápida de injetar o squad em qualquer projeto é usar o comando de instalação:
 
 ```bash
-# 1. Instale o pacote globalmente
-pip install dmz-os
-
-# 2. Inicie o setup interativo (Wizard)
+# Se você já tem o pacote instalado:
 dmz-os install
 ```
 
-### 2. O Loop de Trabalho
-Uma vez configurado, seu squad entra em modo de escuta:
+O Wizard irá guiar você pela configuração do **Supabase**, escolha das **LLMs** (Claude, GPT, Gemini) e conexão com seu **Slug de Projeto**.
+
+### 2. O Loop de Trabalho (Modo Operação)
+Para ativar seus agentes e deixar o squad em "modo de espera" para novas demandas:
 
 ```bash
-# Inicia os motores e o loop do Orchestrator
+# Inicia os motores e o loop dos agentes
 dmz-os start
 ```
 
-O `@orch` agora está vigiando seu projeto. Você pode enviar demandas através do [Dashboard Offline](https://dmz-os.netlify.app/projects) ou diretamente via Supabase.
+Se o seu projeto ainda não estiver configurado, o comando `start` iniciará automaticamente o **Wizard de Instalação**.
 
 ---
 
-## 🤖 O Squad Especializado
-18 agentes organizados para cobrir 100% do ciclo de vida de um produto:
+## 🤖 O Squad Especializado (18 Agentes)
+O squad é organizado em categorias estratégicas para cobrir 100% do ciclo de vida de um produto digital:
+
+| Categoria | Agentes Principais | Papel Fundamental |
+|:---:|---|---|
+| **Core** | `@orch`, `@syd` | Orquestração, Liderança Operacional e Gestão de Saúde do Squad. |
+| **Product** | `@lucas`, `@jose`, `@emma` | Visão de Produto, Gestão de Prazos e Barreira de Qualidade (QA). |
+| **Dev** | `@ryan`, `@alex`, `@oliver` | Coding Full-Stack, Arquitetura Estrutural e Automação DevOps. |
+| **Security** | `@constantine`, `@theron` | Fortaleza de Segurança, Privacidade e Conformidade Legal. |
+| **Design** | `@aurora`, `@victoria` | Estética Premium, Design Systems e Experiência do Usuário (UX). |
+| **Strategy** | `@kanya`, `@cassandra` | Inteligência de Mercado, Análise de Cenários e Narrativa de Marca. |
+| **Auxiliary** | `@martin`, `@sofia`, `@quantum` | Extração de SOPs, Gestão de Dados e Orquestração de Ferramentas. |
+
+---
+
+## 🏗️ Fluxo de Inteligência
 
 ```mermaid
 graph TD
-    ORCH[@orch Orchestrator Master] --> SYD[@syd Squad Manager]
-    ORCH --> JOSE[@jose Project Manager]
-    JOSE --> LUCAS[@lucas Product Owner]
-    JOSE --> DAVID[@david Scrum Master]
-    ORCH --> RYAN[@ryan Developer]
-    RYAN --> OLIVER[@oliver DevOps Engineer]
-    RYAN --> ALEX[@alex Tech Architect]
-    ORCH --> EMMA[@emma QA Engineer]
-    ORCH --> CONST[@constantine Cyber Chief]
-    CONST --> THERON[@theron Legal Chief]
-    ORCH --> AURORA[@aurora Design Chief]
-    AURORA --> VICT[@victoria UX Designer]
-    ORCH --> CASS[@cassandra Copy Chief]
-    ORCH --> KANYA[@kanya Strategy Analyst]
-    ORCH --> MART[@martin SOP Extractor]
-    ORCH --> SOFIA[@sofia DB Sage]
-    ORCH --> QUANT[@quantum Tools Orch]
+    User((Usuário)) -- Demanda --> UI[Dashboard/CLI]
+    UI -- Registra Task --> DB[(Supabase)]
+    DB -- Notifica --> Orch[@orch]
+    Orch -- Planeja --> Plan[Master Plan]
+    Plan -- Delega --> Agents[Agentes Especialistas]
+    Agents -- Executa --> Memory[(Memória Sagrada)]
+    Memory -- Feedback --> User
 ```
 
 ---
 
-## 🏗️ Arquitetura de Dados
+## 💻 Tech Stack de Elite
 
-```mermaid
-sequenceDiagram
-    participant Humano
-    participant CLI as dmz-os CLI
-    participant LLM as AI Engine (Gemini/Claude)
-    participant DB as Supabase Realtime
-    participant UI as DMZ Dashboard
-
-    Humano->>UI: Insere demanda (ex: "Criar Dark Mode")
-    UI->>DB: Registra Task (status: pending)
-    CLI->>DB: Detecta nova Task
-    CLI->>LLM: Envia Contexto + Prompt do @orch
-    LLM-->>CLI: Retorna Plano de Ação
-    CLI->>DB: Atualiza Task + Grava Memória
-    DB-->>UI: Reflete progresso instantaneamente
-    UI-->>Humano: Notifica conclusão
-```
+- **Frontend:** Next.js 15, Tailwind CSS, Framer Motion (para micro-animações).
+- **CLI Engine:** Python 3.12, Typer, Rich (UI de Terminal Premium).
+- **Inteligência:** Claude 3.7 Sonnet (Reasoning), GPT-4o, Gemini 2.0 Flash.
+- **Backend:** Supabase (Real-time DB, Auth, Vector Storage), Railway.
 
 ---
 
-## 💻 Tech Stack
+## 🗺️ Roadmap v0.3.0
 
-- **Frontend:** Next.js 15 (App Router), TypeScript, Lucide Icons.
-- **Backend/Engine:** Python 3.12, Typer, Rich, Supabase Python SDK.
-- **Inteligência:** Google Gemini 2.5 Pro, Anthropic Claude 3.7, OpenAI SDKs.
-- **Infra:** Supabase (DB/Auth), Netlify (UI), Railway (Microservices).
-
----
-
-## 🗺️ Roadmap v0.2.0
-
-- [x] **v0.1.0:** Lançamento do Dashboard e Schema Supabase.
-- [x] **v0.2.0:** Engine Python Core + Publicação no PyPI (`dmz-os`).
-- [ ] **v0.3.0:** Suporte a Callbacks de Webhooks e MCP Tools dinâmicas.
-- [ ] **v0.4.0:** Integração nativa com Cursor e VS Code Extension.
-- [ ] **v0.5.0:** Sistema de Governança de Tokens e Custos por Agente.
+- [x] **v0.2.0:** Publicação no PyPI e Sincronização de Capabilities via DB.
+- [ ] **v0.3.0:** Sistema de 'Shared Workspace' onde agentes colaboram no mesmo arquivo simultaneamente.
+- [ ] **v0.4.0:** Integração com Slack e Discord para controle do squad via chat.
 
 ---
 
-## 🤝 Contribuição e Comunidade
+## 🤝 Make your code alive.
 O DMZ OS é um projeto "Dogfooding". Nós usamos os agentes para construir os próprios agentes. Se você encontrar bugs ou tiver sugestões de prompts de especialistas, abra uma Issue!
 
 MIT © 2024 DMZ Labs.
-**Make your code alive.**
+**Built by DMZ Agents.**

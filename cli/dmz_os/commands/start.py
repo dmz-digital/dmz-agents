@@ -17,7 +17,8 @@ def start_command(project: str | None):
         console.print("[yellow]Configuração (.env.dmz) não encontrada![/]")
         console.print("[dim]Iniciando o Wizard de instalação automática...[/]\n")
         from dmz_os.commands.install import install_command
-        install_command(project_type="new")
+        # Corrigindo a assinatura do comando: (project: str | None, yes: bool)
+        install_command(project, False)
         return
 
     # Se existir, tenta carregar
