@@ -1,5 +1,6 @@
 "use client";
 
+// Final deployment build - Video background support
 import { useState } from "react";
 import Link from "next/link";
 import { Bot, Mail, Lock, ArrowRight } from "lucide-react";
