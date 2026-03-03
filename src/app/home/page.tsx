@@ -3,28 +3,35 @@
 import Link from "next/link";
 import {
     Bot, Rocket, Shield, Zap, Music2, Users, Code2,
-    ArrowRight, CheckCircle2, Globe, Star, PlayCircle
+    ArrowRight, CheckCircle2, Globe, Star, PlayCircle,
+    Cpu, Layers, MessageSquare, BarChart3, AppWindow,
+    Database, Layout, Workflow, Box, Building2, ShoppingCart,
+    HeartPulse, Landmark, Plane, GraduationCap
 } from "lucide-react";
 import Image from "next/image";
+import { motion } from "framer-motion";
 
 // ── Components ────────────────────────────────────────────────────────────────
 
 function FeatureCard({ icon: Icon, title, desc }: { icon: any, title: string, desc: string }) {
     return (
-        <div className="bg-white/5 backdrop-blur-lg border border-white/10 p-8 rounded-2xl hover:border-dmz-accent/40 transition-all group">
-            <div className="w-12 h-12 bg-dmz-accent/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+        <motion.div
+            whileHover={{ y: -5 }}
+            className="bg-white/5 backdrop-blur-lg border border-white/10 p-8 rounded-[32px] hover:border-dmz-accent/40 transition-all group"
+        >
+            <div className="w-12 h-12 bg-dmz-accent/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Icon className="text-dmz-accent" size={24} />
             </div>
             <h3 className="text-xl font-bold text-white mb-3">{title}</h3>
             <p className="text-neutral-400 leading-relaxed text-sm">{desc}</p>
-        </div>
+        </motion.div>
     );
 }
 
 function PricingCard({ tier, price, features, recommended = false }: { tier: string, price: string, features: string[], recommended?: boolean }) {
     return (
-        <div className={`p-8 rounded-3xl border ${recommended ? 'border-dmz-accent bg-dmz-accent/5 scale-105 shadow-2xl shadow-dmz-accent/20' : 'border-white/10 bg-white/5'} flex flex-col`}>
-            {recommended && <span className="text-[10px] font-bold tracking-widest text-dmz-accent uppercase mb-4 text-center">Recomendado</span>}
+        <div className={`p-8 rounded-[40px] border ${recommended ? 'border-dmz-accent bg-dmz-accent/5 scale-105 shadow-2xl shadow-dmz-accent/20' : 'border-white/10 bg-white/5'} flex flex-col`}>
+            {recommended && <span className="text-[10px] font-bold tracking-[0.2em] text-dmz-accent uppercase mb-4 text-center">Recomendado</span>}
             <h3 className="text-2xl font-bold text-white mb-2">{tier}</h3>
             <div className="flex items-baseline gap-1 mb-6">
                 <span className="text-4xl font-black text-white">{price}</span>
@@ -40,9 +47,9 @@ function PricingCard({ tier, price, features, recommended = false }: { tier: str
             </ul>
             <Link
                 href="/sign-up"
-                className={`w-full py-4 rounded-xl font-bold text-center transition-all ${recommended
-                        ? 'bg-dmz-accent text-white hover:bg-orange-500'
-                        : 'bg-white/10 text-white hover:bg-white/20'
+                className={`w-full py-4 rounded-2xl font-bold text-center transition-all ${recommended
+                    ? 'bg-dmz-accent text-white hover:bg-orange-500'
+                    : 'bg-white/10 text-white hover:bg-white/20'
                     }`}
             >
                 Começar Agora
@@ -51,15 +58,29 @@ function PricingCard({ tier, price, features, recommended = false }: { tier: str
     );
 }
 
+function IndustryCard({ icon: Icon, title, useCase }: { icon: any, title: string, useCase: string }) {
+    return (
+        <div className="bg-white/[0.03] border border-white/10 p-6 rounded-2xl hover:bg-white/[0.06] transition-all">
+            <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-dmz-accent/10 rounded-lg">
+                    <Icon className="text-dmz-accent" size={18} />
+                </div>
+                <h4 className="font-bold text-white text-sm">{title}</h4>
+            </div>
+            <p className="text-xs text-neutral-500 leading-relaxed">{useCase}</p>
+        </div>
+    );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
     return (
-        <div className="bg-[#050505] text-white selection:bg-dmz-accent selection:text-white">
+        <div className="bg-[#050505] text-white selection:bg-dmz-accent selection:text-white font-jakarta">
 
-            {/* Navbar Area (Inside Hero usually for modern LPs) */}
+            {/* Navbar Area */}
             <header className="fixed top-0 w-full z-50 px-6 py-4">
-                <nav className="max-w-7xl mx-auto flex items-center justify-between bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl px-6 py-3">
+                <nav className="max-w-7xl mx-auto flex items-center justify-between bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl px-6 py-3">
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-dmz-accent rounded-lg flex items-center justify-center">
                             <Bot size={18} className="text-white" />
@@ -68,8 +89,9 @@ export default function LandingPage() {
                     </div>
 
                     <div className="hidden md:flex items-center gap-8 text-sm font-medium text-neutral-400">
-                        <a href="#agents" className="hover:text-white transition-colors">Agentes</a>
-                        <a href="#cases" className="hover:text-white transition-colors">Casos de Uso</a>
+                        <Link href="/squad" className="hover:text-white transition-colors">Agentes</Link>
+                        <a href="#capabilities" className="hover:text-white transition-colors">Capacidades</a>
+                        <a href="#industries" className="hover:text-white transition-colors">Indústrias</a>
                         <a href="#pricing" className="hover:text-white transition-colors">Preços</a>
                     </div>
 
@@ -81,33 +103,52 @@ export default function LandingPage() {
             </header>
 
             {/* Hero Section */}
-            <section className="relative pt-40 pb-20 px-6 overflow-hidden">
+            <section className="relative pt-48 pb-24 px-6 overflow-hidden">
                 {/* Background Gradients */}
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-dmz-accent/20 blur-[150px] rounded-full" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-blue-600/10 blur-[150px] rounded-full" />
 
                 <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
                     <div className="relative z-10">
-                        <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full mb-8">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full mb-8"
+                        >
                             <Zap size={14} className="text-dmz-accent" />
                             <span className="text-[11px] font-bold tracking-widest text-neutral-300 uppercase">A Revolução AI-Native Chegou</span>
-                        </div>
-                        <h1 className="text-6xl md:text-7xl font-black mb-8 leading-[1.05] tracking-tight">
+                        </motion.div>
+                        <motion.h1
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 }}
+                            className="text-6xl md:text-8xl font-black mb-8 leading-[1.05] tracking-tighter"
+                        >
                             Seu Squad de <br />
                             <span className="text-dmz-accent">AI Experts</span> pronto <br />
                             em segundos.
-                        </h1>
-                        <p className="text-lg text-neutral-400 mb-10 leading-relaxed max-w-lg">
+                        </motion.h1>
+                        <motion.p
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="text-lg text-neutral-400 mb-10 leading-relaxed max-w-lg"
+                        >
                             O DMZ OS Agents transforma seu fluxo de trabalho estático em um squad autônomo de 18 especialistas que planejam, criam e auditam seu produto em tempo real.
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-4">
+                        </motion.p>
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
+                            className="flex flex-col sm:flex-row gap-4"
+                        >
                             <Link href="/sign-up" className="bg-dmz-accent text-white px-8 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-orange-500 transition-all shadow-xl shadow-dmz-accent/30 group">
                                 Criar Meu Squad <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                             </Link>
                             <button className="bg-white/5 border border-white/10 text-white px-8 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-white/10 transition-all">
                                 <PlayCircle size={18} /> Ver Demo
                             </button>
-                        </div>
+                        </motion.div>
 
                         <div className="mt-12 flex items-center gap-6">
                             <div className="flex -space-x-3">
@@ -123,13 +164,100 @@ export default function LandingPage() {
                         </div>
                     </div>
 
-                    <div className="relative">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.4 }}
+                        className="relative"
+                    >
                         <div className="absolute inset-0 bg-dmz-accent/20 blur-[100px] rounded-full scale-75 animate-pulse" />
-                        <div className="relative bg-white/5 border border-white/10 p-4 rounded-[40px] backdrop-blur-sm overflow-hidden shadow-2xl">
+                        <div className="relative bg-white/5 border border-white/10 p-3 rounded-[48px] backdrop-blur-sm shadow-2xl overflow-hidden">
                             <img
-                                src="/docs/assets/hero-banner.png"
+                                src="/hero-dashboard.png"
                                 alt="DMZ OS Interface"
-                                className="rounded-[30px] border border-white/5 w-full hover:scale-[1.02] transition-transform duration-700"
+                                className="rounded-[40px] border border-white/5 w-full hover:scale-[1.05] transition-transform duration-1000"
+                            />
+                        </div>
+                    </motion.div>
+                </div>
+            </section>
+
+            {/* Capabilities Section */}
+            <section id="capabilities" className="py-32 px-6">
+                <div className="max-w-7xl mx-auto">
+                    <div className="text-center mb-24">
+                        <h2 className="text-4xl md:text-6xl font-black mb-8 leading-tight">O que você pode <br /><span className="text-dmz-accent">construir hoje?</span></h2>
+                        <p className="text-neutral-400 max-w-2xl mx-auto">Dos primeiros requisitos até a escala global. Seu squad gerencia a complexidade técnica para você focar no valor.</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <FeatureCard
+                            icon={AppWindow}
+                            title="SaaS & Web Apps"
+                            desc="Da arquitetura Next.js ao deploy em containers com total segurança e performance."
+                        />
+                        <FeatureCard
+                            icon={Database}
+                            title="Integrações de Dados"
+                            desc="Pipelines de dados, orquestração de APIs e gestão de metadados com auditabilidade nativa."
+                        />
+                        <FeatureCard
+                            icon={Workflow}
+                            title="Automação Inteligente"
+                            desc="SOPs vivos que transformam processos manuais em fluxos autônomos de agentes."
+                        />
+                        <FeatureCard
+                            icon={Shield}
+                            title="Sistemas Críticos"
+                            desc="Conformidade LGPD, monitoramento STRIDE e infra blindada por design em cada commit."
+                        />
+                    </div>
+                </div>
+            </section>
+
+            {/* Industries Section */}
+            <section id="industries" className="py-32 bg-white/[0.02] px-6">
+                <div className="max-w-7xl mx-auto">
+                    <div className="grid lg:grid-cols-3 gap-20 items-center">
+                        <div className="lg:col-span-1">
+                            <h2 className="text-4xl md:text-5xl font-black mb-8 leading-tight">Adaptado para <br /><span className="text-dmz-accent">seu setor.</span></h2>
+                            <p className="text-neutral-400 mb-8 leading-relaxed">
+                                O DMZ OS não é genérico. Nossos agentes entendem as nuances de diferentes indústrias para entregar soluções compliance e performantes.
+                            </p>
+                            <Link href="/sign-up" className="text-dmz-accent font-bold flex items-center gap-2 group">
+                                Ver todos os casos de uso <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                            </Link>
+                        </div>
+                        <div className="lg:col-span-2 grid sm:grid-cols-2 gap-4">
+                            <IndustryCard
+                                icon={Landmark}
+                                title="Fintech & Banking"
+                                useCase="Sistemas de KYC, orquestração de pagamentos e auditoria de transações em tempo real."
+                            />
+                            <IndustryCard
+                                icon={HeartPulse}
+                                title="Healthtech"
+                                useCase="Gestão de dados sensíveis (HIPAA/LGPD), fluxos clínicos e interoperabilidade FHIR."
+                            />
+                            <IndustryCard
+                                icon={ShoppingCart}
+                                title="E-commerce & Retail"
+                                useCase="Motores de recomendação, gestão de inventário inteligente e chatbots de alta conversão."
+                            />
+                            <IndustryCard
+                                icon={Code2}
+                                title="Software & SaaS"
+                                useCase="Aceleração de roadmap, refatoração de legado e QA automatizado em larga escala."
+                            />
+                            <IndustryCard
+                                icon={Plane}
+                                title="Logística & Travel"
+                                useCase="Otimização de rotas, sistemas de reserva e rastreamento de ativos ponta a ponta."
+                            />
+                            <IndustryCard
+                                icon={GraduationCap}
+                                title="EdTech"
+                                useCase="Personalização de trilhas de aprendizagem e automação de avaliações adaptativas."
                             />
                         </div>
                     </div>
@@ -179,12 +307,17 @@ export default function LandingPage() {
                             desc="Direção criativa ultra-moderna. Garante que seu produto seja visualmente impactante e coerente."
                         />
                     </div>
+                    <div className="text-center mt-12">
+                        <Link href="/squad" className="bg-white/5 border border-white/10 px-8 py-4 rounded-2xl font-bold hover:bg-white/10 transition-all inline-flex items-center gap-2">
+                            Ver Squad Completo <ArrowRight size={18} />
+                        </Link>
+                    </div>
                 </div>
             </section>
 
             {/* Case Section */}
-            <section id="cases" className="py-32 bg-white/[0.02]">
-                <div className="max-w-7xl mx-auto px-6">
+            <section id="cases" className="py-32 bg-white/[0.02] px-6">
+                <div className="max-w-7xl mx-auto">
                     <div className="grid lg:grid-cols-2 gap-20 items-center">
                         <div className="order-2 lg:order-1">
                             <div className="bg-gradient-to-br from-neutral-800 to-neutral-900 rounded-[32px] p-8 border border-white/5 relative">
@@ -300,19 +433,20 @@ export default function LandingPage() {
                             Built by agents, for developers.
                         </p>
                         <div className="flex gap-4">
-                            <div className="w-10 h-10 bg-white/5 rounded-lg border border-white/10 flex items-center justify-center hover:bg-white/10 cursor-pointer transition-all">
-                                <svg className="w-5 h-5 text-neutral-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" /></svg>
-                            </div>
-                            <div className="w-10 h-10 bg-white/5 rounded-lg border border-white/10 flex items-center justify-center hover:bg-white/10 cursor-pointer transition-all">
-                                <svg className="w-5 h-5 text-neutral-400" fill="currentColor" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.84 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" /></svg>
-                            </div>
+                            <a
+                                href="https://github.com/eldanielsantos-git/dmz-agents"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-10 h-10 bg-white/5 rounded-lg border border-white/10 flex items-center justify-center hover:bg-white/10 cursor-pointer transition-all"
+                            >
+                                <svg className="w-5 h-5 text-neutral-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" /></svg></a>
                         </div>
                     </div>
 
                     <div>
                         <h5 className="font-bold text-white mb-6">Plataforma</h5>
                         <div className="flex flex-col gap-4 text-sm text-neutral-500">
-                            <Link href="/app/agents" className="hover:text-dmz-accent">Especialistas</Link>
+                            <Link href="/squad" className="hover:text-dmz-accent text-white font-medium">Especialistas</Link>
                             <Link href="/app/projects" className="hover:text-dmz-accent">Projetos</Link>
                             <Link href="/sign-in" className="hover:text-dmz-accent">Login</Link>
                             <Link href="/sign-up" className="hover:text-dmz-accent">Cadastro</Link>

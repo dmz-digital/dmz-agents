@@ -12,6 +12,7 @@ import {
     PenLine, Brain, FlaskConical, Copy, Check,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import AppHeader from "@/components/AppHeader";
 
 // ── Icon map ────────────────────────────────────────────────────────────────
 const AGENT_ICONS: Record<string, any> = {
@@ -810,7 +811,17 @@ function WorkHistory({ onBack }: { onBack: () => void }) {
 function ProjectsPageContent() {
     const searchParams = useSearchParams();
     const addAgent = searchParams.get("add");
-    const [view, setView] = useState<"landing" | "select" | "install" | "history">(addAgent ? "select" : "landing");
+    const viewParam = searchParams.get("view");
+    const [view, setView] = useState<"landing" | "select" | "install" | "history">("landing");
+
+    useEffect(() => {
+        if (addAgent || viewParam === "select") {
+            setView("select");
+        } else if (viewParam === "landing") {
+            setView("landing");
+        }
+    }, [addAgent, viewParam]);
+
     const [projectCount, setProjectCount] = useState(0);
 
     useEffect(() => {
@@ -820,17 +831,7 @@ function ProjectsPageContent() {
 
     return (
         <div className="max-w-7xl mx-auto px-6 pt-12 pb-24">
-            {/* Page header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px" }}>
-                <div>
-                    <h1 style={{ fontSize: "26px", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em", lineHeight: 1.1 }}>
-                        Projects
-                    </h1>
-                    <p style={{ fontSize: "13px", color: "#9CA3AF", marginTop: "3px" }}>
-                        Crie projetos e configure sua squad de agentes
-                    </p>
-                </div>
-            </div>
+            <AppHeader />
 
             {view === "landing" && (
                 <LandingCards onGoTo={setView as any} projectCount={projectCount} />

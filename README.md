@@ -24,6 +24,12 @@ curl -fsSL https://raw.githubusercontent.com/eldanielsantos-git/dmz-agents/main/
 
 ---
 
+### 🌐 Visite o Site Oficial
+Para mais informações, cases e documentação completa, acesse nosso site oficial:
+[**https://agents.dmzdigital.com.br/**](https://agents.dmzdigital.com.br/)
+
+---
+
 ## 🚀 A Visão: AI-Native Organization
 O **DMZ - OS Agents** não é apenas uma ferramenta; é a materialização de uma organização autônoma. É uma camada de infraestrutura viva que transforma repositórios estáticos em sistemas inteligentes e proativos.
 

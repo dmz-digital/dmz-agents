@@ -11,6 +11,7 @@ import {
     Palette, Monitor, Smartphone, Server, Star, Zap as ZapIcon,
     Circle, Hash, AlignLeft, Command, Crosshair,
 } from "lucide-react";
+import AppHeader from "@/components/AppHeader";
 
 // ─── DATA ─────────────────────────────────────────────────────────────────────
 
@@ -884,39 +885,7 @@ export default function SquadAboutPage() {
                 ))}
             </div>
 
-            {/* Page header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px" }}>
-                <div>
-                    <h1 style={{ fontSize: "26px", fontWeight: "800", color: "#111827", letterSpacing: "-0.04em", lineHeight: 1.1 }}>
-                        {titles[view].h}
-                    </h1>
-                    <p style={{ fontSize: "13px", color: "#9CA3AF", marginTop: "3px" }}>{titles[view].sub}</p>
-                </div>
-                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                    <div style={{
-                        background: "#FFFFFF", border: "1.5px solid #F0F0F0",
-                        borderRadius: "10px", padding: "8px 14px",
-                        display: "none", gap: "6px", alignItems: "center", // Hidden for now to favor the button
-                        fontSize: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                    }}>
-                        <StatusDot active={true} />
-                        <span style={{ fontWeight: "600", color: "#111827" }}>@orch</span>
-                        <span style={{ color: "#9CA3AF" }}>online</span>
-                    </div>
-                    <a
-                        href="/app/projects"
-                        style={{
-                            display: "flex", alignItems: "center", gap: "8px",
-                            background: "linear-gradient(135deg, #E85D2F, #D14D22)", color: "#FFFFFF",
-                            border: "none", borderRadius: "10px", padding: "10px 20px",
-                            fontSize: "13px", fontWeight: 700, textDecoration: "none",
-                            boxShadow: "0 2px 12px rgba(232,93,47,0.3)", transition: "all 0.15s"
-                        }}
-                    >
-                        Utilizar Agentes <ArrowRight size={15} />
-                    </a>
-                </div>
-            </div>
+            <AppHeader />
 
             {view === "agents" && <AgentsView />}
             {view === "about" && <AboutView />}
