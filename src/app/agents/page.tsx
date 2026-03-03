@@ -35,6 +35,7 @@ const CAT_COLORS: Record<string, string> = {
     Orchestration: "#E85D2F", Product: "#2563EB", Development: "#0891B2",
     Security: "#DC2626", Strategy: "#D97706", Design: "#DB2777",
     Copy: "#7C3AED", Frameworks: "#475569", Data: "#0369A1", Marketing: "#059669",
+    Sales: "#10B981"
 };
 
 // ── Primitives ────────────────────────────────────────────────────────────────

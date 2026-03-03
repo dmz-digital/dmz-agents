@@ -10,11 +10,13 @@ import {
     BookOpen, Brain, FlaskConical, Cpu, Activity,
     Layers, Blocks, Wrench, X, Terminal, Check
 } from "lucide-react";
+import { Briefcase } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // ─── DATA ─────────────────────────────────────────────────────────────────────
 
 const CAT_COLORS: Record<string, string> = {
+    Sales: "#10B981",
     Orchestration: "#E85D2F",
     Product: "#2563EB",
     Development: "#0891B2",
@@ -185,6 +187,268 @@ const AGENTS = [
         protocols: ["Observação → Extração → Estruturação → Validação → SOP"],
         connects: ["orchestrator", "squad_manager", "pm"],
     },
+
+
+    {
+        id: "closer", handle: "closer", name: "Closer", fullName: "Deal Closer Agent",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 1", role: "Deal Closer Agent",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "cra", handle: "cra", name: "Cra", fullName: "Chief Revenue Agent",
+        category: "Sales", color: "#10B981", active: true,
+        level: "L0", role: "Chief Revenue Agent",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "deck", handle: "deck", name: "Deck", fullName: "Deck Architect",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Deck Architect",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "draft_chief", handle: "draft_chief", name: "Draft", fullName: "Proposal Drafter",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Proposal Drafter",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "ecvc", handle: "ecvc", name: "Ecvc", fullName: "Ecvc",
+        category: "Sales", color: "#10B981", active: true,
+        level: "None", role: "None",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "emailcopy", handle: "emailcopy", name: "Emailcopy", fullName: "Email Copywriter",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Email Copywriter",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "finmodel", handle: "finmodel", name: "Finmodel", fullName: "Financial Modeler",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Financial Modeler",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "hunter", handle: "hunter", name: "Hunter", fullName: "Outbound Hunter Agent",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 1", role: "Outbound Hunter Agent",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "intel", handle: "intel", name: "Intel", fullName: "Market Intel Agent",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Market Intel Agent",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "ir", handle: "ir", name: "Ir", fullName: "Investor Relations Agent",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 1", role: "Investor Relations Agent",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "lens", handle: "lens", name: "Lens", fullName: "Social Lens Agent",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Social Lens Agent",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "mapper", handle: "mapper", name: "Mapper", fullName: "Account Mapper",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Account Mapper",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "nurture", handle: "nurture", name: "Nurture", fullName: "Nurture Agent",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 1", role: "Nurture Agent",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "oracle", handle: "oracle", name: "Oracle", fullName: "Oracle Agent",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Oracle Agent",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "osint", handle: "osint", name: "Osint", fullName: "Osint Scout",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Osint Scout",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "persona", handle: "persona", name: "Persona", fullName: "Persona Builder",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Persona Builder",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "pitch", handle: "pitch", name: "Pitch", fullName: "Pitch Master Agent",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 1", role: "Pitch Master Agent",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "push", handle: "push", name: "Push", fullName: "Push Agent",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Push Agent",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "qualifier", handle: "qualifier", name: "Qualifier", fullName: "Lead Qualifier",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Lead Qualifier",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "radar", handle: "radar", name: "Radar", fullName: "Trigger Radar Agent",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Trigger Radar Agent",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "rebound", handle: "rebound", name: "Rebound", fullName: "Rebound Agent",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Rebound Agent",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "revops", handle: "revops", name: "Revops", fullName: "Revenue Ops Agent",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Revenue Ops Agent",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "scheduler", handle: "scheduler", name: "Scheduler", fullName: "Meeting Scheduler",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Meeting Scheduler",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "social", handle: "social", name: "Social", fullName: "Social Selling Agent",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Social Selling Agent",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "story", handle: "story", name: "Story", fullName: "Storyteller Agent",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Storyteller Agent",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    },
+    {
+        id: "vault", handle: "vault", name: "Vault", fullName: "Content Vault Agent",
+        category: "Sales", color: "#10B981", active: true,
+        level: "Nível 2", role: "Content Vault Agent",
+        mission: "Agent for sales automation.",
+        skills: ["Strategy", "Analytics"],
+        tools: [],
+        protocols: ["Analysis -> Action"],
+        connects: ["cra", "orchestrator"]
+    }
 ];
 
 const PRINCIPLES = [
