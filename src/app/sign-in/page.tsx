@@ -20,16 +20,29 @@ export default function SignInPage() {
     };
 
     return (
-        <div className="min-h-screen bg-dmz-bg flex items-center justify-center p-6 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-orange-100/20 via-transparent to-transparent">
+        <div className="min-h-screen relative flex items-center justify-center p-6 overflow-hidden">
+            {/* Video Background */}
+            <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="absolute top-0 left-0 w-full h-full object-cover z-0"
+            >
+                <source src="/video-bg.mp4" type="video/mp4" />
+            </video>
 
-            <div className="w-full max-w-md">
+            {/* Dark Overlay */}
+            <div className="absolute top-0 left-0 w-full h-full bg-black/60 backdrop-blur-[2px] z-10" />
+
+            <div className="w-full max-w-md relative z-20">
                 {/* Logo */}
                 <div className="flex flex-col items-center mb-10">
                     <div className="w-16 h-16 bg-white border border-neutral-100 shadow-xl rounded-2xl flex items-center justify-center mb-6">
                         <Bot size={32} className="text-dmz-accent" strokeWidth={1.5} />
                     </div>
-                    <h1 className="text-3xl font-black tracking-tight text-neutral-900 mb-2">Bem-vindo de volta</h1>
-                    <p className="text-sm text-neutral-500 font-medium">O seu squad de agentes está aguardando você.</p>
+                    <h1 className="text-3xl font-black tracking-tight text-white mb-2">Bem-vindo de volta</h1>
+                    <p className="text-sm text-neutral-300 font-medium text-center">O seu squad de agentes está aguardando você.</p>
                 </div>
 
                 {/* Card */}
@@ -96,7 +109,7 @@ export default function SignInPage() {
                     </button>
                 </div>
 
-                <p className="text-center mt-8 text-sm text-neutral-500">
+                <p className="text-center mt-8 text-sm text-neutral-300">
                     Não tem uma conta? <Link href="/sign-up" className="text-dmz-accent font-bold hover:underline">Cadastre-se</Link>
                 </p>
             </div>

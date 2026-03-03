@@ -124,13 +124,26 @@ export default function SignUpPage() {
     };
 
     return (
-        <div className="min-h-screen bg-dmz-bg flex items-center justify-center p-6 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-orange-100/20 via-transparent to-transparent">
+        <div className="min-h-screen relative flex items-center justify-center p-6 overflow-hidden">
+            {/* Video Background */}
+            <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="absolute top-0 left-0 w-full h-full object-cover z-0"
+            >
+                <source src="/video-bg.mp4" type="video/mp4" />
+            </video>
 
-            <div className="w-full max-w-xl">
+            {/* Dark Overlay */}
+            <div className="absolute top-0 left-0 w-full h-full bg-black/60 backdrop-blur-[2px] z-10" />
+
+            <div className="w-full max-w-xl relative z-20">
                 {/* Step Indicator */}
                 <div className="flex justify-center gap-3 mb-10">
-                    <div className={`h-1.5 rounded-full transition-all duration-500 ${step === 1 ? 'w-12 bg-dmz-accent' : 'w-4 bg-orange-200'}`} />
-                    <div className={`h-1.5 rounded-full transition-all duration-500 ${step === 2 ? 'w-12 bg-dmz-accent' : 'w-4 bg-orange-200'}`} />
+                    <div className={`h-1.5 rounded-full transition-all duration-500 ${step === 1 ? 'w-12 bg-dmz-accent' : 'w-4 bg-white/20'}`} />
+                    <div className={`h-1.5 rounded-full transition-all duration-500 ${step === 2 ? 'w-12 bg-dmz-accent' : 'w-4 bg-white/20'}`} />
                 </div>
 
                 {/* Card */}
@@ -327,7 +340,7 @@ export default function SignUpPage() {
 
                 </div>
 
-                <p className="text-center mt-10 text-sm text-neutral-500">
+                <p className="text-center mt-10 text-sm text-neutral-300">
                     Já tem uma conta? <Link href="/sign-in" className="text-dmz-accent font-bold hover:underline">Fazer Login</Link>
                 </p>
             </div>
