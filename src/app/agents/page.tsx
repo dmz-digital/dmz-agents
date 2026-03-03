@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
     Bot, Search, Activity, Layers, Blocks, Music2, Users,
     Code2, ClipboardList, Target, CheckSquare, Zap, Rocket,
     Building2, ShieldAlert, Scale, Sparkles, Paintbrush,
-    PenLine, BookOpen, Brain, FlaskConical,
+    PenLine, BookOpen, Brain, FlaskConical, ArrowRight,
     X, Plus, ExternalLink, Database, GitBranch,
     FileText, Pin, CreditCard, Cloud, Server, Plug, Unplug,
-    Package, Palette, Component, Globe, Cpu, Cpu as CpuIcon,
-    BarChart2, List, Settings,
+    Package, Palette, Component, Globe, Cpu,
+    BarChart2, Settings,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -120,6 +121,7 @@ function AgentCard({ agent, onClick, selected }: { agent: any; onClick: (a: any)
 
 // ── Agent Panel ───────────────────────────────────────────────────────────────
 function AgentPanel({ agent, onClose }: { agent: any; onClose: () => void }) {
+    const router = useRouter();
     const [tab, setTab] = useState<"skills" | "tools" | "memory" | "prompt">("skills");
     const [skills, setSkills] = useState<any[]>([]);
     const [tools, setTools] = useState<any[]>([]);
@@ -203,6 +205,20 @@ function AgentPanel({ agent, onClose }: { agent: any; onClose: () => void }) {
                 </button>
             </div>
 
+            {/* Add to project CTA */}
+            <button
+                onClick={() => router.push(`/projects?add=${agent.id}`)}
+                style={{
+                    width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                    background: "linear-gradient(135deg, #E85D2F, #D14D22)", color: "#FFFFFF",
+                    border: "none", borderRadius: "10px", padding: "10px 0", cursor: "pointer",
+                    fontSize: "12px", fontWeight: 700, marginBottom: "18px",
+                    transition: "all 0.15s", boxShadow: "0 2px 8px rgba(232,93,47,0.3)"
+                }}
+            >
+                <Plus size={14} /> Adicionar ao meu projeto
+            </button>
+
             {/* Tabs */}
             <div style={{ display: "flex", gap: "2px", background: "#F3F4F6", borderRadius: "10px", padding: "3px", marginBottom: "18px" }}>
                 {(["skills", "tools", "memory", "prompt"] as const).map(t => (
@@ -224,130 +240,138 @@ function AgentPanel({ agent, onClose }: { agent: any; onClose: () => void }) {
             </div>
 
             {/* Skills tab */}
-            {tab === "skills" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    {loading ? (
-                        [1, 2, 3].map(i => (
-                            <div key={i} style={{ height: 44, background: "#F9FAFB", borderRadius: "10px", animation: "pulse 1.5s infinite" }} />
-                        ))
-                    ) : skills.length === 0 ? (
-                        <p style={{ color: "#9CA3AF", fontSize: "13px" }}>No skills registered yet.</p>
-                    ) : (
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-                            {skills.map((sk: any) => (
-                                <div key={sk.id} style={{
-                                    background: "#F9FAFB", border: "1px solid #F0F0F0",
-                                    borderRadius: "10px", padding: "10px 12px",
-                                    display: "flex", gap: "8px", alignItems: "center"
-                                }}>
-                                    <Activity size={12} color={cc} strokeWidth={1.75} />
-                                    <div>
-                                        <div style={{ fontSize: "12px", color: "#374151", fontWeight: 600 }}>{sk.name}</div>
-                                        {sk.level && <div style={{ fontSize: "10px", color: "#9CA3AF" }}>{sk.level}</div>}
+            {
+                tab === "skills" && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        {loading ? (
+                            [1, 2, 3].map(i => (
+                                <div key={i} style={{ height: 44, background: "#F9FAFB", borderRadius: "10px", animation: "pulse 1.5s infinite" }} />
+                            ))
+                        ) : skills.length === 0 ? (
+                            <p style={{ color: "#9CA3AF", fontSize: "13px" }}>No skills registered yet.</p>
+                        ) : (
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+                                {skills.map((sk: any) => (
+                                    <div key={sk.id} style={{
+                                        background: "#F9FAFB", border: "1px solid #F0F0F0",
+                                        borderRadius: "10px", padding: "10px 12px",
+                                        display: "flex", gap: "8px", alignItems: "center"
+                                    }}>
+                                        <Activity size={12} color={cc} strokeWidth={1.75} />
+                                        <div>
+                                            <div style={{ fontSize: "12px", color: "#374151", fontWeight: 600 }}>{sk.name}</div>
+                                            {sk.level && <div style={{ fontSize: "10px", color: "#9CA3AF" }}>{sk.level}</div>}
+                                        </div>
                                     </div>
+                                ))}
+                                <div style={{
+                                    background: "#F9FAFB", border: "1.5px dashed #E5E7EB",
+                                    borderRadius: "10px", padding: "10px 12px",
+                                    display: "flex", gap: "8px", alignItems: "center", cursor: "pointer"
+                                }}>
+                                    <Plus size={12} color="#D1D5DB" />
+                                    <span style={{ fontSize: "12px", color: "#9CA3AF" }}>Add Skill</span>
                                 </div>
-                            ))}
-                            <div style={{
-                                background: "#F9FAFB", border: "1.5px dashed #E5E7EB",
-                                borderRadius: "10px", padding: "10px 12px",
-                                display: "flex", gap: "8px", alignItems: "center", cursor: "pointer"
-                            }}>
-                                <Plus size={12} color="#D1D5DB" />
-                                <span style={{ fontSize: "12px", color: "#9CA3AF" }}>Add Skill</span>
                             </div>
-                        </div>
-                    )}
-                </div>
-            )}
+                        )}
+                    </div>
+                )
+            }
 
             {/* Tools tab */}
-            {tab === "tools" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    {loading ? (
-                        [1, 2].map(i => <div key={i} style={{ height: 56, background: "#F9FAFB", borderRadius: "10px" }} />)
-                    ) : tools.length === 0 ? (
-                        <p style={{ color: "#9CA3AF", fontSize: "13px" }}>No tools configured.</p>
-                    ) : (
-                        tools.map((tool: any) => {
-                            const TIcon = TOOL_ICONS[tool.id] || Plug;
-                            return (
-                                <div key={tool.id} style={{
-                                    background: "#F9FAFB", border: "1px solid #F0F0F0",
-                                    borderRadius: "10px", padding: "12px 14px",
-                                    display: "flex", gap: "10px", alignItems: "center"
-                                }}>
-                                    <div style={{
-                                        width: 32, height: 32, background: "#F0F0F0",
-                                        borderRadius: "9px", display: "flex", alignItems: "center", justifyContent: "center"
+            {
+                tab === "tools" && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        {loading ? (
+                            [1, 2].map(i => <div key={i} style={{ height: 56, background: "#F9FAFB", borderRadius: "10px" }} />)
+                        ) : tools.length === 0 ? (
+                            <p style={{ color: "#9CA3AF", fontSize: "13px" }}>No tools configured.</p>
+                        ) : (
+                            tools.map((tool: any) => {
+                                const TIcon = TOOL_ICONS[tool.id] || Plug;
+                                return (
+                                    <div key={tool.id} style={{
+                                        background: "#F9FAFB", border: "1px solid #F0F0F0",
+                                        borderRadius: "10px", padding: "12px 14px",
+                                        display: "flex", gap: "10px", alignItems: "center"
                                     }}>
-                                        <TIcon size={15} color="#6B7280" />
+                                        <div style={{
+                                            width: 32, height: 32, background: "#F0F0F0",
+                                            borderRadius: "9px", display: "flex", alignItems: "center", justifyContent: "center"
+                                        }}>
+                                            <TIcon size={15} color="#6B7280" />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: "13px", fontWeight: 600, color: "#111827" }}>{tool.name}</div>
+                                            <div style={{ fontSize: "11px", color: "#9CA3AF" }}>{tool.type}</div>
+                                        </div>
+                                        <Dot status={tool.status} />
+                                        <span style={{
+                                            fontSize: "11px", fontWeight: 600,
+                                            color: tool.status === "connected" ? "#10B981" : "#EF4444"
+                                        }}>{tool.status}</span>
                                     </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: "13px", fontWeight: 600, color: "#111827" }}>{tool.name}</div>
-                                        <div style={{ fontSize: "11px", color: "#9CA3AF" }}>{tool.type}</div>
-                                    </div>
-                                    <Dot status={tool.status} />
-                                    <span style={{
-                                        fontSize: "11px", fontWeight: 600,
-                                        color: tool.status === "connected" ? "#10B981" : "#EF4444"
-                                    }}>{tool.status}</span>
-                                </div>
-                            );
-                        })
-                    )}
-                    <div style={{
-                        background: "#F9FAFB", border: "1.5px dashed #E5E7EB",
-                        borderRadius: "10px", padding: "12px 14px", cursor: "pointer",
-                        color: "#9CA3AF", fontSize: "12px",
-                        display: "flex", alignItems: "center", justifyContent: "center", gap: "6px"
-                    }}>
-                        <Plus size={12} /> Connect Tool
+                                );
+                            })
+                        )}
+                        <div style={{
+                            background: "#F9FAFB", border: "1.5px dashed #E5E7EB",
+                            borderRadius: "10px", padding: "12px 14px", cursor: "pointer",
+                            color: "#9CA3AF", fontSize: "12px",
+                            display: "flex", alignItems: "center", justifyContent: "center", gap: "6px"
+                        }}>
+                            <Plus size={12} /> Connect Tool
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Memory tab */}
-            {tab === "memory" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    {loading ? (
-                        [1, 2].map(i => <div key={i} style={{ height: 72, background: "#F9FAFB", borderRadius: "10px" }} />)
-                    ) : memory.length === 0 ? (
-                        <p style={{ color: "#9CA3AF", fontSize: "13px" }}>No memory entries.</p>
-                    ) : (
-                        memory.map((m: any) => {
-                            const tc = typeColors[m.memory_type] || "#6B7280";
-                            return (
-                                <div key={m.id} style={{
-                                    background: "#F9FAFB", border: "1px solid #F0F0F0",
-                                    borderRadius: "10px", padding: "12px 14px"
-                                }}>
-                                    <div style={{ display: "flex", gap: "6px", alignItems: "center", marginBottom: "6px" }}>
-                                        <Tag color={tc}>{m.memory_type}</Tag>
-                                        <span style={{ fontSize: "10px", color: "#9CA3AF", fontFamily: "monospace" }}>{m.key}</span>
-                                        <span style={{ marginLeft: "auto", fontSize: "10px", color: "#D1D5DB" }}>
-                                            {new Date(m.created_at).toLocaleDateString()}
-                                        </span>
+            {
+                tab === "memory" && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                        {loading ? (
+                            [1, 2].map(i => <div key={i} style={{ height: 72, background: "#F9FAFB", borderRadius: "10px" }} />)
+                        ) : memory.length === 0 ? (
+                            <p style={{ color: "#9CA3AF", fontSize: "13px" }}>No memory entries.</p>
+                        ) : (
+                            memory.map((m: any) => {
+                                const tc = typeColors[m.memory_type] || "#6B7280";
+                                return (
+                                    <div key={m.id} style={{
+                                        background: "#F9FAFB", border: "1px solid #F0F0F0",
+                                        borderRadius: "10px", padding: "12px 14px"
+                                    }}>
+                                        <div style={{ display: "flex", gap: "6px", alignItems: "center", marginBottom: "6px" }}>
+                                            <Tag color={tc}>{m.memory_type}</Tag>
+                                            <span style={{ fontSize: "10px", color: "#9CA3AF", fontFamily: "monospace" }}>{m.key}</span>
+                                            <span style={{ marginLeft: "auto", fontSize: "10px", color: "#D1D5DB" }}>
+                                                {new Date(m.created_at).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        <p style={{ fontSize: "12px", color: "#6B7280", lineHeight: "1.6", margin: 0 }}>
+                                            {typeof m.content === "string" ? m.content : JSON.stringify(m.content)}
+                                        </p>
                                     </div>
-                                    <p style={{ fontSize: "12px", color: "#6B7280", lineHeight: "1.6", margin: 0 }}>
-                                        {typeof m.content === "string" ? m.content : JSON.stringify(m.content)}
-                                    </p>
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
-            )}
+                                );
+                            })
+                        )}
+                    </div>
+                )
+            }
 
             {/* Prompt tab */}
-            {tab === "prompt" && (
-                <div style={{
-                    background: "#F9FAFB", borderRadius: "10px", padding: "14px",
-                    fontFamily: "monospace", fontSize: "11.5px", color: "#6B7280",
-                    lineHeight: "1.8", whiteSpace: "pre-wrap", maxHeight: "400px", overflowY: "auto"
-                }}>
-                    {loading ? "Loading..." : prompt}
-                </div>
-            )}
+            {
+                tab === "prompt" && (
+                    <div style={{
+                        background: "#F9FAFB", borderRadius: "10px", padding: "14px",
+                        fontFamily: "monospace", fontSize: "11.5px", color: "#6B7280",
+                        lineHeight: "1.8", whiteSpace: "pre-wrap", maxHeight: "400px", overflowY: "auto"
+                    }}>
+                        {loading ? "Loading..." : prompt}
+                    </div>
+                )
+            }
         </div>
     );
 }
@@ -385,11 +409,25 @@ export default function AgentsPage() {
     return (
         <div className="max-w-7xl mx-auto px-6 pt-12 pb-24">
             {/* Page header */}
-            <div className="mb-8">
-                <h1 style={{ fontSize: "26px", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em", lineHeight: 1.1 }}>
-                    Agents
-                </h1>
-                <p style={{ fontSize: "13px", color: "#9CA3AF", marginTop: "3px" }}>Manage your squad specialists</p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px" }}>
+                <div>
+                    <h1 style={{ fontSize: "26px", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em", lineHeight: 1.1 }}>
+                        Agents
+                    </h1>
+                    <p style={{ fontSize: "13px", color: "#9CA3AF", marginTop: "3px" }}>Manage your squad specialists</p>
+                </div>
+                <a
+                    href="/projects"
+                    style={{
+                        display: "flex", alignItems: "center", gap: "8px",
+                        background: "linear-gradient(135deg, #E85D2F, #D14D22)", color: "#FFFFFF",
+                        border: "none", borderRadius: "10px", padding: "10px 20px",
+                        fontSize: "13px", fontWeight: 700, textDecoration: "none",
+                        boxShadow: "0 2px 12px rgba(232,93,47,0.3)", transition: "all 0.15s"
+                    }}
+                >
+                    Utilizar Agentes <ArrowRight size={15} />
+                </a>
             </div>
 
             {/* Stats */}
