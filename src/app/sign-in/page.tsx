@@ -1,7 +1,8 @@
 "use client";
 
 // Final deployment build - Video background support
-import { useState } from "react";
+// Version: 1.0.1 - Force build for video background
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Bot, Mail, Lock, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
