@@ -62,12 +62,16 @@ echo -e "  ${GREEN}✓${RESET} pip encontrado"
 echo ""
 echo -e "${CYAN}Instalando dmz-os...${RESET}"
 
-$PIP install dmz-os --quiet --upgrade 2>&1 | grep -v "^$" | head -5 || true
+if ! $PIP install dmz-os --quiet --upgrade 2>/dev/null; then
+    $PIP install dmz-os --quiet --upgrade --break-system-packages 2>/dev/null || true
+fi
 
 # Verifica se instalou
 if ! command -v dmz-os &>/dev/null; then
     # Tenta via python -m
-    python3 -m pip install dmz-os --quiet --upgrade 2>&1 | head -5 || true
+    if ! python3 -m pip install dmz-os --quiet --upgrade 2>/dev/null; then
+        python3 -m pip install dmz-os --quiet --upgrade --break-system-packages 2>/dev/null || true
+    fi
 fi
 
 if ! command -v dmz-os &>/dev/null && ! python3 -c "import dmz_os" &>/dev/null 2>&1; then
