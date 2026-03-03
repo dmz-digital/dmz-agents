@@ -680,7 +680,9 @@ function WorkHistory({ onBack }: { onBack: () => void }) {
             .then(({ data }) => {
                 if (data && data.length > 0) {
                     setProjects(data);
-                    setSelectedProject(data[0]);
+                    // Prefer 'active' project, fall back to most recent
+                    const active = data.find((p: any) => p.status === "active");
+                    setSelectedProject(active || data[0]);
                 }
             });
     }, []);
