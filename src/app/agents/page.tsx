@@ -412,7 +412,7 @@ export default function AgentsPage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px" }}>
                 <div>
                     <h1 style={{ fontSize: "26px", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em", lineHeight: 1.1 }}>
-                        Agents
+                        DMZ - OS Agents
                     </h1>
                     <p style={{ fontSize: "13px", color: "#9CA3AF", marginTop: "3px" }}>Manage your squad specialists</p>
                 </div>

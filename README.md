@@ -1,20 +1,20 @@
 <div align="center">
 
-<img src="https://dmz-os.netlify.app/favicon.ico" width="64" alt="DMZ Agents" />
+![DMZ - OS Hero](./docs/assets/hero-banner.png)
 
-# DMZ Agents
-
-**Squad de 18 agentes de AI especializados que se integra diretamente ao seu repositório.**
-
-Hierárquicos. Rastreáveis. Colaborativos. Construídos para times de produto.
+# DMZ - OS Agents
+**The AI-Native Operating System for Modern Product Squads**
 
 [![Painel Live](https://img.shields.io/badge/Painel-dmz--os.netlify.app-E85D2F?style=for-the-badge&logo=netlify&logoColor=white)](https://dmz-os.netlify.app)
 [![API Railway](https://img.shields.io/badge/API-Railway-000000?style=for-the-badge&logo=railway&logoColor=white)](https://dmz-agents-production.up.railway.app)
 [![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
+[![PyPI Version](https://img.shields.io/pypi/v/dmz-os?style=for-the-badge&color=blue)](https://pypi.org/project/dmz-os/)
 [![License MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](./LICENSE)
 
+---
+
+### 🔥 Instalação Instantânea
 ```bash
-# Instalação em 1 comando — funciona em qualquer projeto
 curl -fsSL https://raw.githubusercontent.com/eldanielsantos-git/dmz-agents/main/install.sh | bash
 ```
 
@@ -22,320 +22,125 @@ curl -fsSL https://raw.githubusercontent.com/eldanielsantos-git/dmz-agents/main/
 
 ---
 
-## O que é?
+## 🚀 A Visão: AI-Native Organization
+O **DMZ - OS Agents** não é apenas uma coleção de chatbots. É uma camada de infraestrutura que transforma seu repositório em uma entidade viva. 
 
-DMZ Agents é um sistema de AI agents que trabalha **dentro do seu projeto**, não em paralelo a ele. Cada agente tem um papel bem definido — de arquitetura a copy — e eles se comunicam em hierarquia, com o `@orch` como maestro central.
+Imagine um squad de **18 especialistas** que não apenas escrevem código, mas gerenciam o backlog, auditam a segurança, garantem a experiência do usuário (UX) e extraem SOPs (Standard Operating Procedures) automaticamente enquanto você trabalha. 
 
-Tudo fica rastreável: tarefas, decisões, memória de trabalho e histórico de execução aparecem no painel em tempo real.
-
-```
-Você dá uma demanda para o @orch →
-  @orch decompõe em tarefas e delega →
-    Cada agente executa sua parte →
-      Resultados são integrados e persistidos →
-        Você acompanha no painel
-```
+### Por que DMZ - OS?
+- **Hierarquia Real:** Agentes operam em níveis de reporte claros, evitando ruído e alucinações cruzadas.
+- **Memória de Longo Prazo:** Cada decisão e raciocínio é persistido no Supabase, criando uma base de conhecimento eterna do projeto.
+- **Rastreabilidade Total:** Acompanhe cada "pensamento" do `@orch` (Orchestrator Master) através do Dashboard em tempo real.
+- **Integração Profunda:** Funciona via CLI diretamente no seu repositório, lendo seu código e contexto atual.
 
 ---
 
-## Como Instalar
+## ✨ Funcionalidades Core
 
-Existem dois cenários de instalação:
+| Feature | Descrição |
+|---|---|
+| **Orchestration** | O `@orch` master planifica demandas complexas e delega para sub-operadores. |
+| **Multi-LLM Engine** | Suporte nativo a **Claude 3.7**, **GPT-4o** e **Gemini 2.5 Pro** com fallback automático. |
+| **Interactive CLI** | Gerencie seu squad via terminal com comandos como `dmz-os start`, `status` e `tasks`. |
+| **Real-time Dashboard** | Visualização completa de Master Plan, Checklist e Work History. |
+| **Knowledge Persistence** | Sistema de memória vetorial e relacional integrada via Supabase. |
 
-### 🆕 Projeto do Zero
+---
 
-Você começa um projeto novo e quer os agentes desde o primeiro commit.
+## 🛠️ Guia de Início Rápido
+
+### 1. Instalação via CLI (Recomendado)
+A forma mais rápida de injetar o squad em qualquer projeto:
 
 ```bash
-# 1. Clone o template base
-git clone https://github.com/dmz-agents/squad-template.git meu-projeto
-cd meu-projeto
+# 1. Instale o pacote globalmente
+pip install dmz-os
 
-# 2. Instale as dependências
-pip install -r requirements.txt
-
-# 3. Configure as credenciais
-cp .env.dmz.example .env.dmz
-#    → edite .env.dmz com SUPABASE_URL, service key e API key do LLM
-
-# 4. Crie seu projeto no painel
-#    → https://dmz-os.netlify.app/projects
-#    → Selecione os agentes e copie o slug do projeto
-
-# 5. Conecte e inicie
-python -m dmz_agents connect --project meu-projeto
-python -m dmz_agents start
+# 2. Inicie o setup interativo (Wizard)
+dmz-os install
 ```
 
-### ⚡ Projeto em Andamento
-
-Você já tem código e quer adicionar o squad sem mudar nada na estrutura atual.
+### 2. O Loop de Trabalho
+Uma vez configurado, seu squad entra em modo de escuta:
 
 ```bash
-# 1. Baixe apenas a pasta .agents/ e adicione ao seu repo
-curl -L https://github.com/dmz-agents/squad-template/archive/refs/heads/main.zip -o dmz.zip
-unzip dmz.zip "squad-template-main/.agents/*" -d temp
-cp -r temp/squad-template-main/.agents/ ./
-rm -rf temp dmz.zip
-
-# 2. Instale as dependências (isoladas do seu projeto)
-pip install -r .agents/requirements.txt
-
-# 3. Configure as credenciais
-cp .agents/.env.dmz.example .env.dmz
-#    → edite .env.dmz (não interfere com o seu .env existente)
-
-# 4. Crie seu projeto no painel
-#    → https://dmz-os.netlify.app/projects → Selecionar Agentes
-
-# 5. Conecte, sincronize e inicie
-python -m dmz_agents connect --project meu-projeto
-python -m dmz_agents sync
-python -m dmz_agents start
+# Inicia os motores e o loop do Orchestrator
+dmz-os start
 ```
 
-> 📖 **Guia completo**: [docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md)
-> 🔑 **Referência de variáveis**: [docs/ENV_REFERENCE.md](./docs/ENV_REFERENCE.md)
+O `@orch` agora está vigiando seu projeto. Você pode enviar demandas através do [Dashboard Offline](https://dmz-os.netlify.app/projects) ou diretamente via Supabase.
 
 ---
 
-## O Squad
-
-18 agentes especializados organizados em hierarquia:
-
-```
-@orch — Orchestrator Master  (ROOT — nível 0)
- │
- ├── @syd    Squad Manager       nível 1 — saúde do time
- │
- ├── @jose   Project Manager     nível 1 — cronograma e riscos
- │    ├── @lucas  Product Owner      nível 2 — backlog e prioridade
- │    └── @david  Scrum Master       nível 2 — cerimônias ágeis
- │
- ├── @ryan   Developer           nível 1 — implementação
- │    ├── @oliver  DevOps Engineer    nível 2 — infra e CI/CD
- │    └── @alex    Tech Architect     nível 2 — decisões estruturais
- │
- ├── @emma        QA Engineer     nível 1 — qualidade e testes
- │
- ├── @constantine  Cyber Chief   nível 1 — segurança
- │    └── @theron   Legal Chief      nível 2 — compliance jurídico
- │
- ├── @aurora  Design Chief       nível 1 — direção criativa
- │    └── @victoria  UX Designer     nível 2 — experiência do usuário
- │
- ├── @cassandra  Copy Chief      nível 1 — copy e conteúdo
- ├── @kanya      Strategy        nível 1 — análise de mercado
- ├── @martin     SOP Extractor   nível 1 — frameworks e processos
- ├── @sofia      DB Sage         nível 1 — banco de dados
- └── @quantum    Tools Orch      nível 1 — orquestração de tools
-```
-
-| Handle | Nome | Função | Categoria |
-|---|---|---|---|
-| `@orch` | ORCH | Orchestrator Master | Orchestration |
-| `@syd` | Syd | Squad Manager | Orchestration |
-| `@jose` | José | Project Manager | Product |
-| `@lucas` | Lucas | Product Owner | Product |
-| `@david` | David | Scrum Master | Product |
-| `@ryan` | Ryan | Developer | Development |
-| `@oliver` | Oliver | DevOps Engineer | Development |
-| `@alex` | Alex | Tech Architect | Development |
-| `@emma` | Emma | QA Engineer | Product |
-| `@constantine` | Constantine | Cyber Chief | Security |
-| `@theron` | Theron | Legal Chief | Security |
-| `@aurora` | Aurora | Design Chief | Design |
-| `@victoria` | Victoria | UX Designer | Design |
-| `@cassandra` | Cassandra | Copy Chief | Marketing |
-| `@kanya` | Kanya | Strategy Analyst | Strategy |
-| `@martin` | Martin | SOP Extractor | Operations |
-| `@sofia` | Sofia | DB Sage | Data |
-| `@quantum` | Quantum | Tools Orchestrator | Operations |
-
-Você escolhe quais agentes ativar para cada projeto. Não é obrigatório usar o squad completo.
-
----
-
-## Como Funciona
-
-```mermaid
-sequenceDiagram
-    participant U as Você
-    participant O as @orch
-    participant A as Agentes
-    participant DB as Supabase
-    participant P as Painel
-
-    U->>O: Demanda em linguagem natural
-    O->>O: Análise e decomposição
-    O->>DB: Registra plano de execução
-    O->>A: Delega tasks (com contexto preciso)
-    A->>A: Executa usando tools disponíveis
-    A->>DB: Persiste resultado + memória
-    DB->>P: Atualiza histórico em tempo real
-    O->>U: Entrega integrada dos outputs
-```
-
-### Fluxo de dados
+## 🤖 O Squad Especializado
+18 agentes organizados para cobrir 100% do ciclo de vida de um produto:
 
 ```mermaid
 graph TD
-    A[Você / Assistente de código] -->|demanda| B[@orch]
-    B -->|plano| C[Supabase — dmz_agents_tasks]
-    B -->|delega| D[@ryan Developer]
-    B -->|delega| E[@alex Architect]
-    B -->|delega| F[@emma QA]
-    D & E & F -->|output| G[Supabase — dmz_agents_memory]
-    G -->|leitura| H[Painel dmz-os.netlify.app]
-    H -->|visualização| A
+    ORCH[@orch Orchestrator Master] --> SYD[@syd Squad Manager]
+    ORCH --> JOSE[@jose Project Manager]
+    JOSE --> LUCAS[@lucas Product Owner]
+    JOSE --> DAVID[@david Scrum Master]
+    ORCH --> RYAN[@ryan Developer]
+    RYAN --> OLIVER[@oliver DevOps Engineer]
+    RYAN --> ALEX[@alex Tech Architect]
+    ORCH --> EMMA[@emma QA Engineer]
+    ORCH --> CONST[@constantine Cyber Chief]
+    CONST --> THERON[@theron Legal Chief]
+    ORCH --> AURORA[@aurora Design Chief]
+    AURORA --> VICT[@victoria UX Designer]
+    ORCH --> CASS[@cassandra Copy Chief]
+    ORCH --> KANYA[@kanya Strategy Analyst]
+    ORCH --> MART[@martin SOP Extractor]
+    ORCH --> SOFIA[@sofia DB Sage]
+    ORCH --> QUANT[@quantum Tools Orch]
 ```
 
 ---
 
-## Pré-requisitos
+## 🏗️ Arquitetura de Dados
 
-- Python 3.10+
-- pip atualizado
-- Conta [Supabase](https://supabase.com) (gratuita)
-- API Key de pelo menos 1 LLM: Anthropic, OpenAI ou Gemini
+```mermaid
+sequenceDiagram
+    participant Humano
+    participant CLI as dmz-os CLI
+    participant LLM as AI Engine (Gemini/Claude)
+    participant DB as Supabase Realtime
+    participant UI as DMZ Dashboard
 
----
-
-## Variáveis de Ambiente (.env.dmz)
-
-O arquivo `.env.dmz` é separado do seu `.env` existente — não conflita.
-
-| Variável | Obrigatória | Descrição |
-|---|:---:|---|
-| `SUPABASE_URL` | ✅ | URL do projeto Supabase |
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Service Role Key |
-| `DMZ_PROJECT_SLUG` | ✅ | Slug criado no painel |
-| `ANTHROPIC_API_KEY` | ⚡ min 1 | Claude (recomendado) |
-| `OPENAI_API_KEY` | ⚡ min 1 | GPT-4 |
-| `GEMINI_API_KEY` | ⚡ min 1 | Gemini |
-
-> Lista completa de 40+ variáveis (MCPs, infra, pagamentos, comunicação) → [docs/ENV_REFERENCE.md](./docs/ENV_REFERENCE.md)
-
----
-
-## Painel de Gestão
-
-O painel em [dmz-os.netlify.app](https://dmz-os.netlify.app) permite:
-
-| Seção | O que você faz |
-|---|---|
-| [/agents](https://dmz-os.netlify.app/agents) | Ver todos os 18 agentes, seus prompts, skills e tools |
-| [/projects](https://dmz-os.netlify.app/projects) | Criar projetos, selecionar agentes, guia de instalação, histórico |
-| [/memory](https://dmz-os.netlify.app/memory) | Memória de trabalho dos agentes por projeto |
-| [/tools](https://dmz-os.netlify.app/tools) | Registry global de tools disponíveis |
-
----
-
-## Estrutura do Repositório
-
-```
-dmz-agents/
-├── src/                        # Frontend Next.js (painel)
-│   └── app/
-│       ├── agents/             # Catálogo de agentes
-│       ├── projects/           # Gestão de projetos
-│       ├── memory/             # Memória de trabalho
-│       └── tools/              # Registry de tools
-├── server/                     # Backend Python (FastAPI) no Railway
-│   ├── main.py
-│   ├── requirements.txt
-│   └── railway.toml
-├── docs/
-│   ├── GETTING_STARTED.md      # ← Leia isso
-│   ├── ENV_REFERENCE.md        # Todas as variáveis
-│   ├── setup_supabase.sql      # Schema do banco
-│   └── capabilities/           # Prompts, skills e tools por agente
-│       ├── orch-prompt.md
-│       ├── ryan-skills.md
-│       └── ...
-└── .env.dmz.example            # Template de configuração
+    Humano->>UI: Insere demanda (ex: "Criar Dark Mode")
+    UI->>DB: Registra Task (status: pending)
+    CLI->>DB: Detecta nova Task
+    CLI->>LLM: Envia Contexto + Prompt do @orch
+    LLM-->>CLI: Retorna Plano de Ação
+    CLI->>DB: Atualiza Task + Grava Memória
+    DB-->>UI: Reflete progresso instantaneamente
+    UI-->>Humano: Notifica conclusão
 ```
 
 ---
 
-## Tech Stack
+## 💻 Tech Stack
 
-| Camada | Tecnologia |
-|---|---|
-| Frontend | Next.js 15 · TypeScript · Netlify |
-| Backend | Python 3.11 · FastAPI · Railway |
-| Banco | Supabase (PostgreSQL + Realtime) |
-| LLMs | Anthropic Claude · OpenAI GPT-4 · Google Gemini |
-| Tools | MCP (Model Context Protocol) |
-| UI | Vanilla CSS · Lucide Icons · Plus Jakarta Sans |
+- **Frontend:** Next.js 15 (App Router), TypeScript, Lucide Icons.
+- **Backend/Engine:** Python 3.12, Typer, Rich, Supabase Python SDK.
+- **Inteligência:** Google Gemini 2.5 Pro, Anthropic Claude 3.7, OpenAI SDKs.
+- **Infra:** Supabase (DB/Auth), Netlify (UI), Railway (Microservices).
 
 ---
 
-## Dogfooding
+## 🗺️ Roadmap v0.2.0
 
-O próprio projeto DMZ OS é gerenciado com o squad DMZ Agents. Os agentes constroem a plataforma que permite criar outros squads.
-
-Você pode ver o histórico de trabalho em tempo real em:
-[dmz-os.netlify.app/projects](https://dmz-os.netlify.app/projects) → **Histórico de Trabalho** → **DMZ OS — Agent Squad Platform**
-
----
-
-## Banco de Dados (Supabase)
-
-O schema completo está em [docs/setup_supabase.sql](./docs/setup_supabase.sql).
-
-Tabelas principais:
-
-| Tabela | Conteúdo |
-|---|---|
-| `dmz_agents_definitions` | 18 agentes com metadata |
-| `dmz_agents_prompts` | Prompts por agente (versionados) |
-| `dmz_agents_skills` | Skills declaradas por agente |
-| `dmz_agents_tools` | Registry global de tools |
-| `dmz_agents_tool_assignments` | Quais tools cada agente usa |
-| `dmz_agents_hierarchy` | Estrutura de reports entre agentes |
-| `dmz_agents_projects` | Projetos registrados |
-| `dmz_agents_squad` | Agentes por projeto |
-| `dmz_agents_tasks` | Tasks: master_plan, checklist, on_going, backlog |
-| `dmz_agents_memory` | Memória de trabalho persistida |
-| `dmz_agents_env_keys` | Referência de variáveis de ambiente |
+- [x] **v0.1.0:** Lançamento do Dashboard e Schema Supabase.
+- [x] **v0.2.0:** Engine Python Core + Publicação no PyPI (`dmz-os`).
+- [ ] **v0.3.0:** Suporte a Callbacks de Webhooks e MCP Tools dinâmicas.
+- [ ] **v0.4.0:** Integração nativa com Cursor e VS Code Extension.
+- [ ] **v0.5.0:** Sistema de Governança de Tokens e Custos por Agente.
 
 ---
 
-## Roadmap
+## 🤝 Contribuição e Comunidade
+O DMZ OS é um projeto "Dogfooding". Nós usamos os agentes para construir os próprios agentes. Se você encontrar bugs ou tiver sugestões de prompts de especialistas, abra uma Issue!
 
-- [x] Schema v2 Supabase — 11 tabelas
-- [x] 18 agentes populados com prompts, skills e tools
-- [x] Hierarquia completa configurada
-- [x] Painel: /agents, /projects, /memory, /tools
-- [x] Guia de instalação (zero e existente)
-- [x] Backend Python FastAPI no Railway
-- [ ] Motor Python CLI — `python -m dmz_agents start`
-- [ ] Protocolo de comunicação inter-agentes
-- [ ] Autenticação multi-tenant (Supabase Auth + RLS)
-- [ ] CI/CD — GitHub Actions
-- [ ] Prompts de @david, @martin, @sofia, @quantum
-- [ ] SDK público para integração com Cursor/Copilot/Antigravity
-
----
-
-## Contribuindo
-
-1. Fork o repositório
-2. Crie um branch: `git checkout -b feat/minha-feature`
-3. Commit com conventional commits: `git commit -m "feat: adiciona X"`
-4. Abra um Pull Request
-
----
-
-## Licença
-
-MIT © DMZ Labs
-
----
-
-<div align="center">
-
-**Feito com o squad DMZ Agents · [dmz-os.netlify.app](https://dmz-os.netlify.app)**
-
-</div>
+MIT © 2024 DMZ Labs.
+**Make your code alive.**

@@ -13,3 +13,7 @@ dmz_os/commands/install.py
 dmz_os/commands/start.py
 dmz_os/commands/status.py
 dmz_os/commands/tasks.py
+dmz_os/engine/__init__.py
+dmz_os/engine/agent.py
+dmz_os/engine/llm.py
+dmz_os/engine/orchestrator.py

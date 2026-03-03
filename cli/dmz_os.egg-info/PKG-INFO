@@ -1,16 +1,15 @@
 Metadata-Version: 2.4
 Name: dmz-os
-Version: 0.1.0
+Version: 0.2.0
 Summary: Squad de 18 AI agents que se integra ao seu projeto
 Author: DMZ Labs
-License: MIT
+License-Expression: MIT
 Project-URL: Homepage, https://dmz-os.netlify.app
 Project-URL: Repository, https://github.com/eldanielsantos-git/dmz-agents
 Project-URL: Documentation, https://github.com/eldanielsantos-git/dmz-agents/blob/main/docs/GETTING_STARTED.md
 Keywords: ai,agents,squad,automation,llm
 Classifier: Development Status :: 3 - Alpha
 Classifier: Intended Audience :: Developers
-Classifier: License :: OSI Approved :: MIT License
 Classifier: Programming Language :: Python :: 3
 Classifier: Programming Language :: Python :: 3.10
 Classifier: Programming Language :: Python :: 3.11

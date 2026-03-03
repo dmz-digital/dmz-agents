@@ -13,7 +13,15 @@ console = Console()
 
 
 def start_command(project: str | None):
-    load_dotenv(".env.dmz")
+    if not os.path.exists(".env.dmz"):
+        console.print("[yellow]Configuração (.env.dmz) não encontrada![/]")
+        console.print("[dim]Iniciando o Wizard de instalação automática...[/]\n")
+        from dmz_os.commands.install import install_command
+        install_command(project_type="new")
+        return
+
+    # Se existir, tenta carregar
+    load_dotenv(".env.dmz") # Load .env.dmz if it exists
     slug = project or os.getenv("DMZ_PROJECT_SLUG", "meu-projeto")
 
     console.print()
@@ -37,11 +45,21 @@ def start_command(project: str | None):
 
     console.print()
     console.print(Panel(
-        f"[bold green]Squad ativo![/]\n\n"
+        f"[bold green]Squad ativo e rodando![/]\n\n"
         f"Projeto: [cyan]{slug}[/]\n"
         f"Painel:  [cyan]https://dmz-os.netlify.app/projects[/]\n\n"
-        "[dim]Envie sua primeira demanda para @orch no painel.[/]",
+        "[dim]Envie demandas para o @orch via painel (ou via API/Supabase)![/]",
         border_style="green",
         padding=(1, 3),
     ))
     console.print()
+
+    from dmz_os.engine.orchestrator import OrchestratorEngine
+    
+    try:
+        engine = OrchestratorEngine(project_id=slug)
+        # Este loop bloqueia o terminal, ele agora é um servidor workers-like:
+        engine.run_loop()
+    except Exception as e:
+        console.print(f"[bold red]Erro fatal rodando o squad:[/] {e}")
+        console.print("[dim]Verifique .env.dmz - As credenciais de LLM ou Supabase estão certas?[/]")

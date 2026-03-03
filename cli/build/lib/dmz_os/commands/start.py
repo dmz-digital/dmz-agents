@@ -37,11 +37,21 @@ def start_command(project: str | None):
 
     console.print()
     console.print(Panel(
-        f"[bold green]Squad ativo![/]\n\n"
+        f"[bold green]Squad ativo e rodando![/]\n\n"
         f"Projeto: [cyan]{slug}[/]\n"
         f"Painel:  [cyan]https://dmz-os.netlify.app/projects[/]\n\n"
-        "[dim]Envie sua primeira demanda para @orch no painel.[/]",
+        "[dim]Envie demandas para o @orch via painel (ou via API/Supabase)![/]",
         border_style="green",
         padding=(1, 3),
     ))
     console.print()
+
+    from dmz_os.engine.orchestrator import OrchestratorEngine
+    
+    try:
+        engine = OrchestratorEngine(project_id=slug)
+        # Este loop bloqueia o terminal, ele agora é um servidor workers-like:
+        engine.run_loop()
+    except Exception as e:
+        console.print(f"[bold red]Erro fatal rodando o squad:[/] {e}")
+        console.print("[dim]Verifique .env.dmz - As credenciais de LLM ou Supabase estão certas?[/]")

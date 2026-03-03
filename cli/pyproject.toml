@@ -4,17 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dmz-os"
-version = "0.1.0"
+version = "0.2.0"
 description = "Squad de 18 AI agents que se integra ao seu projeto"
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
 authors = [{ name = "DMZ Labs" }]
 requires-python = ">=3.10"
 keywords = ["ai", "agents", "squad", "automation", "llm"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
