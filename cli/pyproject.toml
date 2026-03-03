@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dmz-os"
+version = "0.1.0"
+description = "Squad de 18 AI agents que se integra ao seu projeto"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "DMZ Labs" }]
+requires-python = ">=3.10"
+keywords = ["ai", "agents", "squad", "automation", "llm"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "typer>=0.12.0",
+    "rich>=13.0.0",
+    "supabase>=2.0.0",
+    "httpx>=0.27.0",
+    "python-dotenv>=1.0.0",
+    "inquirer>=3.2.0",
+]
+
+[project.urls]
+Homepage = "https://dmz-os.netlify.app"
+Repository = "https://github.com/eldanielsantos-git/dmz-agents"
+Documentation = "https://github.com/eldanielsantos-git/dmz-agents/blob/main/docs/GETTING_STARTED.md"
+
+[project.scripts]
+dmz-os = "dmz_os.main:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dmz_os*"]
+
+[tool.setuptools.package-data]
+dmz_os = ["*.md", "*.txt"]

@@ -1,0 +1,15 @@
+README.md
+pyproject.toml
+dmz_os/__init__.py
+dmz_os/main.py
+dmz_os.egg-info/PKG-INFO
+dmz_os.egg-info/SOURCES.txt
+dmz_os.egg-info/dependency_links.txt
+dmz_os.egg-info/entry_points.txt
+dmz_os.egg-info/requires.txt
+dmz_os.egg-info/top_level.txt
+dmz_os/commands/__init__.py
+dmz_os/commands/install.py
+dmz_os/commands/start.py
+dmz_os/commands/status.py
+dmz_os/commands/tasks.py

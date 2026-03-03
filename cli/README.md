@@ -13,11 +13,6 @@ Hierárquicos. Rastreáveis. Colaborativos. Construídos para times de produto.
 [![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
 [![License MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](./LICENSE)
 
-```bash
-# Instalação em 1 comando — funciona em qualquer projeto
-curl -fsSL https://raw.githubusercontent.com/eldanielsantos-git/dmz-agents/main/install.sh | bash
-```
-
 </div>
 
 ---
