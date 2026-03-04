@@ -58,8 +58,11 @@ from dmz_os.engine.agent import AgentContext
 
 class ChatRequest(BaseModel):
     message: str
-    agent_id: str = "orchestrator"
+    agent_id: str = "orch"
     project_id: str = "default"
+    tool: str | None = None
+    file_url: str | None = None
+    file_type: str | None = None
 
 @app.post("/chat")
 async def chat_interaction(req: ChatRequest):
@@ -74,7 +77,11 @@ async def chat_interaction(req: ChatRequest):
         # Ensure the response is NOT markdown as requested by user
         system_prompt += "\nIMPORTANTE: Sua resposta NÃO pode conter markdown (como bold **, headers #, etc). Use apenas texto simples e quebras de linha para organizar a resposta."
         
-        response = get_llm_response(system_prompt, req.message)
+        full_message = req.message
+        if req.file_url:
+            full_message = f"{full_message}\n\n[Anexo enviado pelo usuário: {req.file_url} (Tipo: {req.file_type})]"
+
+        response = get_llm_response(system_prompt, full_message)
         
         return {
             "agent_id": req.agent_id,

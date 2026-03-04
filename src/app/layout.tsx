@@ -11,12 +11,14 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: "DMZ - OS Agents | AI-Native Operating System",
-  description: "A camada de inteligência organizacional que torna seu repositório vivo. Gerencie squads de agentes autônomos para escalar seu desenvolvimento.",
-  keywords: ["AI Agents", "Operating System", "SaaS", "Product Squads", "Automated Development", "DMZ OS"],
+  description: "A camada de inteligência organizacional que torna seu repositório vivo. Gerencie squads de agentes autônomos para escalar seu desenvolvimento com proatividade.",
+  keywords: ["AI Agents", "Operating System", "SaaS", "Product Squads", "Automated Development", "DMZ OS", "Orchestrator"],
+  authors: [{ name: "DMZ Digital" }],
+  metadataBase: new URL("https://agents.dmzdigital.com.br"),
   openGraph: {
-    title: "DMZ - OS Agents | AI-Native Operating System",
-    description: "Injete inteligência proativa no seu desenvolvimento com squads de 44 especialistas autônomos.",
-    url: "https://dmz-os.netlify.app",
+    title: "DMZ - OS Agents | Squads de Especialistas Autônomos",
+    description: "Injete inteligência proativa no seu desenvolvimento com squads de especialistas autônomos treinados para performar.",
+    url: "https://agents.dmzdigital.com.br",
     siteName: "DMZ OS Agents",
     images: [
       {
@@ -31,12 +33,17 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "DMZ - OS Agents",
-    description: "The AI-Native Operating System for Modern Product Squads",
+    title: "DMZ - OS Agents | AI-Native OS",
+    description: "A camada de inteligência organizacional que torna seu repositório vivo.",
     images: ["/ogg.png"],
+    creator: "@dmzdigital",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon.ico", sizes: "32x32", type: "image/x-icon" },
+    ],
+    apple: "/logo.svg",
   },
 };
 
