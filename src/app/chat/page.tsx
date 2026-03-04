@@ -5,7 +5,7 @@ import {
     Send, Mic, Paperclip, Bot, User,
     Sparkles, ArrowLeft, MoreHorizontal,
     Music2, Code2, Paintbrush, ShieldCheck,
-    Volume2, StopCircle
+    Volume2, StopCircle, Play, Pause, Loader2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -16,6 +16,7 @@ interface Message {
     id: string;
     role: "user" | "assistant";
     content: string;
+    audio_url?: string;
     agent_id?: string;
     agent?: {
         handle: string;
@@ -23,6 +24,7 @@ interface Message {
         color: string;
     };
     created_at: Date;
+    isTyping?: boolean;
 }
 
 const AGENT_MAP: Record<string, any> = {
@@ -31,6 +33,72 @@ const AGENT_MAP: Record<string, any> = {
     aurora: { name: "Aurora", color: "#DB2777", icon: Paintbrush },
     theron: { name: "Theron", color: "#DC2626", icon: ShieldCheck }
 };
+
+// ── Components ───────────────────────────────────────────────────────────────
+
+function ThinkingDots() {
+    return (
+        <div className="flex gap-1 px-2 py-1">
+            {[0, 1, 2].map((i) => (
+                <motion.div
+                    key={i}
+                    animate={{ y: [0, -4, 0] }}
+                    transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.1 }}
+                    className="w-1.5 h-1.5 bg-neutral-300 rounded-full"
+                />
+            ))}
+        </div>
+    );
+}
+
+function AudioPlayer({ url }: { url: string }) {
+    const [playing, setPlaying] = useState(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    const toggle = () => {
+        if (!audioRef.current) return;
+        if (playing) audioRef.current.pause();
+        else audioRef.current.play();
+        setPlaying(!playing);
+    };
+
+    return (
+        <div className="flex items-center gap-3 bg-white/10 p-2 px-4 rounded-2xl min-w-[200px]">
+            <button onClick={toggle} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors">
+                {playing ? <Pause size={14} fill="white" /> : <Play size={14} fill="white" className="ml-0.5" />}
+            </button>
+            <div className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden relative">
+                <motion.div
+                    animate={playing ? { x: ["0%", "100%"] } : {}}
+                    transition={playing ? { duration: 10, repeat: Infinity, ease: "linear" } : {}}
+                    className="absolute inset-0 bg-white w-full"
+                    style={{ left: "-100%" }}
+                />
+            </div>
+            <audio ref={audioRef} src={url} onEnded={() => setPlaying(false)} className="hidden" />
+            <Volume2 size={14} className="text-white/60" />
+        </div>
+    );
+}
+
+function TypingText({ text, onComplete }: { text: string, onComplete?: () => void }) {
+    const [displayed, setDisplayed] = useState("");
+
+    useEffect(() => {
+        let i = 0;
+        const interval = setInterval(() => {
+            setDisplayed(text.substring(0, i));
+            i++;
+            if (i > text.length) {
+                clearInterval(interval);
+                onComplete?.();
+            }
+        }, 15);
+        return () => clearInterval(interval);
+    }, [text]);
+
+    return <span>{displayed}</span>;
+}
 
 export default function ChatPage() {
     const [messages, setMessages] = useState<Message[]>([]);
@@ -48,6 +116,7 @@ export default function ChatPage() {
 
     const [input, setInput] = useState("");
     const [isRecording, setIsRecording] = useState(false);
+    const [isThinking, setIsThinking] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -68,6 +137,7 @@ export default function ChatPage() {
                     id: m.id,
                     role: m.role,
                     content: m.content,
+                    audio_url: m.audio_url,
                     agent_id: m.agent_id,
                     agent: m.agent_id ? {
                         handle: m.agent_id,
@@ -112,6 +182,7 @@ export default function ChatPage() {
                 session_id: sessionId,
                 role: msg.role,
                 content: msg.content,
+                audio_url: msg.audio_url,
                 agent_id: msg.agent_id,
                 created_at: msg.created_at?.toISOString()
             })
@@ -121,24 +192,38 @@ export default function ChatPage() {
         return data;
     };
 
-    const handleSend = async (textOverride?: string | React.MouseEvent) => {
-        const text = typeof textOverride === 'string' ? textOverride : input;
-        if (!text.trim()) return;
+    const handleSend = async (payload?: string | { text: string, audioUrl: string } | React.MouseEvent) => {
+        let text = "";
+        let audioUrl = "";
+
+        if (typeof payload === 'string') {
+            text = payload;
+        } else if (payload && typeof payload === 'object' && 'text' in payload) {
+            text = (payload as any).text;
+            audioUrl = (payload as any).audioUrl;
+        } else {
+            text = input;
+        }
+
+        if (!text.trim() && !audioUrl) return;
 
         const userMsg: Message = {
             id: Date.now().toString(),
             role: "user",
             content: text,
+            audio_url: audioUrl,
             created_at: new Date()
         };
 
         setMessages(prev => [...prev, userMsg]);
-        if (!textOverride) setInput("");
+        if (typeof payload !== 'object' || !('text' in payload)) setInput("");
 
         const savedUserMsg = await saveMessage(userMsg);
         if (savedUserMsg) {
             setMessages(prev => prev.map(m => m.id === userMsg.id ? { ...m, id: savedUserMsg.id } : m));
         }
+
+        setIsThinking(true);
 
         // AI Response Logic
         setTimeout(async () => {
@@ -167,10 +252,13 @@ export default function ChatPage() {
                     name: AGENT_MAP[responseAgent]?.name || responseAgent.toUpperCase(),
                     color: AGENT_MAP[responseAgent]?.color || "#6B7280"
                 },
-                created_at: new Date()
+                created_at: new Date(),
+                isTyping: true
             };
 
+            setIsThinking(false);
             setMessages(prev => [...prev, aiMsg]);
+
             const savedAiMsg = await saveMessage(aiMsg);
             if (savedAiMsg) {
                 setMessages(prev => prev.map(m => m.id === aiMsg.id ? { ...m, id: savedAiMsg.id } : m));
@@ -229,8 +317,8 @@ export default function ChatPage() {
             if (!response.ok) throw new Error("Falha na transcrição");
 
             const result = await response.json();
-            if (result.text) {
-                handleSend(result.text);
+            if (result.text || result.audioUrl) {
+                handleSend({ text: result.text || "", audioUrl: result.audioUrl });
             }
         } catch (err) {
             console.error("Transcription error:", err);
@@ -300,7 +388,20 @@ export default function ChatPage() {
                                         ? "bg-dmz-accent text-white rounded-tr-none shadow-lg shadow-dmz-accent/10"
                                         : "bg-white border border-neutral-100 text-neutral-700 rounded-tl-none shadow-sm"
                                         }`}>
-                                        {msg.content}
+                                        {msg.audio_url ? (
+                                            <div className="space-y-3">
+                                                <AudioPlayer url={msg.audio_url} />
+                                                {msg.content && <p className="opacity-80 text-xs italic">{msg.content}</p>}
+                                            </div>
+                                        ) : (
+                                            msg.isTyping ? (
+                                                <TypingText text={msg.content} onComplete={() => {
+                                                    setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isTyping: false } : m));
+                                                }} />
+                                            ) : (
+                                                msg.content
+                                            )
+                                        )}
                                     </div>
                                     <div className={`text-[9px] font-medium text-neutral-300 uppercase tracking-tighter ${msg.role === "user" ? "text-right" : "text-left"}`}>
                                         {msg.created_at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -309,6 +410,23 @@ export default function ChatPage() {
                             </div>
                         </motion.div>
                     ))}
+
+                    {isThinking && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex justify-start"
+                        >
+                            <div className="flex gap-4 items-center">
+                                <div className="w-10 h-10 rounded-2xl bg-white border border-neutral-100 flex items-center justify-center shrink-0">
+                                    <Loader2 size={18} className="text-neutral-300 animate-spin" />
+                                </div>
+                                <div className="bg-white border border-neutral-100 p-3 px-4 rounded-[20px] rounded-tl-none shadow-sm">
+                                    <ThinkingDots />
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
                 </AnimatePresence>
             </div>
 
