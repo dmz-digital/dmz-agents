@@ -70,8 +70,20 @@ Deno.serve(async (req: Request) => {
 
         const whisperFormData = new FormData();
         const file = new File([audioFile], 'audio.mp3', { type: audioFile.type || 'audio/mpeg' });
+
+        // Load transcription prompt dynamically
+        const { data: promptData } = await supabaseClient
+            .from('dmz_agents_prompts')
+            .select('content')
+            .eq('agent_id', 'voice_transcription')
+            .limit(1)
+            .single();
+
+        const prompt = promptData?.content || "Transcreva o áudio de forma fiel, removendo ruídos e focando na fala em português.";
+
         whisperFormData.append('file', file);
         whisperFormData.append('model', 'whisper-1');
+        whisperFormData.append('prompt', prompt);
 
         console.log('Transcribing...');
         const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {

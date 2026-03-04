@@ -33,7 +33,6 @@ const toolsList = [
     { id: 'createImage', name: 'Gerar uma imagem', shortName: 'Gerar Imagem', icon: Paintbrush },
     { id: 'searchWeb', name: 'Deep web research', shortName: 'Deep Research', icon: Globe },
     { id: 'writeCode', name: 'Escrever código', shortName: 'Código', icon: Pencil },
-    { id: 'deepResearch', name: 'Pesquisa profunda', shortName: 'Deep Research', icon: Telescope, extra: '5 left' },
 ];
 
 interface PromptBoxProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -216,7 +215,7 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
                                             <button key={tool.id} onClick={() => { setSelectedTool(tool.id); setIsPopoverOpen(false); }} className="flex w-full items-center gap-3 rounded-xl p-3 text-left text-sm font-bold hover:bg-neutral-50 transition-colors text-neutral-600 hover:text-dmz-accent">
                                                 <tool.icon size={18} strokeWidth={2} />
                                                 <span>{tool.name}</span>
-                                                {tool.extra && <span className="ml-auto text-[10px] font-black bg-neutral-100 px-2 py-0.5 rounded-full text-neutral-400">{tool.extra}</span>}
+                                                {(tool as any).extra && <span className="ml-auto text-[10px] font-black bg-neutral-100 px-2 py-0.5 rounded-full text-neutral-400">{(tool as any).extra}</span>}
                                             </button>
                                         ))}
                                     </div>

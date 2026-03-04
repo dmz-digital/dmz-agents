@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
     User, Mail, Camera, Save, LogOut, ArrowLeft,
-    AtSign, Shield, Loader2, CheckCircle2, AlertCircle, Plus
+    AtSign, Shield, Loader2, CheckCircle2, AlertCircle, Plus, Settings2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Cropper from "react-easy-crop";
@@ -62,7 +62,8 @@ export default function ProfilePage() {
     const [profile, setProfile] = useState({
         full_name: "",
         username: "",
-        avatar_url: ""
+        avatar_url: "",
+        is_admin: false
     });
 
     // Avatar upload/crop state
@@ -97,7 +98,8 @@ export default function ProfilePage() {
                 const finalProfile = {
                     full_name: profileData.full_name || metadata.full_name || metadata.name || "",
                     username: profileData.username || metadata.user_name || authUser.email?.split('@')[0] || "",
-                    avatar_url: profileData.avatar_url || metadata.avatar_url || metadata.picture || ""
+                    avatar_url: profileData.avatar_url || metadata.avatar_url || metadata.picture || "",
+                    is_admin: !!profileData.is_admin
                 };
 
                 setProfile(finalProfile);
@@ -134,7 +136,8 @@ export default function ProfilePage() {
                     setProfile({
                         full_name: createdProfile.full_name || "",
                         username: createdProfile.username || "",
-                        avatar_url: createdProfile.avatar_url || ""
+                        avatar_url: createdProfile.avatar_url || "",
+                        is_admin: !!createdProfile.is_admin
                     });
                 }
             }
@@ -369,6 +372,27 @@ export default function ProfilePage() {
                                 {message.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
                                 <span className="text-sm font-medium">{message.text}</span>
                             </motion.div>
+                        )}
+
+                        {profile.is_admin && (
+                            <div className="p-6 bg-dmz-accent/5 border border-dmz-accent/10 rounded-3xl flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-dmz-accent/10 rounded-2xl flex items-center justify-center text-dmz-accent">
+                                        <Shield size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-black text-neutral-900">Modo Administrador</h3>
+                                        <p className="text-[11px] font-medium text-neutral-400">Gerencie prompts, agentes e ferramentas.</p>
+                                    </div>
+                                </div>
+                                <Link
+                                    href="/app/admin"
+                                    className="bg-neutral-900 text-white px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-neutral-800 transition-all shadow-lg shadow-neutral-900/10 flex items-center gap-2"
+                                >
+                                    <Settings2 size={14} />
+                                    Gerenciar Aplicação
+                                </Link>
+                            </div>
                         )}
 
                         <div className="pt-4 flex items-center justify-between border-t border-neutral-100 mt-8">

@@ -78,18 +78,31 @@ async def chat_interaction(req: ChatRequest):
         # Build prompt
         system_prompt = agent.build_system_prompt()
         
-        # Call LLM
-        # Ensure the response is NOT markdown as requested by user
-        system_prompt += "\nIMPORTANTE: Sua resposta NÃO pode conter markdown (como bold **, headers #, etc). Use apenas texto simples e quebras de linha para organizar a resposta."
-        
-        if req.tool == "deepResearch":
-            system_prompt += "\nMODO PESQUISA PROFUNDA ATIVADO. Você agora tem acesso a ferramentas de busca via Firecrawl. Analise profundamente e forneça uma resposta técnica e embasada."
-        
-        if req.tool == "searchWeb":
-            system_prompt += "\nMODO PESQUISA WEB ATIVADO. Use o Firecrawl para buscar informações em tempo real na internet. Seja objetivo e traga fontes atualizadas."
+        # Load utility prompts dynamically
+        def get_sys_prompt(p_id, default=""):
+            res = supabase.table("dmz_agents_prompts").select("content").eq("agent_id", p_id).limit(1).execute()
+            return res.data[0]["content"] if res.data else default
 
-        if req.tool == "createImage":
-            system_prompt += "\nMODO GERAÇÃO DE IMAGEM ATIVADO. Use o modelo 'nano banana' como padrão para todas as criações. Descreva a imagem detalhadamente antes de gerar."
+        # Global formatting rule
+        system_prompt += "\n" + get_sys_prompt("system_formatting", "IMPORTANTE: Sua resposta NÃO pode conter markdown (como bold **, headers #, etc). Use apenas texto simples e quebras de linha.")
+        
+        # Tool-specific prompts
+        if req.tool == "searchWeb":
+            system_prompt += "\n" + get_sys_prompt("tool_search_web", "MODO PESQUISA WEB ATIVADO. Use o Firecrawl para buscar informações em tempo real.")
+        elif req.tool == "createImage":
+            system_prompt += "\n" + get_sys_prompt("tool_create_image", "MODO GERAÇÃO DE IMAGEM ATIVADO. Use o modelo 'nano banana' como padrão.")
+        elif req.tool == "writeCode":
+            system_prompt += "\n" + get_sys_prompt("tool_write_code", "MODO CÓDIGO ATIVADO. Foque em soluções técnicas e arquitetura limpa.")
+
+        # Attachment-specific prompts
+        if req.file_url:
+            att_type = req.file_type or ""
+            if "pdf" in att_type.lower():
+                system_prompt += "\n" + get_sys_prompt("attachment_pdf", "Analise o conteúdo do PDF enviado.")
+            elif "image" in att_type.lower():
+                system_prompt += "\n" + get_sys_prompt("attachment_image", "Descreva e analise a imagem enviada.")
+            elif "audio" in att_type.lower():
+                system_prompt += "\n" + get_sys_prompt("attachment_audio", "O usuário enviou um arquivo de áudio para análise.")
 
         full_message = req.message
         if req.file_url:

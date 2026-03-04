@@ -529,10 +529,10 @@ export default function ChatPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button className="p-2 hover:bg-neutral-100 rounded-xl text-neutral-400 transition-all">
+                        <button className="p-2 hover:bg-neutral-100 rounded-xl text-neutral-400 transition-all" title="Gerar Insight do Debate">
                             <Sparkles size={20} />
                         </button>
-                        <button className="p-2 hover:bg-neutral-100 rounded-xl text-neutral-400 transition-all">
+                        <button className="p-2 hover:bg-neutral-100 rounded-xl text-neutral-400 transition-all" title="Opções da Conversa">
                             <MoreHorizontal size={20} />
                         </button>
                     </div>
