@@ -31,7 +31,7 @@ DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const toolsList = [
     { id: 'createImage', name: 'Gerar uma imagem', shortName: 'Gerar Imagem', icon: Paintbrush },
-    { id: 'searchWeb', name: 'Pesquisar na web', shortName: 'Pesquisa', icon: Globe },
+    { id: 'searchWeb', name: 'Deep web research', shortName: 'Deep Research', icon: Globe },
     { id: 'writeCode', name: 'Escrever código', shortName: 'Código', icon: Pencil },
     { id: 'deepResearch', name: 'Pesquisa profunda', shortName: 'Deep Research', icon: Telescope, extra: '5 left' },
 ];
