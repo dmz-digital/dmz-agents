@@ -132,10 +132,13 @@ export default function ChatPage() {
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
         document.title = "Chat de Projetos | DMZ - OS Agents";
         loadInitialData();
+        // Auto-focus textarea on mount
+        setTimeout(() => inputRef.current?.focus(), 100);
     }, []);
 
     useEffect(() => {
@@ -652,6 +655,7 @@ export default function ChatPage() {
                 <div className="p-6 sticky bottom-0 left-0 w-full bg-gradient-to-t from-white via-white/100 to-transparent z-30">
                     <div className="max-w-4xl mx-auto">
                         <PromptBox
+                            ref={inputRef}
                             onSend={handlePromptSend}
                             onStartRecording={startRecording}
                             onStopRecording={stopRecording}
