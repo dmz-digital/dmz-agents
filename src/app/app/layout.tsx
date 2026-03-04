@@ -17,54 +17,67 @@ export default function AppLayout({
     useEffect(() => {
         async function loadProfile() {
             const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                // Fetch profile
-                const { data } = await supabase
-                    .from("user_profiles")
-                    .select("*")
-                    .eq("id", user.id)
-                    .single();
+            if (!user) return;
 
-                if (data) {
-                    setProfile(data);
+            const metadata = user.user_metadata;
 
-                    // Optional: If name or avatar is missing in DB but present in metadata, update it
-                    if (!data.full_name || !data.avatar_url) {
-                        const metadata = user.user_metadata;
-                        const updates: any = {};
-                        if (!data.full_name && (metadata.full_name || metadata.name)) {
-                            updates.full_name = metadata.full_name || metadata.name;
-                        }
-                        if (!data.avatar_url && (metadata.avatar_url || metadata.picture)) {
-                            updates.avatar_url = metadata.avatar_url || metadata.picture;
-                        }
+            // Extract avatar from identities (works for Google, GitHub, etc.)
+            const getOAuthAvatar = () => {
+                // Check identities array for provider-specific avatar
+                const identities = user.identities || [];
+                for (const identity of identities) {
+                    const id_data = identity.identity_data || {};
+                    const avatar = id_data.avatar_url || id_data.picture;
+                    if (avatar) return avatar;
+                }
+                // Fallback to user_metadata
+                return metadata?.avatar_url || metadata?.picture || null;
+            };
 
-                        if (Object.keys(updates).length > 0) {
-                            const { data: updatedProfile } = await supabase
-                                .from("user_profiles")
-                                .update(updates)
-                                .eq("id", user.id)
-                                .select()
-                                .single();
-                            if (updatedProfile) setProfile(updatedProfile);
-                        }
-                    }
-                } else {
-                    // Profile doesn't exist, create it from metadata
-                    const metadata = user.user_metadata;
-                    const { data: newProfile } = await supabase
+            const oauthAvatar = getOAuthAvatar();
+            const oauthName = metadata?.full_name || metadata?.name || null;
+            const oauthUsername = metadata?.user_name || metadata?.preferred_username || user.email?.split('@')[0] || "";
+
+            // Fetch profile from DB
+            const { data } = await supabase
+                .from("user_profiles")
+                .select("*")
+                .eq("id", user.id)
+                .single();
+
+            if (data) {
+                // Always sync avatar_url if OAuth provides one (keeps it fresh)
+                const updates: any = {};
+                if (oauthAvatar && data.avatar_url !== oauthAvatar) {
+                    updates.avatar_url = oauthAvatar;
+                }
+                if (oauthName && !data.full_name) {
+                    updates.full_name = oauthName;
+                }
+                if (Object.keys(updates).length > 0) {
+                    const { data: updated } = await supabase
                         .from("user_profiles")
-                        .upsert({
-                            id: user.id,
-                            email: user.email,
-                            full_name: metadata.full_name || metadata.name || "",
-                            avatar_url: metadata.avatar_url || metadata.picture || "",
-                            username: metadata.user_name || user.email?.split('@')[0] || "",
-                        })
+                        .update(updates)
+                        .eq("id", user.id)
                         .select()
                         .single();
-                    if (newProfile) setProfile(newProfile);
+                    if (updated) { setProfile(updated); return; }
                 }
+                setProfile(data);
+            } else {
+                // No profile yet — create from OAuth metadata
+                const { data: newProfile } = await supabase
+                    .from("user_profiles")
+                    .upsert({
+                        id: user.id,
+                        email: user.email,
+                        full_name: oauthName || "",
+                        avatar_url: oauthAvatar || "",
+                        username: oauthUsername,
+                    })
+                    .select()
+                    .single();
+                if (newProfile) setProfile(newProfile);
             }
         }
         loadProfile();
