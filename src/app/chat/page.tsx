@@ -600,7 +600,11 @@ export default function ChatPage() {
                                                         {msg.content && <p className="pt-2">{msg.content}</p>}
                                                     </div>
                                                 ) : (
-                                                    msg.content
+                                                    <div className="space-y-3">
+                                                        {msg.content.split('\n').filter(line => line.trim()).map((line, i) => (
+                                                            <p key={i} className="leading-relaxed">{line}</p>
+                                                        ))}
+                                                    </div>
                                                 )}
                                             </div>
                                             <div className={`px-2 text-[9px] font-medium text-neutral-300 uppercase tracking-tighter ${msg.role === "user" ? "text-right" : "text-left"}`}>

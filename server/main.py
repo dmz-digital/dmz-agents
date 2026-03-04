@@ -160,7 +160,15 @@ async def chat_interaction(req: ChatRequest):
         # Apply global formatting rule
         system_prompt += "\n" + get_sys_prompt(
             "system_formatting",
-            "IMPORTANTE: Sua resposta NÃO pode conter markdown (bold **, headers #, listas com -, etc). Use apenas texto simples e quebras de linha para organizar a resposta."
+            (
+                "REGRAS DE FORMATO — NUNCA QUEBRE ESTAS REGRAS:\n"
+                "1. Escreva como um humano em conversa casual, não como um relatório ou apresentação.\n"
+                "2. Use parágrafos curtos de 1 a 3 frases. Deixe uma linha em branco entre cada parágrafo.\n"
+                "3. NUNCA use markdown: sem **, sem #, sem -, sem bullets, sem numeração de listas.\n"
+                "4. Não enumere tópicos. Se precisar listar coisas, escreva em texto corrido separado por parágrafo.\n"
+                "5. Faça perguntas para engajar o usuário. Termine sempre com uma pergunta ou próximo passo claro.\n"
+                "6. Tom: direto, humano, especialista que fala sem jargão, como um sócio experiente conversando."
+            )
         )
 
         # Apply tool-specific prompts
