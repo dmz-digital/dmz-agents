@@ -427,17 +427,6 @@ export default function ChatPage() {
             setMessages(prev => prev.filter(m => m.id !== tempMsg.id));
 
             if (isAudioFile) {
-                // 3. Show transcription progress
-                const progressMsg: Message = {
-                    id: `progress-${Date.now()}`,
-                    role: "assistant",
-                    content: "📝 Transcrevendo áudio... isso pode levar alguns minutos para arquivos longos.",
-                    agent_id: "orch",
-                    agent: AGENT_MAP.orch,
-                    created_at: new Date()
-                };
-                setMessages(prev => [...prev, progressMsg]);
-
                 // 4. Call /transcribe endpoint
                 try {
                     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://dmz-agents-production.up.railway.app";
@@ -449,9 +438,6 @@ export default function ChatPage() {
                             file_name: file.name
                         }),
                     });
-
-                    // Remove progress message
-                    setMessages(prev => prev.filter(m => m.id !== progressMsg.id));
 
                     if (!transcribeResp.ok) {
                         throw new Error("Falha na transcrição");
