@@ -67,8 +67,13 @@ class ChatRequest(BaseModel):
 @app.post("/chat")
 async def chat_interaction(req: ChatRequest):
     try:
+        # Map short names to DB IDs
+        agent_db_id = req.agent_id
+        if agent_db_id == "orch":
+            agent_db_id = "orchestrator"
+        
         # Load agent context
-        agent = AgentContext(supabase, req.project_id, req.agent_id)
+        agent = AgentContext(supabase, req.project_id, agent_db_id)
         
         # Build prompt
         system_prompt = agent.build_system_prompt()

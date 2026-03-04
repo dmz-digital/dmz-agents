@@ -39,10 +39,10 @@ interface ChatSession {
 }
 
 const AGENT_MAP: Record<string, any> = {
-    orch: { name: "ORCH", color: "#E85D2F", icon: Music2 },
-    ryan: { name: "Ryan", color: "#0891B2", icon: Code2 },
-    aurora: { name: "Aurora", color: "#DB2777", icon: Paintbrush },
-    theron: { name: "Theron", color: "#DC2626", icon: ShieldCheck }
+    orch: { name: "ORCH", handle: "orch", color: "#E85D2F", icon: Music2 },
+    ryan: { name: "Ryan", handle: "ryan", color: "#0891B2", icon: Code2 },
+    aurora: { name: "Aurora", handle: "aurora", color: "#DB2777", icon: Paintbrush },
+    theron: { name: "Theron", handle: "theron", color: "#DC2626", icon: ShieldCheck }
 };
 
 // ── Components ───────────────────────────────────────────────────────────────
@@ -539,8 +539,8 @@ export default function ChatPage() {
                 </header>
 
                 {/* Chat Area */}
-                <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-smooth bg-white">
-                    <div className="max-w-4xl mx-auto w-full p-6 space-y-10 pb-32">
+                <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-smooth bg-white custom-scrollbar">
+                    <div className="max-w-4xl mx-auto w-full p-6 space-y-6 pb-48">
                         <AnimatePresence initial={false}>
                             {messages.map((msg) => (
                                 <motion.div
@@ -551,7 +551,7 @@ export default function ChatPage() {
                                 >
                                     <div className={`max-w-[85%] flex gap-4 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
                                         {/* Avatar */}
-                                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm border-2 border-white ${msg.role === "user"
+                                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border-2 border-white ${msg.role === "user"
                                             ? "bg-neutral-900 text-white overflow-hidden"
                                             : "bg-white border-neutral-100"
                                             }`}>
@@ -578,9 +578,9 @@ export default function ChatPage() {
                                                     </span>
                                                 </div>
                                             )}
-                                            <div className={`p-4 rounded-2xl text-sm leading-relaxed ${msg.role === "user"
-                                                ? "bg-neutral-900 text-white rounded-tr-none"
-                                                : "bg-white border border-neutral-100 text-neutral-800 rounded-tl-none"
+                                            <div className={`py-4 px-6 rounded-[28px] text-[15px] leading-relaxed transition-all ${msg.role === "user"
+                                                ? "bg-neutral-900 text-white rounded-tr-none border border-neutral-800"
+                                                : "bg-[#F3F4F6] border border-neutral-100 text-neutral-800 rounded-tl-none"
                                                 }`}>
                                                 {msg.audio_url ? (
                                                     <div className="flex flex-col gap-3">
@@ -631,8 +631,7 @@ export default function ChatPage() {
                     </div>
                 </div>
 
-                {/* Input Area */}
-                <div className="p-6 bg-white border-t border-neutral-100 absolute bottom-0 left-0 w-full bg-gradient-to-t from-white via-white to-transparent">
+                <div className="p-6 sticky bottom-0 left-0 w-full bg-gradient-to-t from-white via-white/100 to-transparent z-30">
                     <div className="max-w-4xl mx-auto">
                         <PromptBox
                             onSend={handlePromptSend}
