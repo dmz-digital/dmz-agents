@@ -62,7 +62,7 @@ function ThinkingDots() {
     );
 }
 
-function AudioPlayer({ url }: { url: string }) {
+function AudioPlayer({ url, isUser = false }: { url: string, isUser?: boolean }) {
     const [playing, setPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -74,20 +74,24 @@ function AudioPlayer({ url }: { url: string }) {
     };
 
     return (
-        <div className="flex items-center gap-3 bg-white/10 p-2 px-4 rounded-2xl min-w-[200px]">
-            <button onClick={toggle} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors">
-                {playing ? <Pause size={14} fill="white" /> : <Play size={14} fill="white" className="ml-0.5" />}
+        <div className={`flex items-center gap-3 p-2 px-4 rounded-2xl min-w-[200px] ${isUser ? 'bg-white/10' : 'bg-neutral-50'}`}>
+            <button onClick={toggle} className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isUser ? 'bg-white/20 hover:bg-white/30' : 'bg-dmz-accent/10 hover:bg-dmz-accent/20'}`}>
+                {playing ? (
+                    <Pause size={14} className={isUser ? 'text-white' : 'text-dmz-accent'} fill="currentColor" />
+                ) : (
+                    <Play size={14} className={`${isUser ? 'text-white' : 'text-dmz-accent'} ml-0.5`} fill="currentColor" />
+                )}
             </button>
-            <div className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden relative">
+            <div className={`flex-1 h-1 rounded-full overflow-hidden relative ${isUser ? 'bg-white/20' : 'bg-neutral-200'}`}>
                 <motion.div
                     animate={playing ? { x: ["0%", "100%"] } : {}}
                     transition={playing ? { duration: 10, repeat: Infinity, ease: "linear" } : {}}
-                    className="absolute inset-0 bg-white w-full"
+                    className={`absolute inset-0 w-full ${isUser ? 'bg-white' : 'bg-dmz-accent'}`}
                     style={{ left: "-100%" }}
                 />
             </div>
             <audio ref={audioRef} src={url} onEnded={() => setPlaying(false)} className="hidden" />
-            <Volume2 size={14} className="text-white/60" />
+            <Volume2 size={14} className={isUser ? 'text-white/60' : 'text-neutral-400'} />
         </div>
     );
 }
@@ -580,8 +584,8 @@ export default function ChatPage() {
                                                 }`}>
                                                 {msg.audio_url ? (
                                                     <div className="flex flex-col gap-3">
-                                                        <AudioPlayer url={msg.audio_url} />
-                                                        {msg.content && <p className="pt-2 border-t border-white/10 italic text-white/70">{msg.content}</p>}
+                                                        <AudioPlayer url={msg.audio_url} isUser={msg.role === "user"} />
+                                                        {msg.content && <p className={`pt-2 border-t italic ${msg.role === 'user' ? 'border-white/10 text-white/70' : 'border-neutral-100 text-neutral-500'}`}>{msg.content}</p>}
                                                     </div>
                                                 ) : msg.file_url ? (
                                                     <div className="flex flex-col gap-3">

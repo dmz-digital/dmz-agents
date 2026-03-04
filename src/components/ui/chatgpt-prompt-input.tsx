@@ -4,7 +4,7 @@ import * as React from "react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Mic, Send, Plus, Settings2, X, Globe, Pencil, Paintbrush, Telescope, Lightbulb, FileAudio } from "lucide-react";
+import { Mic, Send, Plus, Settings2, X, Globe, Pencil, Paintbrush, Telescope, Lightbulb, FileAudio, StopCircle } from "lucide-react";
 
 // --- Utility Function & Radix Primitives ---
 type ClassValue = string | number | boolean | null | undefined;
@@ -237,34 +237,34 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
                             <div className="ml-auto flex items-center gap-2">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <button
-                                            type="button"
-                                            onClick={isRecording ? onStopRecording : onStartRecording}
-                                            className={cn(
-                                                "flex h-9 w-9 items-center justify-center rounded-full transition-all focus-visible:outline-none",
-                                                isRecording ? "bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/20" : "text-neutral-400 hover:bg-neutral-100 hover:text-dmz-accent"
-                                            )}
-                                        >
-                                            <Mic size={20} strokeWidth={2} />
-                                            <span className="sr-only">Gravar voz</span>
-                                        </button>
+                                        {isRecording || hasValue ? (
+                                            <button
+                                                type="button"
+                                                onClick={isRecording ? onStopRecording : handleSubmit}
+                                                className={cn(
+                                                    "flex h-10 w-10 items-center justify-center rounded-full transition-all focus-visible:outline-none shadow-xl active:scale-95 translate-x-1",
+                                                    isRecording
+                                                        ? "bg-red-500 text-white animate-pulse shadow-red-500/20"
+                                                        : "bg-neutral-900 text-white hover:bg-neutral-800 shadow-neutral-900/10"
+                                                )}
+                                            >
+                                                {isRecording ? <StopCircle size={20} strokeWidth={2.5} /> : <Send size={18} strokeWidth={2.5} />}
+                                                <span className="sr-only font-bold">{isRecording ? "Parar" : "Enviar"}</span>
+                                            </button>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={onStartRecording}
+                                                className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-400 hover:bg-neutral-100 hover:text-dmz-accent transition-all focus-visible:outline-none"
+                                            >
+                                                <Mic size={20} strokeWidth={2} />
+                                                <span className="sr-only">Gravar voz</span>
+                                            </button>
+                                        )}
                                     </TooltipTrigger>
-                                    <TooltipContent side="top" showArrow={true}><p>{isRecording ? "Parar Gravação" : "Gravar Voz"}</p></TooltipContent>
-                                </Tooltip>
-
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <button
-                                            type="button"
-                                            onClick={handleSubmit}
-                                            disabled={!hasValue}
-                                            className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-all focus-visible:outline-none disabled:opacity-30 disabled:grayscale bg-neutral-900 text-white hover:bg-neutral-800 shadow-xl shadow-neutral-900/10 active:scale-95 translate-x-1"
-                                        >
-                                            <Send size={18} strokeWidth={2.5} />
-                                            <span className="sr-only">Enviar mensagem</span>
-                                        </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" showArrow={true}><p>Enviar</p></TooltipContent>
+                                    <TooltipContent side="top" showArrow={true}>
+                                        <p>{isRecording ? "Parar Gravação" : hasValue ? "Enviar Mensagem" : "Gravar Voz"}</p>
+                                    </TooltipContent>
                                 </Tooltip>
                             </div>
                         </div>
