@@ -11,7 +11,9 @@ import {
     Package, Palette, Component, Globe, Cpu, Cpu as CpuIcon,
     BarChart2, List, Settings,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { Suspense } from "react";
 
 // ── Icons maps ────────────────────────────────────────────────────────────────
 const AGENT_ICONS: Record<string, any> = {
@@ -354,13 +356,24 @@ function AgentPanel({ agent, onClose }: { agent: any; onClose: () => void }) {
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-export default function AgentsPage() {
+// ── Inner Page logic to handle Suspense ──────────────────────────────────────
+function AgentsContent() {
+    const searchParams = useSearchParams();
+    const initialCategory = searchParams.get("category") || "All";
+
     const [agents, setAgents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
-    const [catFilter, setCatFilter] = useState("All");
+    const [catFilter, setCatFilter] = useState(initialCategory);
     const [activeFilter, setActiveFilter] = useState("All");
     const [selected, setSelected] = useState<any | null>(null);
+
+    useEffect(() => {
+        // Update filter if query param changes
+        if (searchParams.get("category")) {
+            setCatFilter(searchParams.get("category") || "All");
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         async function fetchAgents() {
@@ -486,5 +499,13 @@ export default function AgentsPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function AgentsPage() {
+    return (
+        <Suspense fallback={<div className="p-24 text-center">Loading search params...</div>}>
+            <AgentsContent />
+        </Suspense>
     );
 }

@@ -726,8 +726,8 @@ export default function SquadAboutPage() {
                         transition={{ delay: 0.2 }}
                         className="text-xl text-neutral-400 mb-12 leading-relaxed max-w-2xl mx-auto"
                     >
-                        18 agentes especializados orquestrados para planejar, executar e
-                        auditar cada detalhe do seu ciclo de vida SaaS.
+                        44 agentes especializados orquestrados para planejar, executar,
+                        vender e auditar cada detalhe do seu ciclo de vida SaaS.
                     </motion.p>
                 </div>
             </section>
@@ -736,8 +736,8 @@ export default function SquadAboutPage() {
             <section className="pb-32 px-6">
                 <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                        { label: "Especialistas Ativos", value: "18", color: "#E85D2F" },
-                        { label: "Categorias", value: "09", color: "#2563EB" },
+                        { label: "Especialistas Ativos", value: "44", color: "#E85D2F" },
+                        { label: "Categorias", value: "10", color: "#2563EB" },
                         { label: "Skills Mapeadas", value: "100+", color: "#059669" },
                         { label: "Protocolos", value: "24/7", color: "#7C3AED" },
                     ].map((stat, i) => (

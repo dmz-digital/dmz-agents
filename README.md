@@ -33,7 +33,7 @@ Para mais informações, cases e documentação completa, acesse nosso site ofic
 ## 🚀 A Visão: AI-Native Organization
 O **DMZ - OS Agents** não é apenas uma ferramenta; é a materialização de uma organização autônoma. É uma camada de infraestrutura viva que transforma repositórios estáticos em sistemas inteligentes e proativos.
 
-Imagine um squad de **18 especialistas** que operam de forma assíncrona, orquestrados por uma inteligência central (`@orch`) que entende o contexto total do seu projeto. Eles não apenas escrevem código; eles projetam, testam, auditam, documentam e planejam o próximo grande salto do seu produto.
+Imagine um squad de **44 especialistas** que operam de forma assíncrona, orquestrados por uma inteligência central (`@orch`) que entende o contexto total do seu projeto. Eles não apenas escrevem código; eles projetam, testam, auditam, documentam, vendem e planejam o próximo grande salto do seu produto.
 
 ### O Potencial do DMZ OS:
 - **Escalabilidade Infinita:** Adicione especialistas ao seu squad conforme a necessidade cresce.
@@ -79,7 +79,7 @@ Se o seu projeto ainda não estiver configurado, o comando `start` iniciará aut
 
 ---
 
-## 🤖 O Squad Especializado (18 Agentes)
+## 🤖 O Squad Especializado (44 Agentes)
 O squad é organizado em categorias estratégicas para cobrir 100% do ciclo de vida de um produto digital:
 
 | Categoria | Agentes Principais | Papel Fundamental |
@@ -89,6 +89,7 @@ O squad é organizado em categorias estratégicas para cobrir 100% do ciclo de v
 | **Dev** | `@ryan`, `@alex`, `@oliver` | Coding Full-Stack, Arquitetura Estrutural e Automação DevOps. |
 | **Security** | `@constantine`, `@theron` | Fortaleza de Segurança, Privacidade e Conformidade Legal. |
 | **Design** | `@aurora`, `@victoria` | Estética Premium, Design Systems e Experiência do Usuário (UX). |
+| **Sales** | `@cra`, `@closer`, `@hunter` | Geração de Receita, Outbound, Fechamento e Inteligência Comercial. |
 | **Strategy** | `@kanya`, `@cassandra` | Inteligência de Mercado, Análise de Cenários e Narrativa de Marca. |
 | **Auxiliary** | `@martin`, `@sofia`, `@quantum` | Extração de SOPs, Gestão de Dados e Orquestração de Ferramentas. |
 
