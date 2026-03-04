@@ -45,7 +45,21 @@ const AGENT_MAP: Record<string, any> = {
     theron: { name: "Theron", handle: "theron", color: "#DC2626", icon: ShieldCheck }
 };
 
-// ── Components ───────────────────────────────────────────────────────────────
+// Strips markdown/list remnants and renders as natural paragraphs
+function formatMessage(text: string): string[] {
+    return text
+        .split('\n')
+        .map(line => line
+            // Remove numbered list prefixes: "1. ", "2. ", etc.
+            .replace(/^\d+\.\s+/, '')
+            // Remove bullet prefixes: "- ", "* ", "• "
+            .replace(/^[-*•]\s+/, '')
+            // Remove leading colons used as sub-headers
+            .replace(/^([A-ZÁÉÍÓÚÂÊÔÃÕ][^:]{0,40}):\s*$/, '$1')
+            .trim()
+        )
+        .filter(line => line.length > 0);
+}
 
 function ThinkingDots() {
     return (
@@ -601,7 +615,7 @@ export default function ChatPage() {
                                                     </div>
                                                 ) : (
                                                     <div className="space-y-3">
-                                                        {msg.content.split('\n').filter(line => line.trim()).map((line, i) => (
+                                                        {formatMessage(msg.content).map((line, i) => (
                                                             <p key={i} className="leading-relaxed">{line}</p>
                                                         ))}
                                                     </div>
