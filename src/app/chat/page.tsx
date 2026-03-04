@@ -263,17 +263,32 @@ export default function ChatPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return null;
 
+        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+        const audioExts = ['mp3', 'wav', 'ogg', 'oga', 'opus', 'm4a', 'aac', 'flac', 'wma', '3gp', '3gpp', 'amr', 'caf', 'webm'];
+        const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'heic', 'heif', 'avif'];
+
+        const isAudio = file.type.startsWith("audio/") || audioExts.includes(ext);
+        const isImage = file.type.startsWith("image/") || imageExts.includes(ext);
+
+        // Determine bucket and effective MIME type
         let bucket = "files";
-        if (file.type.startsWith("image/")) bucket = "images";
-        else if (file.type.startsWith("audio/")) bucket = "audio";
+        let effectiveMime = file.type;
+        if (isAudio) {
+            bucket = "audio";
+            if (!effectiveMime || effectiveMime === 'application/octet-stream') {
+                effectiveMime = `audio/${ext === 'mp3' ? 'mpeg' : ext}`;
+            }
+        } else if (isImage) {
+            bucket = "images";
+        }
 
         const fileName = `${user.id}/${Date.now()}-${file.name}`;
         const { data, error } = await supabase.storage
             .from(bucket)
-            .upload(fileName, file);
+            .upload(fileName, file, { contentType: effectiveMime || undefined });
 
         if (error) {
-            console.error("Upload error:", error);
+            console.error("[uploadFile] error:", error.message, "bucket:", bucket, "file:", file.name, file.type);
             return null;
         }
 
@@ -281,7 +296,8 @@ export default function ChatPage() {
             .from(bucket)
             .getPublicUrl(fileName);
 
-        return { url: publicUrl, type: file.type };
+        console.log("[uploadFile] success:", publicUrl, "type:", effectiveMime, "isAudio:", isAudio);
+        return { url: publicUrl, type: effectiveMime, isAudio, isImage };
     };
 
     const handleSend = async (payload?: string | { text: string, audioUrl?: string, fileUrl?: string, fileType?: string, toolId?: string | null }) => {
@@ -370,20 +386,47 @@ export default function ChatPage() {
     };
 
     const handlePromptSend = async (text: string, file?: File, toolId?: string | null) => {
+        if (!text.trim() && !file) return;
+
         if (file) {
+            // Show immediate user message with file name while uploading
+            const tempMsg: Message = {
+                id: `temp-${Date.now()}`,
+                role: "user",
+                content: text || `🎤 ${file.name}`,
+                created_at: new Date()
+            };
+            setMessages(prev => [...prev, tempMsg]);
+            setIsThinking(true);
+
             const uploadResult = await uploadFile(file);
-            if (uploadResult) {
-                handleSend({
-                    text,
-                    fileUrl: uploadResult.url,
-                    fileType: uploadResult.type,
-                    toolId
-                });
+
+            if (!uploadResult) {
+                setIsThinking(false);
+                const errMsg: Message = {
+                    id: Date.now().toString(),
+                    role: "assistant",
+                    content: "Não consegui fazer o upload do arquivo. Verifique se o tipo de arquivo é suportado e tente novamente.",
+                    agent_id: "orch",
+                    agent: AGENT_MAP.orch,
+                    created_at: new Date()
+                };
+                setMessages(prev => [...prev, errMsg]);
+                return;
+            }
+
+            // Remove temp message, call handleSend with real data
+            setMessages(prev => prev.filter(m => m.id !== tempMsg.id));
+            setIsThinking(false);
+
+            if (uploadResult.isAudio) {
+                // Audio: send with audioUrl so AudioPlayer renders
+                await handleSend({ text, audioUrl: uploadResult.url, fileType: uploadResult.type, toolId });
             } else {
-                handleSend({ text, toolId });
+                await handleSend({ text, fileUrl: uploadResult.url, fileType: uploadResult.type, toolId });
             }
         } else {
-            handleSend({ text, toolId });
+            await handleSend({ text, toolId });
         }
     };
 
