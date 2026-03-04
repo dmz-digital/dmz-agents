@@ -4,7 +4,7 @@ import * as React from "react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Mic, Send, Plus, Settings2, X, Globe, Pencil, Paintbrush, Telescope, Lightbulb, FileAudio, StopCircle, Play, Pause } from "lucide-react";
+import { Mic, Send, Plus, Settings2, X, Globe, Pencil, Paintbrush, Telescope, Lightbulb, FileAudio, StopCircle, Play, Pause, CloudUpload, FileText, Film, Image } from "lucide-react";
 
 // --- Utility Function & Radix Primitives ---
 type ClassValue = string | number | boolean | null | undefined;
@@ -61,6 +61,8 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
         const [audioPlaying, setAudioPlaying] = React.useState(false);
         const [recordingSeconds, setRecordingSeconds] = React.useState(0);
         const recordingTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+        const [isUploadModalOpen, setIsUploadModalOpen] = React.useState(false);
+        const [modalDragging, setModalDragging] = React.useState(false);
 
         React.useImperativeHandle(ref, () => internalTextareaRef.current!, []);
 
@@ -79,7 +81,7 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
         };
 
         const handlePlusClick = () => {
-            fileInputRef.current?.click();
+            setIsUploadModalOpen(true);
         };
 
         // ── Internal audio recording (self-contained, gives preview) ──────────
@@ -133,19 +135,24 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
         const formatSeconds = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
         // ── File handlers ────────────────────────────────────────────────────
+        const ACCEPTED_EXTENSIONS = [
+            // Audio
+            'mp3', 'wav', 'ogg', 'oga', 'opus', 'm4a', 'aac', 'flac', 'wma', '3gp', '3gpp', 'amr', 'caf', 'webm',
+            // Image
+            'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'heic', 'heif', 'avif', 'tiff', 'ico',
+            // Document
+            'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'md', 'rtf', 'ppt', 'pptx',
+            // Video
+            'mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm', '3gp', 'm4v', 'ogv',
+        ];
+
         const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
             const file = event.target.files?.[0];
             if (file) {
                 const ext = file.name.split('.').pop()?.toLowerCase() || '';
-                const audioExts = ['mp3', 'wav', 'ogg', 'oga', 'opus', 'm4a', 'aac', 'flac', 'wma', '3gp', '3gpp', 'amr', 'caf'];
-                const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'heic', 'heif', 'avif'];
-
-                const isAudio = file.type.startsWith("audio/") || audioExts.includes(ext);
-                const isImage = file.type.startsWith("image/") || imageExts.includes(ext);
-                const isPDF = file.type === "application/pdf" || ext === 'pdf';
-
-                if (isAudio || isImage || isPDF) {
+                if (ACCEPTED_EXTENSIONS.includes(ext) || file.type.startsWith('audio/') || file.type.startsWith('image/') || file.type.startsWith('video/')) {
                     setAttachedFile(file);
+                    setIsUploadModalOpen(false);
                 }
             }
             event.target.value = "";
@@ -195,17 +202,35 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
             const file = e.dataTransfer.files?.[0];
             if (file) {
                 const ext = file.name.split('.').pop()?.toLowerCase() || '';
-                const audioExts = ['mp3', 'wav', 'ogg', 'oga', 'opus', 'm4a', 'aac', 'flac', 'wma', '3gp', '3gpp', 'amr', 'caf'];
-                const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'heic', 'heif', 'avif'];
-
-                const isAudio = file.type.startsWith("audio/") || audioExts.includes(ext);
-                const isImage = file.type.startsWith("image/") || imageExts.includes(ext);
-                const isPDF = file.type === "application/pdf" || ext === 'pdf';
-
-                if (isAudio || isImage || isPDF) {
+                if (ACCEPTED_EXTENSIONS.includes(ext) || file.type.startsWith('audio/') || file.type.startsWith('image/') || file.type.startsWith('video/')) {
                     setAttachedFile(file);
+                    setIsUploadModalOpen(false);
+                } else {
+                    // Open modal so user can pick a valid file
+                    setIsUploadModalOpen(true);
                 }
             }
+        };
+
+        const handleModalDrop = (e: React.DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setModalDragging(false);
+            const file = e.dataTransfer.files?.[0];
+            if (file) {
+                const ext = file.name.split('.').pop()?.toLowerCase() || '';
+                if (ACCEPTED_EXTENSIONS.includes(ext) || file.type.startsWith('audio/') || file.type.startsWith('image/') || file.type.startsWith('video/')) {
+                    setAttachedFile(file);
+                    setIsUploadModalOpen(false);
+                }
+            }
+        };
+
+        const getFileIcon = (file: File) => {
+            if (file.type.startsWith('image/')) return <Image size={20} className="text-pink-500" />;
+            if (file.type.startsWith('audio/')) return <FileAudio size={20} className="text-blue-500" />;
+            if (file.type.startsWith('video/')) return <Film size={20} className="text-purple-500" />;
+            return <FileText size={20} className="text-dmz-accent" />;
         };
 
         const hasValue = value.trim().length > 0 || !!attachedFile || !!recordedBlob;
@@ -214,7 +239,7 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
         const activeTool = selectedTool ? toolsList.find(t => t.id === selectedTool) : null;
         const ActiveToolIcon = activeTool?.icon;
 
-        return (
+        return (<>
             <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -230,7 +255,7 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
                     ref={fileInputRef}
                     onChange={handleFileChange}
                     className="hidden"
-                    accept="audio/*,image/*,application/pdf,.m4a,.ogg,.opus,.flac,.3gp,.amr,.caf,.heic,.heif,.avif"
+                    accept="audio/*,image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.md,.rtf,.ppt,.pptx,.m4a,.ogg,.opus,.flac,.3gp,.amr,.caf,.heic,.heif,.avif,.mkv"
                 />
 
                 {/* Recorded audio preview */}
@@ -268,14 +293,9 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
                 {/* Regular file attachment */}
                 {attachedFile && (
                     <div className="flex items-center gap-3 bg-neutral-50 p-2 px-4 rounded-2xl mb-2 w-fit group">
-                        {attachedFile.type.startsWith("image/") ? (
-                            <Paintbrush size={18} className="text-dmz-accent" />
-                        ) : attachedFile.type.startsWith("audio/") ? (
-                            <FileAudio size={18} className="text-dmz-accent" />
-                        ) : (
-                            <Settings2 size={18} className="text-dmz-accent" />
-                        )}
-                        <span className="text-xs font-bold text-neutral-600 truncate max-w-[150px]">{attachedFile.name}</span>
+                        <CloudUpload size={18} className="text-dmz-accent" />
+                        <span className="text-xs font-bold text-neutral-600 truncate max-w-[180px]">{attachedFile.name}</span>
+                        <span className="text-[9px] text-neutral-400 font-medium">{(attachedFile.size / 1024).toFixed(0)} KB</span>
                         <button onClick={handleRemoveFile} className="p-1 hover:bg-neutral-200 rounded-full transition-all">
                             <X size={14} className="text-neutral-400" />
                         </button>
@@ -386,7 +406,61 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
                     </TooltipProvider>
                 </div>
             </div>
-        );
+
+            {/* Upload Modal */}
+            {
+                isUploadModalOpen && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center" onClick={() => setIsUploadModalOpen(false)}>
+                        <div className="absolute inset-0 bg-neutral-900/30 backdrop-blur-sm" />
+                        <div
+                            className={cn(
+                                "relative z-10 w-full max-w-md mx-4 bg-white rounded-3xl shadow-2xl border overflow-hidden transition-all",
+                                modalDragging ? "border-dmz-accent scale-[1.02] shadow-orange-100" : "border-neutral-100"
+                            )}
+                            onClick={(e) => e.stopPropagation()}
+                            onDragOver={(e) => { e.preventDefault(); setModalDragging(true); }}
+                            onDragLeave={() => setModalDragging(false)}
+                            onDrop={handleModalDrop}
+                        >
+                            <div className="p-6 pb-4 flex items-center justify-between">
+                                <h3 className="text-sm font-black text-neutral-800 uppercase tracking-wider">Enviar Arquivo</h3>
+                                <button onClick={() => setIsUploadModalOpen(false)} className="p-1.5 rounded-full hover:bg-neutral-100 transition-all">
+                                    <X size={16} className="text-neutral-400" />
+                                </button>
+                            </div>
+                            <div className="px-6 pb-6">
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className={cn(
+                                        "w-full flex flex-col items-center justify-center py-12 rounded-2xl border-2 border-dashed transition-all cursor-pointer group",
+                                        modalDragging
+                                            ? "border-dmz-accent bg-orange-50/50"
+                                            : "border-neutral-200 hover:border-dmz-accent/40 hover:bg-neutral-50/50"
+                                    )}
+                                >
+                                    <div className={cn(
+                                        "w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-all",
+                                        modalDragging ? "bg-dmz-accent/10" : "bg-neutral-100 group-hover:bg-dmz-accent/10"
+                                    )}>
+                                        <CloudUpload size={26} className={cn(
+                                            "transition-colors",
+                                            modalDragging ? "text-dmz-accent" : "text-neutral-400 group-hover:text-dmz-accent"
+                                        )} />
+                                    </div>
+                                    <p className="text-sm font-bold text-neutral-700 mb-1">
+                                        {modalDragging ? "Solte o arquivo aqui" : "Clique para selecionar"}
+                                    </p>
+                                    <p className="text-[10px] text-neutral-400 font-medium text-center leading-relaxed max-w-[280px]">
+                                        Ou arraste um arquivo aqui. Formatos: imagens, áudios, vídeos, PDF, DOC, XLS, CSV, TXT, MD
+                                    </p>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+        </>);
     }
 );
 PromptBox.displayName = "PromptBox";
