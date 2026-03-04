@@ -7,7 +7,7 @@ import {
     Music2, Code2, Paintbrush, ShieldCheck,
     Volume2, StopCircle, Play, Pause, Loader2,
     MessageSquare, Plus, Search, ChevronRight,
-    Clock, Trash2
+    Clock, Trash2, Menu
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -551,7 +551,20 @@ export default function ChatPage() {
     };
 
     return (
-        <div className="flex h-screen bg-[#FDFDFD] font-jakarta overflow-hidden">
+        <div className="flex h-screen bg-[#FDFDFD] font-jakarta overflow-hidden relative">
+            {/* Sidebar Overlay for Mobile */}
+            <AnimatePresence>
+                {sidebarOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setSidebarOpen(false)}
+                        className="md:hidden absolute inset-0 bg-neutral-900/40 z-40 backdrop-blur-sm"
+                    />
+                )}
+            </AnimatePresence>
+
             {/* Sidebar */}
             <AnimatePresence>
                 {sidebarOpen && (
@@ -559,7 +572,7 @@ export default function ChatPage() {
                         initial={{ width: 0, opacity: 0 }}
                         animate={{ width: 320, opacity: 1 }}
                         exit={{ width: 0, opacity: 0 }}
-                        className="h-full bg-white border-r border-neutral-100 flex flex-col shrink-0 overflow-hidden relative"
+                        className="absolute md:relative z-50 h-full bg-white border-r border-neutral-100 flex flex-col shrink-0 overflow-hidden shadow-2xl md:shadow-none"
                     >
                         <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
                             <Link href="/app" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -637,28 +650,43 @@ export default function ChatPage() {
 
             {/* Main Chat Content */}
             <div className="flex-1 flex flex-col h-full relative">
-                {/* Header */}
-                <header className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-white/80 backdrop-blur-md z-20">
-                    <div className="flex items-center gap-4">
+                <header className="px-4 md:px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-white/80 backdrop-blur-md z-20">
+                    <div className="flex items-center gap-3 md:gap-4">
                         <button
                             onClick={() => setSidebarOpen(!sidebarOpen)}
-                            className="p-2 hover:bg-neutral-100 rounded-xl text-neutral-500 transition-colors"
+                            className="md:hidden p-2 hover:bg-neutral-100 rounded-xl text-neutral-500 transition-colors"
+                        >
+                            <Menu size={20} />
+                        </button>
+                        <button
+                            onClick={() => setSidebarOpen(!sidebarOpen)}
+                            className="hidden md:block p-2 hover:bg-neutral-100 rounded-xl text-neutral-500 transition-colors"
                         >
                             <ArrowLeft size={20} className={sidebarOpen ? "" : "rotate-180 transition-transform"} />
                         </button>
                         <div>
-                            <h1 className="text-lg font-black text-neutral-900 tracking-tight">Chat de Projetos</h1>
+                            <h1 className="text-lg md:text-lg font-black text-neutral-900 tracking-tight">Chat de Projetos</h1>
                             <div className="flex items-center gap-2">
                                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Squad Online</span>
+                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest hidden sm:inline-block">Squad Online</span>
+                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest sm:hidden">Online</span>
                             </div>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button className="p-2 hover:bg-neutral-100 rounded-xl text-neutral-400 transition-all" title="Gerar Insight do Debate">
+                        {userProfile && (
+                            <Link href="/app/profile" className="md:hidden flex items-center justify-center w-8 h-8 rounded-full overflow-hidden bg-neutral-100 border-2 border-white shadow-sm shrink-0">
+                                {userProfile.avatar_url ? (
+                                    <img src={userProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-[10px] font-bold text-neutral-400">{getUserInitials()}</span>
+                                )}
+                            </Link>
+                        )}
+                        <button className="hidden md:block p-2 hover:bg-neutral-100 rounded-xl text-neutral-400 transition-all" title="Gerar Insight do Debate">
                             <Sparkles size={20} />
                         </button>
-                        <button className="p-2 hover:bg-neutral-100 rounded-xl text-neutral-400 transition-all" title="Opções da Conversa">
+                        <button className="hidden md:block p-2 hover:bg-neutral-100 rounded-xl text-neutral-400 transition-all" title="Opções da Conversa">
                             <MoreHorizontal size={20} />
                         </button>
                     </div>
