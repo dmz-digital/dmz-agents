@@ -8,6 +8,7 @@ import {
     ChevronDown, Search, ArrowLeft
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 // ── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -111,15 +112,46 @@ export default function SignUpPage() {
     const isFormValid = Object.values(checks).every(Boolean) &&
         formData.firstName && formData.lastName && formData.email && formData.phone;
 
-    const handleNext = (e: React.FormEvent) => {
+    const [error, setError] = useState<string | null>(null);
+
+    const handleNext = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
         if (step === 1) setStep(2);
         else {
             setLoading(true);
-            setTimeout(() => {
+            try {
+                const { data, error: signUpError } = await supabase.auth.signUp({
+                    email: formData.email,
+                    password: formData.password,
+                    options: {
+                        data: {
+                            full_name: `${formData.firstName} ${formData.lastName}`
+                        }
+                    }
+                });
+
+                if (signUpError) throw signUpError;
+                if (!data.user) throw new Error("Erro ao criar usuário");
+
+                // Profile is usually created by trigger, but let's ensure it exists
+                const { error: profileError } = await supabase
+                    .from("user_profiles")
+                    .upsert({
+                        id: data.user.id,
+                        email: formData.email,
+                        full_name: `${formData.firstName} ${formData.lastName}`,
+                        username: formData.email.split('@')[0],
+                        created_at: new Date().toISOString()
+                    });
+
+                if (profileError) console.error("Profile creation error:", profileError);
+
+                router.push("/app");
+            } catch (err: any) {
+                setError(err.message || "Erro ao criar conta");
                 setLoading(false);
-                router.push("/app/agents");
-            }, 1500);
+            }
         }
     };
 
@@ -325,6 +357,12 @@ export default function SignUpPage() {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {error && (
+                                        <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-xs font-medium border border-red-100">
+                                            {error}
+                                        </div>
+                                    )}
 
                                     <button
                                         type="submit"

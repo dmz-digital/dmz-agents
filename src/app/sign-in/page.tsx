@@ -1,24 +1,36 @@
 "use client";
 
-// Final deployment build - Video background support
-// Version: 1.0.1 - Force build for video background
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Bot, Mail, Lock, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function SignInPage() {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        // Simulate login
-        setTimeout(() => {
-            setLoading(false);
+        setError(null);
+
+        try {
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+
+            if (signInError) throw signInError;
+
             router.push("/app");
-        }, 1500);
+        } catch (err: any) {
+            setError(err.message || "Erro ao fazer login");
+            setLoading(false);
+        }
     };
 
     return (
@@ -52,13 +64,15 @@ export default function SignInPage() {
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="space-y-2">
-                            <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest px-1">Usuário / Email</label>
+                            <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest px-1">Email</label>
                             <div className="relative">
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-300" size={18} />
                                 <input
-                                    type="text"
+                                    type="email"
                                     required
-                                    placeholder="Seu email ou username"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="Seu email"
                                     className="w-full bg-neutral-50 border-none rounded-2xl py-4 pl-12 pr-4 text-sm focus:ring-2 focus:ring-dmz-accent/20 transition-all outline-none"
                                 />
                             </div>
@@ -74,11 +88,19 @@ export default function SignInPage() {
                                 <input
                                     type="password"
                                     required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
                                     className="w-full bg-neutral-50 border-none rounded-2xl py-4 pl-12 pr-4 text-sm focus:ring-2 focus:ring-dmz-accent/20 transition-all outline-none"
                                 />
                             </div>
                         </div>
+
+                        {error && (
+                            <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-xs font-medium border border-red-100 animate-in fade-in slide-in-from-top-1">
+                                {error}
+                            </div>
+                        )}
 
                         <button
                             type="submit"
