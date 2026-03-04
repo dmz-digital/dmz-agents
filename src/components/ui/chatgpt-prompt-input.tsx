@@ -30,15 +30,14 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const toolsList = [
-    { id: 'createImage', name: 'Create an image', shortName: 'Image', icon: Paintbrush },
-    { id: 'searchWeb', name: 'Search the web', shortName: 'Search', icon: Globe },
-    { id: 'writeCode', name: 'Write or code', shortName: 'Write', icon: Pencil },
-    { id: 'deepResearch', name: 'Run deep research', shortName: 'Deep Search', icon: Telescope, extra: '5 left' },
-    { id: 'thinkLonger', name: 'Think for longer', shortName: 'Think', icon: Lightbulb },
+    { id: 'createImage', name: 'Gerar uma imagem', shortName: 'Gerar Imagem', icon: Paintbrush },
+    { id: 'searchWeb', name: 'Pesquisar na web', shortName: 'Pesquisa', icon: Globe },
+    { id: 'writeCode', name: 'Escrever código', shortName: 'Código', icon: Pencil },
+    { id: 'deepResearch', name: 'Pesquisa profunda', shortName: 'Deep Research', icon: Telescope, extra: '5 left' },
 ];
 
 interface PromptBoxProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-    onSend?: (text: string, audioFile?: File) => void;
+    onSend?: (text: string, file?: File, toolId?: string | null) => void;
     onStartRecording?: () => void;
     onStopRecording?: () => void;
     isRecording?: boolean;
@@ -49,7 +48,7 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
         const internalTextareaRef = React.useRef<HTMLTextAreaElement>(null);
         const fileInputRef = React.useRef<HTMLInputElement>(null);
         const [value, setValue] = React.useState("");
-        const [audioFile, setAudioFile] = React.useState<File | null>(null);
+        const [attachedFile, setAttachedFile] = React.useState<File | null>(null);
         const [selectedTool, setSelectedTool] = React.useState<string | null>(null);
         const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
         const [isAudioPreviewOpen, setIsAudioPreviewOpen] = React.useState(false);
@@ -77,15 +76,21 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
 
         const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
             const file = event.target.files?.[0];
-            if (file && file.type.startsWith("audio/")) {
-                setAudioFile(file);
+            if (file) {
+                const isAudio = file.type.startsWith("audio/");
+                const isImage = file.type.startsWith("image/");
+                const isPDF = file.type === "application/pdf";
+
+                if (isAudio || isImage || isPDF) {
+                    setAttachedFile(file);
+                }
             }
             event.target.value = "";
         };
 
-        const handleRemoveAudio = (e: React.MouseEvent<HTMLButtonElement>) => {
+        const handleRemoveFile = (e: React.MouseEvent<HTMLButtonElement>) => {
             e.stopPropagation();
-            setAudioFile(null);
+            setAttachedFile(null);
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
             }
@@ -93,10 +98,10 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
 
         const handleSubmit = () => {
             if (onSend) {
-                onSend(value, audioFile || undefined);
+                onSend(value, attachedFile || undefined, selectedTool);
             }
             setValue("");
-            setAudioFile(null);
+            setAttachedFile(null);
         };
 
         const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -119,12 +124,18 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
             e.preventDefault();
             setIsDragging(false);
             const file = e.dataTransfer.files?.[0];
-            if (file && file.type.startsWith("audio/")) {
-                setAudioFile(file);
+            if (file) {
+                const isAudio = file.type.startsWith("audio/");
+                const isImage = file.type.startsWith("image/");
+                const isPDF = file.type === "application/pdf";
+
+                if (isAudio || isImage || isPDF) {
+                    setAttachedFile(file);
+                }
             }
         };
 
-        const hasValue = value.trim().length > 0 || audioFile;
+        const hasValue = value.trim().length > 0 || attachedFile;
         const activeTool = selectedTool ? toolsList.find(t => t.id === selectedTool) : null;
         const ActiveToolIcon = activeTool?.icon;
 
@@ -139,13 +150,25 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
                     className
                 )}
             >
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="audio/*" />
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept="audio/*,image/*,application/pdf"
+                />
 
-                {audioFile && (
+                {attachedFile && (
                     <div className="flex items-center gap-3 bg-neutral-50 p-2 px-4 rounded-2xl mb-2 w-fit group">
-                        <FileAudio size={18} className="text-dmz-accent" />
-                        <span className="text-xs font-bold text-neutral-600 truncate max-w-[150px]">{audioFile.name}</span>
-                        <button onClick={handleRemoveAudio} className="p-1 hover:bg-neutral-200 rounded-full transition-all">
+                        {attachedFile.type.startsWith("image/") ? (
+                            <Paintbrush size={18} className="text-dmz-accent" />
+                        ) : attachedFile.type.startsWith("audio/") ? (
+                            <FileAudio size={18} className="text-dmz-accent" />
+                        ) : (
+                            <Settings2 size={18} className="text-dmz-accent" />
+                        )}
+                        <span className="text-xs font-bold text-neutral-600 truncate max-w-[150px]">{attachedFile.name}</span>
+                        <button onClick={handleRemoveFile} className="p-1 hover:bg-neutral-200 rounded-full transition-all">
                             <X size={14} className="text-neutral-400" />
                         </button>
                     </div>
@@ -157,7 +180,7 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
                     value={value}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
-                    placeholder="Conte sobre seu projeto ou arraste um áudio..."
+                    placeholder="No que vamos debater hoje? Arraste um arquivo ou digite..."
                     className="w-full resize-none border-0 bg-transparent p-3 text-neutral-800 placeholder:text-neutral-400 focus:ring-0 focus-visible:outline-none min-h-12 text-sm leading-relaxed"
                     {...props}
                 />
@@ -169,10 +192,10 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
                                 <TooltipTrigger asChild>
                                     <button type="button" onClick={handlePlusClick} className="flex h-9 w-9 items-center justify-center rounded-full text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-dmz-accent focus-visible:outline-none">
                                         <Plus size={22} strokeWidth={2.5} />
-                                        <span className="sr-only">Anexar áudio</span>
+                                        <span className="sr-only">Anexar arquivo</span>
                                     </button>
                                 </TooltipTrigger>
-                                <TooltipContent side="top" showArrow={true}><p>Anexar áudio</p></TooltipContent>
+                                <TooltipContent side="top" showArrow={true}><p>Anexar arquivo (PDF, Imagem, Áudio)</p></TooltipContent>
                             </Tooltip>
 
                             <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>

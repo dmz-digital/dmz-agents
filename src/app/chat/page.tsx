@@ -20,6 +20,8 @@ interface Message {
     role: "user" | "assistant";
     content: string;
     audio_url?: string;
+    file_url?: string;
+    file_type?: string;
     agent_id?: string;
     agent?: {
         handle: string;
@@ -223,6 +225,8 @@ export default function ChatPage() {
                 role: msg.role,
                 content: msg.content,
                 audio_url: msg.audio_url,
+                file_url: msg.file_url,
+                file_type: msg.file_type,
                 agent_id: msg.agent_id,
                 created_at: msg.created_at?.toISOString()
             })
@@ -234,24 +238,57 @@ export default function ChatPage() {
         return data;
     };
 
-    const handleSend = async (payload?: string | { text: string, audioUrl: string }) => {
+    const uploadFile = async (file: File) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return null;
+
+        let bucket = "files";
+        if (file.type.startsWith("image/")) bucket = "images";
+        else if (file.type.startsWith("audio/")) bucket = "audio";
+
+        const fileName = `${user.id}/${Date.now()}-${file.name}`;
+        const { data, error } = await supabase.storage
+            .from(bucket)
+            .upload(fileName, file);
+
+        if (error) {
+            console.error("Upload error:", error);
+            return null;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+            .from(bucket)
+            .getPublicUrl(fileName);
+
+        return { url: publicUrl, type: file.type };
+    };
+
+    const handleSend = async (payload?: string | { text: string, audioUrl?: string, fileUrl?: string, fileType?: string, toolId?: string | null }) => {
         let text = "";
         let audioUrl = "";
+        let fileUrl = "";
+        let fileType = "";
+        let toolId = null;
 
         if (typeof payload === 'string') {
             text = payload;
-        } else if (payload && typeof payload === 'object' && 'text' in payload) {
+        } else if (payload && typeof payload === 'object') {
             text = payload.text;
-            audioUrl = payload.audioUrl;
+            audioUrl = payload.audioUrl || "";
+            fileUrl = payload.fileUrl || "";
+            fileType = payload.fileType || "";
+            toolId = payload.toolId || null;
         }
 
-        if (!text.trim() && !audioUrl) return;
+        if (!text.trim() && !audioUrl && !fileUrl) return;
 
         const userMsg: Message = {
             id: Date.now().toString(),
             role: "user",
             content: text,
             audio_url: audioUrl,
+            file_url: fileUrl,
+            file_type: fileType,
             created_at: new Date()
         };
 
@@ -265,7 +302,13 @@ export default function ChatPage() {
             const response = await fetch(`${apiUrl}/chat`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: text, project_id: "default" }),
+                body: JSON.stringify({
+                    message: text,
+                    project_id: "default",
+                    tool: toolId,
+                    file_url: fileUrl || audioUrl,
+                    file_type: fileType || (audioUrl ? "audio/webm" : "")
+                }),
             });
 
             if (!response.ok) throw new Error("Falha ao obter resposta.");
@@ -305,12 +348,21 @@ export default function ChatPage() {
         }
     };
 
-    const handlePromptSend = async (text: string, audioFile?: File | Blob) => {
-        if (audioFile) {
-            await transcribeAudio(audioFile as Blob);
-            if (text.trim()) handleSend(text);
+    const handlePromptSend = async (text: string, file?: File, toolId?: string | null) => {
+        if (file) {
+            const uploadResult = await uploadFile(file);
+            if (uploadResult) {
+                handleSend({
+                    text,
+                    fileUrl: uploadResult.url,
+                    fileType: uploadResult.type,
+                    toolId
+                });
+            } else {
+                handleSend({ text, toolId });
+            }
         } else {
-            handleSend(text);
+            handleSend({ text, toolId });
         }
     };
 
@@ -530,6 +582,18 @@ export default function ChatPage() {
                                                     <div className="flex flex-col gap-3">
                                                         <AudioPlayer url={msg.audio_url} />
                                                         {msg.content && <p className="pt-2 border-t border-white/10 italic text-white/70">{msg.content}</p>}
+                                                    </div>
+                                                ) : msg.file_url ? (
+                                                    <div className="flex flex-col gap-3">
+                                                        {msg.file_type?.startsWith("image/") ? (
+                                                            <img src={msg.file_url} className="rounded-xl max-w-full h-auto shadow-lg" alt="Anexo" />
+                                                        ) : (
+                                                            <a href={msg.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-neutral-100 p-3 rounded-xl hover:bg-neutral-200 transition-colors text-neutral-700 font-bold decoration-none">
+                                                                <Paperclip size={16} />
+                                                                Ver anexo: {msg.file_type?.split('/')[1]?.toUpperCase() || 'Arquivo'}
+                                                            </a>
+                                                        )}
+                                                        {msg.content && <p className="pt-2">{msg.content}</p>}
                                                     </div>
                                                 ) : (
                                                     msg.content
