@@ -731,7 +731,7 @@ export default function ChatPage() {
                                                 ) : msg.file_url ? (
                                                     <div className="flex flex-col gap-3">
                                                         {msg.file_type?.startsWith("image/") ? (
-                                                            <img src={msg.file_url} className="rounded-xl max-w-full h-auto shadow-lg" alt="Anexo" />
+                                                            <img src={msg.file_url} className="rounded-xl max-w-[250px] max-h-[300px] object-cover shadow-sm" alt="Anexo" />
                                                         ) : (
                                                             <a href={msg.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-neutral-100 p-3 rounded-xl hover:bg-neutral-200 transition-colors text-neutral-700 font-bold decoration-none">
                                                                 <Paperclip size={16} />
