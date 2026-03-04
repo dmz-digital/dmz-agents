@@ -39,10 +39,22 @@ interface ChatSession {
 }
 
 const AGENT_MAP: Record<string, any> = {
-    orch: { name: "ORCH", handle: "orch", color: "#E85D2F", icon: Music2 },
-    ryan: { name: "Ryan", handle: "ryan", color: "#0891B2", icon: Code2 },
-    aurora: { name: "Aurora", handle: "aurora", color: "#DB2777", icon: Paintbrush },
-    theron: { name: "Theron", handle: "theron", color: "#DC2626", icon: ShieldCheck }
+    orchestrator: { name: "ORCH", handle: "orch", color: "#E85D2F", icon: Music2 },
+    developer: { name: "Ryan", handle: "ryan", color: "#0891B2", icon: Code2 },
+    design_chief: { name: "Aurora", handle: "aurora", color: "#DB2777", icon: Paintbrush },
+    legal_chief: { name: "Theron", handle: "theron", color: "#DC2626", icon: ShieldCheck }
+};
+
+// Aliases for the frontend to handle legacy/backend handle names
+const AGENT_HANDLE_TO_ID: Record<string, string> = {
+    orch: "orchestrator",
+    ryan: "developer",
+    aurora: "design_chief",
+    theron: "legal_chief",
+    orchestrator: "orchestrator",
+    developer: "developer",
+    design_chief: "design_chief",
+    legal_chief: "legal_chief"
 };
 
 // Strips markdown/list remnants and renders as natural paragraphs
@@ -69,7 +81,8 @@ function ThinkingDots() {
                     key={i}
                     animate={{ y: [0, -4, 0] }}
                     transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.1 }}
-                    className="w-1.5 h-1.5 bg-neutral-300 rounded-full"
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ backgroundColor: '#838485' }}
                 />
             ))}
         </div>
@@ -124,6 +137,44 @@ export default function ChatPage() {
         }
         return uuidv4();
     });
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (searchQuery.length < 2) {
+                setSearchResults([]);
+                return;
+            }
+
+            setIsSearching(true);
+            const { data, error } = await supabase
+                .from('dmz_agents_chat')
+                .select('session_id, content, created_at')
+                .ilike('content', `%${searchQuery}%`)
+                .order('created_at', { ascending: false })
+                .limit(20);
+
+            if (data) {
+                // Unique by session, prefer last_message but keep snippet
+                const uniqueSessions: Record<string, any> = {};
+                data.forEach(m => {
+                    if (!uniqueSessions[m.session_id]) {
+                        uniqueSessions[m.session_id] = {
+                            session_id: m.session_id,
+                            last_message: m.content, // Show the match snippet
+                            created_at: m.created_at
+                        };
+                    }
+                });
+                setSearchResults(Object.values(uniqueSessions));
+            }
+            setIsSearching(false);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
     const [userProfile, setUserProfile] = useState<any>(null);
     const [isRecording, setIsRecording] = useState(false);
@@ -202,7 +253,7 @@ export default function ChatPage() {
                 file_type: m.file_type || undefined,
                 agent_id: m.agent_id,
                 agent: m.agent_id ? {
-                    handle: m.agent_id,
+                    handle: m.agent_id === "orchestrator" ? "orch" : m.agent_id,
                     name: AGENT_MAP[m.agent_id]?.name || m.agent_id.toUpperCase(),
                     color: AGENT_MAP[m.agent_id]?.color || "#6B7280"
                 } : undefined,
@@ -355,18 +406,20 @@ export default function ChatPage() {
             if (!response.ok) throw new Error("Falha ao obter resposta.");
 
             const data = await response.json();
-            const responseAgent = data.agent_id || "orch";
+            const responseAgent = data.agent_id || "orchestrator";
             const responseContent = data.content;
+
+            const responseAgentID = AGENT_HANDLE_TO_ID[responseAgent] || "orchestrator";
 
             const aiMsg: Message = {
                 id: (Date.now() + 1).toString(),
                 role: "assistant",
                 content: responseContent,
-                agent_id: responseAgent,
+                agent_id: responseAgentID,
                 agent: {
                     handle: responseAgent,
-                    name: AGENT_MAP[responseAgent]?.name || responseAgent.toUpperCase(),
-                    color: AGENT_MAP[responseAgent]?.color || "#6B7280"
+                    name: AGENT_MAP[responseAgentID]?.name || responseAgent.toUpperCase(),
+                    color: AGENT_MAP[responseAgentID]?.color || "#6B7280"
                 },
                 created_at: new Date(),
                 isTyping: true
@@ -397,14 +450,16 @@ export default function ChatPage() {
             const audioExts = ['mp3', 'wav', 'ogg', 'oga', 'opus', 'm4a', 'aac', 'flac', 'wma', '3gp', '3gpp', 'amr', 'caf', 'webm'];
             const isAudioFile = file.type.startsWith("audio/") || audioExts.includes(ext);
 
-            // Show immediate user message
+            // Show immediate user message (NOT for audio as per item 7)
             const tempMsg: Message = {
                 id: `temp-${Date.now()}`,
                 role: "user",
-                content: text || (isAudioFile ? `🎤 ${file.name}` : `📎 ${file.name}`),
+                content: text || (isAudioFile ? "" : `📎 ${file.name}`),
                 created_at: new Date()
             };
-            setMessages(prev => [...prev, tempMsg]);
+            if (!isAudioFile || text) {
+                setMessages(prev => [...prev, tempMsg]);
+            }
             setIsThinking(true);
 
             // 1. Upload to Supabase
@@ -452,8 +507,8 @@ export default function ChatPage() {
                             id: Date.now().toString(),
                             role: "assistant",
                             content: "Não consegui transcrever o áudio. O arquivo pode estar corrompido ou vazio.",
-                            agent_id: "orch",
-                            agent: AGENT_MAP.orch,
+                            agent_id: "orchestrator",
+                            agent: AGENT_MAP.orchestrator,
                             created_at: new Date()
                         };
                         setMessages(prev => [...prev, errMsg]);
@@ -475,13 +530,12 @@ export default function ChatPage() {
 
                 } catch (err) {
                     setIsThinking(false);
-                    setMessages(prev => prev.filter(m => m.id !== progressMsg.id));
                     const errMsg: Message = {
                         id: Date.now().toString(),
                         role: "assistant",
                         content: "Erro ao transcrever o áudio. Tente novamente ou envie um arquivo menor.",
-                        agent_id: "orch",
-                        agent: AGENT_MAP.orch,
+                        agent_id: "orchestrator",
+                        agent: AGENT_MAP.orchestrator,
                         created_at: new Date()
                     };
                     setMessages(prev => [...prev, errMsg]);
@@ -581,21 +635,18 @@ export default function ChatPage() {
                                 </div>
                                 <span className="font-extrabold text-[#D8663E] text-sm tracking-tight">DMZ – OS Agents</span>
                             </Link>
-                            <button onClick={createNewSession} className="p-2 hover:bg-neutral-50 rounded-xl text-neutral-400 group transition-all" title="Nova Conversa">
-                                <Plus size={20} className="group-hover:text-dmz-accent transition-colors" />
-                            </button>
-                        </div>
-
-                        <div className="p-4">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-300" size={14} />
-                                <input
-                                    type="text"
-                                    placeholder="Buscar projeto..."
-                                    className="w-full bg-neutral-50 border-none rounded-xl py-2.5 pl-9 pr-4 text-xs focus:ring-1 focus:ring-dmz-accent/20 transition-all outline-none"
-                                />
+                            <div className="flex items-center gap-1">
+                                <button onClick={() => setIsSearchOpen(true)} className="p-2 hover:bg-neutral-50 rounded-xl text-neutral-400 group transition-all" title="Buscar">
+                                    <Search size={18} className="group-hover:text-dmz-accent transition-colors" />
+                                </button>
+                                <button onClick={createNewSession} className="p-2 hover:bg-neutral-50 rounded-xl text-neutral-400 group transition-all" title="Nova Conversa">
+                                    <Plus size={20} className="group-hover:text-dmz-accent transition-colors" />
+                                </button>
                             </div>
                         </div>
+
+                        {/* Search Input Removed as per preference */}
+
 
                         <div className="flex-1 overflow-y-auto px-4 pb-8 space-y-2 custom-scrollbar">
                             <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-2 mb-4 mt-6">Histórico de Projetos</h4>
@@ -648,6 +699,83 @@ export default function ChatPage() {
                 )}
             </AnimatePresence>
 
+            {/* Global Search Modal */}
+            <AnimatePresence>
+                {isSearchOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsSearchOpen(false)}
+                            className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: -20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: -20 }}
+                            className="relative w-full max-w-xl mx-4 bg-white rounded-3xl shadow-2xl border border-neutral-100 overflow-hidden flex flex-col max-h-[60vh]"
+                        >
+                            <div className="p-5 border-b border-neutral-50 flex items-center gap-4 bg-neutral-50/50">
+                                <Search className="text-neutral-400" size={20} />
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    placeholder="Buscar em conversas e títulos..."
+                                    className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-neutral-800 placeholder:text-neutral-400"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                                {isSearching && <Loader2 className="animate-spin text-dmz-accent" size={16} />}
+                                <button
+                                    onClick={() => setIsSearchOpen(false)}
+                                    className="text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:text-neutral-600 transition-colors"
+                                >
+                                    Esc
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                                {searchQuery.length < 2 ? (
+                                    <div className="flex flex-col items-center justify-center py-12 text-neutral-300">
+                                        <Search size={40} className="mb-4 opacity-20" />
+                                        <p className="text-xs font-bold uppercase tracking-widest">Digite para buscar</p>
+                                    </div>
+                                ) : searchResults.length > 0 ? (
+                                    <div className="space-y-1">
+                                        {searchResults.map((res) => (
+                                            <button
+                                                key={res.session_id}
+                                                onClick={() => {
+                                                    setCurrentSessionId(res.session_id);
+                                                    setIsSearchOpen(false);
+                                                    setSearchQuery("");
+                                                }}
+                                                className="w-full p-4 rounded-2xl text-left hover:bg-neutral-50 transition-all flex items-center gap-4 group"
+                                            >
+                                                <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center shrink-0 group-hover:bg-dmz-accent/10 transition-colors">
+                                                    <MessageSquare size={18} className="text-neutral-400 group-hover:text-dmz-accent transition-colors" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-sm font-bold text-neutral-800 truncate mb-0.5">{res.last_message}</div>
+                                                    <div className="text-[10px] text-neutral-400 font-medium">
+                                                        Sessão: {res.session_id.slice(0, 8)} • {new Date(res.created_at).toLocaleDateString()}
+                                                    </div>
+                                                </div>
+                                                <ChevronRight size={16} className="text-neutral-200 group-hover:text-neutral-400 transition-colors" />
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-12 text-neutral-300 font-jakarta">
+                                        <p className="text-xs font-bold uppercase tracking-widest">Nenhum resultado encontrado</p>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
             {/* Main Chat Content */}
             <div className="flex-1 flex flex-col h-full relative">
                 <header className="px-4 md:px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-white/80 backdrop-blur-md z-20">
@@ -683,12 +811,6 @@ export default function ChatPage() {
                                 )}
                             </Link>
                         )}
-                        <button className="hidden md:block p-2 hover:bg-neutral-100 rounded-xl text-neutral-400 transition-all" title="Gerar Insight do Debate">
-                            <Sparkles size={20} />
-                        </button>
-                        <button className="hidden md:block p-2 hover:bg-neutral-100 rounded-xl text-neutral-400 transition-all" title="Opções da Conversa">
-                            <MoreHorizontal size={20} />
-                        </button>
                     </div>
                 </header>
 
@@ -740,7 +862,7 @@ export default function ChatPage() {
                                                     <div className="flex flex-col gap-3">
                                                         <AudioPlayer url={msg.audio_url} isUser={msg.role === "user"} />
                                                         {msg.content && !msg.content.includes("[Transcrição Interna do Áudio]:") && <p className={`pt-2 border-t italic ${msg.role === 'user' ? 'border-white/10 text-white/70' : 'border-neutral-100 text-neutral-500'}`}>{msg.content}</p>}
-                                                        {msg.content && msg.content.includes("[Transcrição Interna do Áudio]:") && msg.content.split("\n\n[Transcrição Interna")[0] && <p className={`pt-2 border-t ${msg.role === 'user' ? 'border-white/10 text-white/90' : 'border-neutral-100 text-neutral-500'}`}>{msg.content.split("\n\n[Transcrição Interna")[0]}</p>}
+                                                        {/* Item 7: Never show internal transcription line */}
                                                     </div>
                                                 ) : msg.file_url ? (
                                                     <div className="flex flex-col gap-3">

@@ -152,7 +152,7 @@ function AgentPanel({ agent, onClose }: { agent: any; onClose: () => void }) {
             setSkills(skillsData || []);
             setTools((toolsData || []).map((ta: any) => ta.tool).filter(Boolean));
             setMemory(memData || []);
-            setPrompt(promptData?.content || `# ${agent.name} — ${agent.full_name}\nCATEGORY: ${agent.category}\n\nYou are ${agent.name}, specialized in ${agent.category}.\n\nRULES:\n- Save all interactions to agent_memory\n- Report to @orch after each task\n- Use structured output format`);
+            setPrompt(promptData?.content || "⚠️ Prompt não configurado.\n\nEste agente ainda não tem um prompt definido no painel admin.\n\nVá em Admin → Prompts do Chat para configurar.");
             setLoading(false);
         }
         load();

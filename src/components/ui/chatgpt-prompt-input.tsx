@@ -220,8 +220,8 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 className={cn(
-                    "flex flex-col rounded-[28px] p-2 shadow-sm transition-all bg-white border cursor-text",
-                    isDragging ? "border-dmz-accent bg-orange-50/20" : "border-neutral-100 focus-within:border-neutral-100",
+                    "flex flex-col rounded-[28px] p-2 transition-all bg-transparent cursor-text",
+                    isDragging ? "border-dmz-accent bg-orange-50/20" : "",
                     className
                 )}
             >
@@ -288,7 +288,7 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
                     value={value}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
-                    placeholder="No que vamos debater hoje? Arraste um arquivo ou digite..."
+                    placeholder="O que vamos construir hoje?"
                     className="w-full resize-none border-0 bg-transparent p-3 text-neutral-800 placeholder:text-neutral-400 focus:ring-0 focus-visible:outline-none min-h-12 text-sm leading-relaxed"
                     {...props}
                 />

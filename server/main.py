@@ -102,32 +102,37 @@ def get_llm_response(system_prompt: str, user_prompt: str, history: list = None)
 
 
 def get_agent_prompt(agent_id: str) -> str:
-    """Fetches agent master prompt from DB. Falls back to a sensible default."""
+    """Fetches agent master prompt from DB. No hardcoded fallback — prompts MUST exist in admin."""
     try:
         res = supabase.table("dmz_agents_prompts") \
             .select("content") \
             .eq("agent_id", agent_id) \
+            .eq("active", True) \
             .order("version", desc=True) \
             .limit(1) \
             .execute()
-        if res.data:
+        if res.data and res.data[0].get("content"):
             return res.data[0]["content"]
-    except Exception:
-        pass
-    return "Você é ORCH, o Orchestrator Master do squad DMZ. Ajude o usuário a estruturar projetos e debates com clareza e objetividade."
+    except Exception as e:
+        print(f"[WARN] Failed to load prompt for agent '{agent_id}': {e}")
+    # No hardcoded fallback — return a minimal identity so the LLM doesn't hallucinate
+    return f"Você é o agente '{agent_id}' do squad DMZ. Seu prompt ainda não foi configurado no painel admin. Responda de forma prestativa até que seu prompt seja definido."
 
 
-def get_sys_prompt(p_id: str, default: str = "") -> str:
-    """Fetches a system/tool prompt from DB with fallback."""
+def get_sys_prompt(p_id: str) -> str:
+    """Fetches a system/tool prompt from DB. No hardcoded fallback."""
     try:
         res = supabase.table("dmz_agents_prompts") \
             .select("content") \
             .eq("agent_id", p_id) \
+            .eq("active", True) \
             .limit(1) \
             .execute()
-        return res.data[0]["content"] if res.data else default
-    except Exception:
-        return default
+        if res.data and res.data[0].get("content"):
+            return res.data[0]["content"]
+    except Exception as e:
+        print(f"[WARN] Failed to load sys prompt '{p_id}': {e}")
+    return ""
 
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
@@ -223,25 +228,15 @@ Possíveis agentes e temas:
         system_prompt = get_agent_prompt(agent_db_id)
 
         # Apply global formatting rule
-        system_prompt += "\n" + get_sys_prompt(
-            "system_formatting",
-            (
-                "REGRAS DE FORMATO — NUNCA QUEBRE ESTAS REGRAS:\n"
-                "1. Escreva como um humano em conversa casual, não como um relatório ou apresentação.\n"
-                "2. Use parágrafos curtos de 1 a 3 frases. Deixe uma linha em branco entre cada parágrafo.\n"
-                "3. NUNCA use markdown: sem **, sem #, sem -, sem bullets, sem numeração de listas.\n"
-                "4. Não enumere tópicos. Se precisar listar coisas, escreva em texto corrido separado por parágrafo.\n"
-                "5. Faça perguntas para engajar o usuário. Termine sempre com uma pergunta ou próximo passo claro.\n"
-                "6. Tom: direto, humano, especialista que fala sem jargão, como um sócio experiente conversando."
-            )
-        )
+        formatting = get_sys_prompt("system_formatting")
+        if formatting:
+            system_prompt += "\n" + formatting
 
         # Handle tool logic
         if req.tool == "searchWeb":
-            system_prompt += "\n" + get_sys_prompt(
-                "tool_search_web",
-                "MODO DEEP WEB RESEARCH ATIVADO. Cite fontes na conversa."
-            )
+            tool_prompt = get_sys_prompt("tool_search_web")
+            if tool_prompt:
+                system_prompt += "\n" + tool_prompt
             firecrawl_key = os.getenv("FIRECRAWL_API_KEY")
             if firecrawl_key:
                 try:
@@ -310,10 +305,9 @@ Possíveis agentes e temas:
             else:
                 system_prompt += "\nMODO GERAÇÃO DE IMAGEM: A API do Google (Gemini API_KEY) não está configurada, então apenas descreva a imagem."
         elif req.tool == "writeCode":
-            system_prompt += "\n" + get_sys_prompt(
-                "tool_write_code",
-                "MODO CÓDIGO ATIVADO. Foque em soluções técnicas e arquitetura limpa. Explique o código linha a linha quando necessário."
-            )
+            code_prompt = get_sys_prompt("tool_write_code")
+            if code_prompt:
+                system_prompt += "\n" + code_prompt
 
         # Detect attachment type
         att_type = (req.file_type or "").lower()
@@ -325,20 +319,17 @@ Possíveis agentes e temas:
         # Apply attachment-specific system prompts
         if req.file_url:
             if is_image:
-                system_prompt += "\n" + get_sys_prompt(
-                    "attachment_image",
-                    "O usuário enviou uma imagem. Analise visualmente o conteúdo da imagem e responda de forma detalhada sobre o que você vê."
-                )
+                img_prompt = get_sys_prompt("attachment_image")
+                if img_prompt:
+                    system_prompt += "\n" + img_prompt
             elif is_audio:
-                system_prompt += "\n" + get_sys_prompt(
-                    "attachment_audio",
-                    "O usuário enviou um arquivo de áudio transcrito. Analise o conteúdo da transcrição e responda com base nela."
-                )
+                audio_prompt = get_sys_prompt("attachment_audio")
+                if audio_prompt:
+                    system_prompt += "\n" + audio_prompt
             elif is_pdf:
-                system_prompt += "\n" + get_sys_prompt(
-                    "attachment_pdf",
-                    "O usuário enviou um PDF. Analise seu conteúdo e responda com base nele."
-                )
+                pdf_prompt = get_sys_prompt("attachment_pdf")
+                if pdf_prompt:
+                    system_prompt += "\n" + pdf_prompt
 
         # For image attachments: use multimodal LLM if possible
         if req.file_url and is_image:
