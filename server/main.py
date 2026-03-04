@@ -47,6 +47,43 @@ async def get_projects():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+from pydantic import BaseModel
+import sys
+
+# Add cli to path to import engine
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "cli"))
+
+from dmz_os.engine.llm import get_llm_response
+from dmz_os.engine.agent import AgentContext
+
+class ChatRequest(BaseModel):
+    message: str
+    agent_id: str = "orchestrator"
+    project_id: str = "default"
+
+@app.post("/chat")
+async def chat_interaction(req: ChatRequest):
+    try:
+        # Load agent context
+        agent = AgentContext(supabase, req.project_id, req.agent_id)
+        
+        # Build prompt
+        system_prompt = agent.build_system_prompt()
+        
+        # Call LLM
+        # Ensure the response is NOT markdown as requested by user
+        system_prompt += "\nIMPORTANTE: Sua resposta NÃO pode conter markdown (como bold **, headers #, etc). Use apenas texto simples e quebras de linha para organizar a resposta."
+        
+        response = get_llm_response(system_prompt, req.message)
+        
+        return {
+            "agent_id": req.agent_id,
+            "content": response,
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))

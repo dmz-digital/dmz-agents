@@ -225,21 +225,26 @@ export default function ChatPage() {
         setIsThinking(true);
 
         // AI Response Logic
-        setTimeout(async () => {
-            const lower = text.toLowerCase();
-            let responseAgent = "orch";
-            let responseContent = "Entendido. Vou analisar como podemos estruturar isso.";
+        try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://dmz-agents-production.up.railway.app";
+            const response = await fetch(`${apiUrl}/chat`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    message: text,
+                    project_id: "default"
+                }),
+            });
 
-            if (lower.includes("site") || lower.includes("design") || lower.includes("visual")) {
-                responseAgent = "aurora";
-                responseContent = "Olá! Eu sou a @aurora, Chief of Design. Vi que você mencionou o visual. Posso ajudar a criar uma interface premium e um design system sólido para seu projeto.";
-            } else if (lower.includes("codigo") || lower.includes("desenvolver") || lower.includes("app")) {
-                responseAgent = "ryan";
-                responseContent = "Aqui é o @ryan. Como desenvolvedor Full-Stack, já estou mapeando a arquitetura necessária para esse projeto. Vamos focar em performance?";
-            } else if (lower.includes("legal") || lower.includes("privacidade") || lower.includes("termos")) {
-                responseAgent = "theron";
-                responseContent = "Sou o @theron, Legal Chief. Garanto que seguiremos todos os protocolos de compliance e proteção de dados desde o dia 1.";
+            if (!response.ok) {
+                throw new Error("Falha ao obter resposta do squad.");
             }
+
+            const data = await response.json();
+            const responseAgent = data.agent_id || "orch";
+            const responseContent = data.content;
 
             const aiMsg: Message = {
                 id: (Date.now() + 1).toString(),
@@ -262,7 +267,20 @@ export default function ChatPage() {
             if (savedAiMsg) {
                 setMessages(prev => prev.map(m => m.id === aiMsg.id ? { ...m, id: savedAiMsg.id } : m));
             }
-        }, 1500);
+        } catch (err: any) {
+            console.error("Chat error:", err);
+            setIsThinking(false);
+
+            const errorMsg: Message = {
+                id: (Date.now() + 1).toString(),
+                role: "assistant",
+                content: "Desculpe, tive um problema ao conectar com o squad. Por favor, tente novamente em instantes.",
+                agent_id: "orch",
+                agent: AGENT_MAP.orch,
+                created_at: new Date(),
+            };
+            setMessages(prev => [...prev, errorMsg]);
+        }
     };
 
     const handlePromptSend = async (text: string, audioFile?: File | Blob) => {
@@ -328,17 +346,20 @@ export default function ChatPage() {
                 body: formData,
             });
 
-            if (!response.ok) throw new Error("Falha na transcrição");
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || errorData.error || "Falha na transcrição");
+            }
 
             const result = await response.json();
             setIsThinking(false);
             if (result.text || result.audioUrl) {
                 handleSend({ text: result.text || "", audioUrl: result.audioUrl });
             }
-        } catch (err) {
+        } catch (err: any) {
             setIsThinking(false);
             console.error("Transcription error:", err);
-            alert("Erro ao transcrever áudio.");
+            alert(`Erro ao transcrever áudio: ${err.message}`);
         }
     };
 
@@ -371,95 +392,88 @@ export default function ChatPage() {
             {/* Chat Area */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-6 space-y-8 scroll-smooth"
+                className="flex-1 overflow-y-auto scroll-smooth"
             >
-                <AnimatePresence initial={false}>
-                    {messages.map((msg) => (
-                        <motion.div
-                            key={msg.id}
-                            initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                        >
-                            <div className={`max-w-[80%] flex gap-4 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                                {/* Avatar */}
-                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${msg.role === "user"
-                                    ? "bg-neutral-900 text-white"
-                                    : "bg-white border border-neutral-100"
-                                    }`}>
-                                    {msg.role === "user" ? <User size={20} /> : <Bot size={20} style={{ color: msg.agent?.color }} />}
-                                </div>
-
-                                {/* Content */}
-                                <div className="space-y-2">
-                                    {msg.agent && (
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs font-black uppercase tracking-widest" style={{ color: msg.agent.color }}>
-                                                {msg.agent.name}
-                                            </span>
-                                            <span className="text-[10px] font-mono text-neutral-300">@{msg.agent.handle}</span>
-                                        </div>
-                                    )}
-                                    <div className={`p-4 px-6 rounded-[24px] text-sm leading-relaxed ${msg.role === "user"
-                                        ? "bg-dmz-accent text-white rounded-tr-none shadow-lg shadow-dmz-accent/10"
-                                        : "bg-white border border-neutral-100 text-neutral-700 rounded-tl-none shadow-sm"
+                <div className="max-w-5xl mx-auto w-full p-6 space-y-8">
+                    <AnimatePresence initial={false}>
+                        {messages.map((msg) => (
+                            <motion.div
+                                key={msg.id}
+                                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                            >
+                                <div className={`max-w-[85%] flex gap-4 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                                    {/* Avatar */}
+                                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${msg.role === "user"
+                                        ? "bg-neutral-900 text-white"
+                                        : "bg-white border border-neutral-100"
                                         }`}>
-                                        {msg.audio_url ? (
-                                            <div className="space-y-3">
-                                                <AudioPlayer url={msg.audio_url} />
-                                                {msg.content && <p className="opacity-80 text-xs italic">{msg.content}</p>}
+                                        {msg.role === "user" ? <User size={20} /> : <Bot size={20} style={{ color: msg.agent?.color }} />}
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="space-y-2">
+                                        {msg.agent && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-black uppercase tracking-widest" style={{ color: msg.agent.color }}>
+                                                    {msg.agent.name}
+                                                </span>
+                                                <span className="text-[10px] text-neutral-300 font-bold uppercase tracking-widest">
+                                                    @{msg.agent.handle}
+                                                </span>
                                             </div>
-                                        ) : (
-                                            msg.isTyping ? (
-                                                <TypingText text={msg.content} onComplete={() => {
-                                                    setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isTyping: false } : m));
-                                                }} />
+                                        )}
+                                        <div className={`p-4 rounded-[24px] shadow-sm text-sm leading-relaxed ${msg.role === "user"
+                                            ? "bg-neutral-900 text-white rounded-tr-none"
+                                            : "bg-white border border-neutral-100 text-neutral-800 rounded-tl-none"
+                                            }`}>
+                                            {msg.audio_url ? (
+                                                <div className="flex flex-col gap-3">
+                                                    <AudioPlayer url={msg.audio_url} />
+                                                    {msg.content && <p className="pt-2 border-t border-white/10 italic text-white/70">{msg.content}</p>}
+                                                </div>
                                             ) : (
                                                 msg.content
-                                            )
-                                        )}
-                                    </div>
-                                    <div className={`text-[9px] font-medium text-neutral-300 uppercase tracking-tighter ${msg.role === "user" ? "text-right" : "text-left"}`}>
-                                        {msg.created_at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            )}
+                                        </div>
+                                        <div className={`text-[9px] font-medium text-neutral-300 uppercase tracking-tighter ${msg.role === "user" ? "text-right" : "text-left"}`}>
+                                            {msg.created_at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </motion.div>
-                    ))}
+                            </motion.div>
+                        ))}
 
-                    {isThinking && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="flex justify-start"
-                        >
-                            <div className="flex gap-4 items-center">
-                                <div className="w-10 h-10 rounded-2xl bg-white border border-neutral-100 flex items-center justify-center shrink-0">
-                                    <Loader2 size={18} className="text-neutral-300 animate-spin" />
+                        {isThinking && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex justify-start"
+                            >
+                                <div className="flex gap-4 items-center">
+                                    <div className="w-10 h-10 rounded-2xl bg-white border border-neutral-100 flex items-center justify-center shrink-0">
+                                        <Loader2 size={18} className="text-neutral-300 animate-spin" />
+                                    </div>
+                                    <div className="bg-white border border-neutral-100 p-3 px-4 rounded-[20px] rounded-tl-none shadow-sm">
+                                        <ThinkingDots />
+                                    </div>
                                 </div>
-                                <div className="bg-white border border-neutral-100 p-3 px-4 rounded-[20px] rounded-tl-none shadow-sm">
-                                    <ThinkingDots />
-                                </div>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
 
             {/* Input Area */}
             <div className="p-6 bg-white border-t border-neutral-100">
-                <div className="max-w-4xl mx-auto">
+                <div className="max-w-5xl mx-auto">
                     <PromptBox
                         onSend={handlePromptSend}
                         onStartRecording={startRecording}
                         onStopRecording={stopRecording}
                         isRecording={isRecording}
                     />
-                    <div className="text-center mt-4">
-                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-[2px]">
-                            {isRecording ? "Gravando áudio..." : "Arraste um áudio ou digite para debater"}
-                        </p>
-                    </div>
                 </div>
             </div>
         </div>

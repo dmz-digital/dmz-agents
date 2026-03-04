@@ -135,7 +135,7 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
                 onDrop={handleDrop}
                 className={cn(
                     "flex flex-col rounded-[28px] p-2 shadow-sm transition-all bg-white border cursor-text",
-                    isDragging ? "border-dmz-accent bg-orange-50/20" : "border-neutral-100 focus-within:border-dmz-accent",
+                    isDragging ? "border-dmz-accent bg-orange-50/20" : "border-neutral-100 focus-within:border-neutral-100",
                     className
                 )}
             >
