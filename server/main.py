@@ -219,6 +219,10 @@ Possíveis agentes e temas:
                             if h == "lucas": agent_db_id = "po"
                             # Update the returned agent_id!
                             req.agent_id = h
+                            # Add context so the specialist responds directly
+                            full_message = f"[CONTEXTO: Você foi chamado pelo Orchestrator para responder diretamente ao usuário. Responda como se estivesse falando diretamente com ele, sem mencionar que foi 'chamado' ou que precisa 'aguardar'. Vá direto ao assunto.]\n\n{full_message}"
+                            # Clear history from orch context to avoid confusion
+                            req.history = req.history[-2:] if len(req.history) > 2 else req.history
                             break
             except Exception:
                 pass
@@ -233,7 +237,21 @@ Possíveis agentes e temas:
             system_prompt += "\n" + formatting
 
         # Handle tool logic
-        if req.tool == "searchWeb":
+        # Auto-detect image generation from natural language (if no tool explicitly selected)
+        effective_tool = req.tool
+        if not effective_tool and full_message.strip():
+            # Quick check for image generation keywords before calling LLM
+            img_keywords = ["gerar imagem", "crie uma imagem", "criar imagem", "gere uma imagem", "gerar uma imagem", 
+                           "fazer uma imagem", "faça uma imagem", "desenhe", "crie um logo", "gerar logo",
+                           "generate image", "create image", "draw", "make an image", "crie uma arte", "gerar arte"]
+            msg_lower = full_message.lower()
+            # Remove internal transcription marker for detection
+            clean_for_detection = msg_lower.replace("[transcrição interna do áudio]:", "").strip()
+            if any(kw in clean_for_detection for kw in img_keywords):
+                effective_tool = "createImage"
+                print(f"[chat] Auto-detected image generation request from text")
+
+        if effective_tool == "searchWeb":
             tool_prompt = get_sys_prompt("tool_search_web")
             if tool_prompt:
                 system_prompt += "\n" + tool_prompt
@@ -257,7 +275,7 @@ Possíveis agentes e temas:
                         full_message += f"\n\n[Firecrawl API falhou com status {fc_resp.status_code}]"
                 except Exception as e:
                     full_message += f"\n\n[Erro ao tentar Firecrawl: {str(e)}]"
-        elif req.tool == "createImage":
+        elif effective_tool == "createImage":
             gemini_key = os.getenv("GEMINI_API_KEY")
             if gemini_key:
                 from google import genai
@@ -265,7 +283,11 @@ Possíveis agentes e temas:
                 import uuid
                 
                 # LLM determines the perfect image generation prompt based on conversation context
-                img_prompt_generator = f"Você é um engenheiro de prompts de imagem. O usuário quer uma imagem. Resumo do pedido: '{full_message}'. Escreva um prompt EXTREMAMENTE detalhado em INGLÊS para o Imagen 3 gerar essa imagem. Responda APENAS com o texto em inglês do prompt."
+                # Clean internal markers from the message for cleaner prompt
+                clean_msg = full_message.replace("[Transcrição Interna do Áudio]:", "").strip()
+                if "[CONTEXTO:" in clean_msg:
+                    clean_msg = clean_msg.split("]\n\n", 1)[-1] if "]\n\n" in clean_msg else clean_msg
+                img_prompt_generator = f"Você é um engenheiro de prompts de imagem. O usuário quer uma imagem. Resumo do pedido: '{clean_msg}'. Escreva um prompt EXTREMAMENTE detalhado em INGLÊS para o Imagen 3 gerar essa imagem. Responda APENAS com o texto em inglês do prompt."
                 img_req_prompt = get_llm_response(system_prompt, img_prompt_generator, req.history[-3:])
                 
                 try:
@@ -304,7 +326,7 @@ Possíveis agentes e temas:
                     }
             else:
                 system_prompt += "\nMODO GERAÇÃO DE IMAGEM: A API do Google (Gemini API_KEY) não está configurada, então apenas descreva a imagem."
-        elif req.tool == "writeCode":
+        elif effective_tool == "writeCode":
             code_prompt = get_sys_prompt("tool_write_code")
             if code_prompt:
                 system_prompt += "\n" + code_prompt

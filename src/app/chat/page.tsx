@@ -7,7 +7,8 @@ import {
     Music2, Code2, Paintbrush, ShieldCheck,
     Volume2, StopCircle, Play, Pause, Loader2,
     MessageSquare, Plus, Search, ChevronRight,
-    Clock, Trash2, Menu
+    Clock, Trash2, Menu, Heart, Copy, Reply,
+    Check, Pencil, BookOpen, Target, Brain, Scale, Activity
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -30,10 +31,13 @@ interface Message {
     };
     created_at: Date;
     isTyping?: boolean;
+    feedback?: string | null;
+    db_id?: string; // real DB id for feedback updates
 }
 
 interface ChatSession {
     session_id: string;
+    title: string;
     last_message: string;
     created_at: Date;
 }
@@ -42,19 +46,37 @@ const AGENT_MAP: Record<string, any> = {
     orchestrator: { name: "ORCH", handle: "orch", color: "#E85D2F", icon: Music2 },
     developer: { name: "Ryan", handle: "ryan", color: "#0891B2", icon: Code2 },
     design_chief: { name: "Aurora", handle: "aurora", color: "#DB2777", icon: Paintbrush },
-    legal_chief: { name: "Theron", handle: "theron", color: "#DC2626", icon: ShieldCheck }
+    legal_chief: { name: "Theron", handle: "theron", color: "#DC2626", icon: ShieldCheck },
+    copy_chief: { name: "Cassandra", handle: "cassandra", color: "#7C3AED", icon: BookOpen },
+    ux: { name: "Victoria", handle: "victoria", color: "#EC4899", icon: Paintbrush },
+    po: { name: "Lucas", handle: "lucas", color: "#2563EB", icon: Target },
+    db_sage: { name: "Sofia", handle: "sofia", color: "#0369A1", icon: Activity },
+    analyst: { name: "Kanya", handle: "kanya", color: "#D97706", icon: Brain },
+    pm: { name: "José", handle: "jose", color: "#2563EB", icon: Target },
+    qa: { name: "Emma", handle: "emma", color: "#059669", icon: ShieldCheck },
+    architect: { name: "Alex", handle: "alex", color: "#0891B2", icon: Code2 },
+    devops: { name: "Oliver", handle: "oliver", color: "#0891B2", icon: Code2 },
+    squad_manager: { name: "Syd", handle: "syd", color: "#7C3AED", icon: Music2 },
+    cyber_chief: { name: "Constantine", handle: "constantine", color: "#DC2626", icon: ShieldCheck },
 };
 
 // Aliases for the frontend to handle legacy/backend handle names
 const AGENT_HANDLE_TO_ID: Record<string, string> = {
-    orch: "orchestrator",
-    ryan: "developer",
-    aurora: "design_chief",
-    theron: "legal_chief",
-    orchestrator: "orchestrator",
-    developer: "developer",
-    design_chief: "design_chief",
-    legal_chief: "legal_chief"
+    orch: "orchestrator", orchestrator: "orchestrator",
+    ryan: "developer", developer: "developer",
+    aurora: "design_chief", design_chief: "design_chief",
+    theron: "legal_chief", legal_chief: "legal_chief",
+    cassandra: "copy_chief", copy_chief: "copy_chief",
+    victoria: "ux", ux: "ux",
+    lucas: "po", po: "po",
+    sofia: "db_sage", db_sage: "db_sage",
+    kanya: "analyst", analyst: "analyst",
+    jose: "pm", pm: "pm",
+    emma: "qa", qa: "qa",
+    alex: "architect", architect: "architect",
+    oliver: "devops", devops: "devops",
+    syd: "squad_manager", squad_manager: "squad_manager",
+    constantine: "cyber_chief", cyber_chief: "cyber_chief",
 };
 
 // Strips ALL markdown markers and renders as clean text
@@ -87,6 +109,34 @@ function stripMarkdown(text: string): string {
         .replace(/^[-*•]\s+/gm, '')
         // Clean up extra whitespace
         .replace(/\n{3,}/g, '\n\n');
+}
+
+// Extract inline images from markdown before stripping
+function extractImages(text: string): { url: string; alt: string }[] {
+    const imgs: { url: string; alt: string }[] = [];
+    const re = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+        imgs.push({ alt: m[1], url: m[2] });
+    }
+    return imgs;
+}
+
+type ContentBlock = { type: 'text'; text: string } | { type: 'image'; url: string; alt: string };
+
+function formatMessageBlocks(text: string): ContentBlock[] {
+    const blocks: ContentBlock[] = [];
+    const images = extractImages(text);
+    // Remove image markdown from text
+    const cleaned = stripMarkdown(text);
+    const lines = cleaned.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length > 0) {
+        blocks.push({ type: 'text', text: lines.join('\n') });
+    }
+    for (const img of images) {
+        blocks.push({ type: 'image', url: img.url, alt: img.alt });
+    }
+    return blocks;
 }
 
 function formatMessage(text: string): string[] {
@@ -200,6 +250,9 @@ export default function ChatPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+    const [editingTitle, setEditingTitle] = useState("");
+    const [copiedId, setCopiedId] = useState<string | null>(null);
 
     useEffect(() => {
         const timer = setTimeout(async () => {
@@ -283,9 +336,11 @@ export default function ChatPage() {
             const grouped: Record<string, ChatSession> = {};
             data.forEach(m => {
                 if (!grouped[m.session_id]) {
+                    const content = m.content || "Áudio enviado";
                     grouped[m.session_id] = {
                         session_id: m.session_id,
-                        last_message: m.content || "Áudio enviado",
+                        title: content.length > 40 ? content.substring(0, 40) + "..." : content,
+                        last_message: content,
                         created_at: new Date(m.created_at)
                     };
                 }
@@ -312,10 +367,12 @@ export default function ChatPage() {
                 file_type: m.file_type || undefined,
                 agent_id: m.agent_id,
                 agent: m.agent_id ? {
-                    handle: m.agent_id === "orchestrator" ? "orch" : m.agent_id,
+                    handle: m.agent_id === "orchestrator" ? "orch" : (AGENT_MAP[m.agent_id]?.handle || m.agent_id),
                     name: AGENT_MAP[m.agent_id]?.name || m.agent_id.toUpperCase(),
                     color: AGENT_MAP[m.agent_id]?.color || "#6B7280"
                 } : undefined,
+                feedback: m.feedback || null,
+                db_id: m.id,
                 created_at: new Date(m.created_at)
             }));
             setMessages(formatted);
@@ -338,6 +395,62 @@ export default function ChatPage() {
         const newId = uuidv4();
         localStorage.setItem('dmz_chat_session', newId);
         setCurrentSessionId(newId);
+    };
+
+    // Like / Feedback toggle
+    const toggleFeedback = async (msg: Message) => {
+        const newFeedback = msg.feedback === 'like' ? null : 'like';
+        // Update local state
+        setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, feedback: newFeedback } : m));
+        // Persist to DB
+        if (msg.db_id) {
+            await supabase.from('dmz_agents_chat').update({ feedback: newFeedback }).eq('id', msg.db_id);
+        }
+    };
+
+    // Copy message to clipboard
+    const copyMessage = (msg: Message) => {
+        const clean = stripMarkdown(msg.content);
+        navigator.clipboard.writeText(clean);
+        setCopiedId(msg.id);
+        setTimeout(() => setCopiedId(null), 2000);
+    };
+
+    // Reply to a message — quote it and focus input
+    const replyToMessage = (msg: Message) => {
+        const clean = stripMarkdown(msg.content);
+        const quote = clean.length > 120 ? clean.substring(0, 120) + "..." : clean;
+        if (inputRef.current) {
+            (inputRef.current as any).value = `> ${quote}\n\n`;
+            inputRef.current.focus();
+        }
+    };
+
+    // Session rename
+    const startEditingSession = (e: React.MouseEvent, s: ChatSession) => {
+        e.stopPropagation();
+        setEditingSessionId(s.session_id);
+        setEditingTitle(s.title);
+    };
+
+    const saveSessionTitle = async (sessionId: string) => {
+        if (!editingTitle.trim()) {
+            setEditingSessionId(null);
+            return;
+        }
+        // Update local state
+        setSessions(prev => prev.map(s => s.session_id === sessionId ? { ...s, title: editingTitle.trim() } : s));
+        // Store title in metadata of first message in session
+        const { data } = await supabase
+            .from('dmz_agents_chat')
+            .select('id')
+            .eq('session_id', sessionId)
+            .order('created_at', { ascending: true })
+            .limit(1);
+        if (data && data[0]) {
+            await supabase.from('dmz_agents_chat').update({ metadata: { title: editingTitle.trim() } }).eq('id', data[0].id);
+        }
+        setEditingSessionId(null);
     };
 
     useEffect(() => {
@@ -710,30 +823,55 @@ export default function ChatPage() {
                         <div className="flex-1 overflow-y-auto px-4 pb-8 space-y-2 custom-scrollbar">
                             <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-2 mb-4 mt-6">Histórico de Projetos</h4>
                             {sessions.map((s) => (
-                                <button
+                                <div
                                     key={s.session_id}
                                     onClick={() => setCurrentSessionId(s.session_id)}
-                                    className={`w-full p-4 rounded-2xl text-left border transition-all group relative ${s.session_id === currentSessionId
+                                    className={`w-full p-4 rounded-2xl text-left border transition-all group relative cursor-pointer ${s.session_id === currentSessionId
                                         ? "bg-white border-dmz-accent/20 shadow-sm"
                                         : "bg-transparent border-transparent hover:bg-neutral-50"
                                         }`}
                                 >
                                     <div className="flex justify-between items-start mb-1">
-                                        <div className="flex items-center gap-2 truncate">
-                                            <MessageSquare size={14} className={s.session_id === currentSessionId ? "text-dmz-accent" : "text-neutral-300"} />
-                                            <span className={`text-xs font-bold truncate ${s.session_id === currentSessionId ? "text-neutral-900" : "text-neutral-500"}`}>
-                                                {s.last_message}
-                                            </span>
+                                        <div className="flex items-center gap-2 truncate flex-1 min-w-0">
+                                            <MessageSquare size={14} className={`shrink-0 ${s.session_id === currentSessionId ? "text-dmz-accent" : "text-neutral-300"}`} />
+                                            {editingSessionId === s.session_id ? (
+                                                <input
+                                                    autoFocus
+                                                    type="text"
+                                                    value={editingTitle}
+                                                    onChange={(e) => setEditingTitle(e.target.value)}
+                                                    onBlur={() => saveSessionTitle(s.session_id)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') saveSessionTitle(s.session_id);
+                                                        if (e.key === 'Escape') setEditingSessionId(null);
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="text-xs font-bold text-neutral-900 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-0.5 flex-1 min-w-0 outline-none focus:border-dmz-accent/40"
+                                                />
+                                            ) : (
+                                                <span
+                                                    className={`text-xs font-bold truncate ${s.session_id === currentSessionId ? "text-neutral-900" : "text-neutral-500"}`}
+                                                    onDoubleClick={(e) => startEditingSession(e as any, s)}
+                                                >
+                                                    {s.title}
+                                                </span>
+                                            )}
                                         </div>
+                                        {editingSessionId !== s.session_id && (
+                                            <button
+                                                onClick={(e) => startEditingSession(e, s)}
+                                                className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-neutral-100 transition-all text-neutral-300 hover:text-neutral-500"
+                                                title="Renomear"
+                                            >
+                                                <Pencil size={11} />
+                                            </button>
+                                        )}
                                     </div>
                                     <div className="flex items-center gap-2 text-[9px] text-neutral-400 font-medium">
                                         <Clock size={10} />
                                         {new Date(s.created_at).toLocaleDateString()}
                                     </div>
-                                    <div className={`absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity ${s.session_id === currentSessionId ? "text-dmz-accent" : "text-neutral-300"}`}>
-                                        <ChevronRight size={14} />
-                                    </div>
-                                </button>
+                                </div>
                             ))}
                         </div>
 
@@ -884,7 +1022,7 @@ export default function ChatPage() {
                                     animate={{ opacity: 1, y: 0 }}
                                     className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                                 >
-                                    <div className={`max-w-[85%] flex gap-4 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                                    <div className={`max-w-[85%] flex gap-4 group ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
                                         {/* Avatar */}
                                         <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border-2 border-white ${msg.role === "user"
                                             ? "bg-neutral-900 text-white overflow-hidden"
@@ -946,14 +1084,55 @@ export default function ChatPage() {
                                                     />
                                                 ) : (
                                                     <div className="space-y-3">
-                                                        {formatMessage(msg.content).map((line, i) => (
-                                                            <p key={i} className="leading-relaxed">{line}</p>
-                                                        ))}
+                                                        {formatMessageBlocks(msg.content).map((block, i) =>
+                                                            block.type === 'image' ? (
+                                                                <img key={i} src={block.url} alt={block.alt} className="rounded-xl max-w-full max-h-[400px] object-cover shadow-sm" />
+                                                            ) : (
+                                                                block.text.split('\n').map((line, j) => (
+                                                                    <p key={`${i}-${j}`} className="leading-relaxed">{line}</p>
+                                                                ))
+                                                            )
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className={`px-2 text-[9px] font-medium text-neutral-300 uppercase tracking-tighter ${msg.role === "user" ? "text-right" : "text-left"}`}>
-                                                {msg.created_at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            <div className={`px-2 flex items-center gap-1 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                                                <span className="text-[9px] font-medium text-neutral-300 uppercase tracking-tighter">
+                                                    {msg.created_at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                                {msg.role === "assistant" && msg.id !== "welcome" && (
+                                                    <div className="flex items-center gap-0.5 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => toggleFeedback(msg)}
+                                                            className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
+                                                            title="Curtir"
+                                                        >
+                                                            <Heart
+                                                                size={12}
+                                                                className={msg.feedback === 'like' ? "text-red-500" : "text-neutral-300 hover:text-red-400"}
+                                                                fill={msg.feedback === 'like' ? "currentColor" : "none"}
+                                                            />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => copyMessage(msg)}
+                                                            className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
+                                                            title="Copiar"
+                                                        >
+                                                            {copiedId === msg.id ? (
+                                                                <Check size={12} className="text-green-500" />
+                                                            ) : (
+                                                                <Copy size={12} className="text-neutral-300 hover:text-neutral-500" />
+                                                            )}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => replyToMessage(msg)}
+                                                            className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
+                                                            title="Responder"
+                                                        >
+                                                            <Reply size={12} className="text-neutral-300 hover:text-neutral-500" />
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
