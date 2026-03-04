@@ -108,7 +108,8 @@ export default function AppDashboard() {
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.3 }}
-                        className="bg-neutral-900 rounded-[32px] p-8 shadow-xl relative overflow-hidden flex flex-col"
+                        onClick={() => window.location.href = '/app/agents'}
+                        className="bg-neutral-900 rounded-[32px] p-8 shadow-xl relative overflow-hidden flex flex-col cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-transform"
                     >
                         <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-dmz-accent/20 blur-[100px] rounded-full" />
 
@@ -124,6 +125,7 @@ export default function AppDashboard() {
 
                         <Link
                             href="/app/agents"
+                            onClick={(e) => e.stopPropagation()}
                             className="bg-white text-black py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-neutral-200 transition-all relative z-10"
                         >
                             Ver Todos Agentes <ArrowRight size={18} />
@@ -226,7 +228,8 @@ export default function AppDashboard() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.6 }}
-                        className="bg-gradient-to-br from-dmz-accent to-orange-600 rounded-[32px] p-8 shadow-xl shadow-dmz-accent/20 flex flex-col group"
+                        onClick={() => window.location.href = '/chat'}
+                        className="bg-gradient-to-br from-dmz-accent to-orange-600 rounded-[32px] p-8 shadow-xl shadow-dmz-accent/20 flex flex-col group cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-transform"
                     >
                         <div className="flex items-center gap-3 mb-8">
                             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
@@ -239,7 +242,11 @@ export default function AppDashboard() {
                             &quot;Apresente seu projeto diretamente com o squad. Os agentes adequados se apresentarão para te ajudar.&quot;
                         </p>
 
-                        <Link href="/chat" className="mt-8 bg-black text-white py-5 rounded-2xl font-black text-center flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-2xl">
+                        <Link
+                            href="/chat"
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-8 bg-black text-white py-5 rounded-2xl font-black text-center flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-2xl"
+                        >
                             <span className="tracking-tight">INICIAR CONVERSA</span>
                             <ArrowRight size={20} />
                         </Link>
