@@ -231,11 +231,11 @@ export default function AppDashboard() {
                             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                                 <MessageSquare className="text-white" size={20} />
                             </div>
-                            <h3 className="text-xl font-bold text-white">Central de Debate</h3>
+                            <h3 className="text-xl font-bold text-white">Construa seu projeto</h3>
                         </div>
 
                         <p className="text-white/80 text-lg font-medium leading-relaxed mb-auto italic">
-                            &quot;Debata seu projeto diretamente com o squad. Os agentes adequados se apresentarão para te ajudar.&quot;
+                            &quot;Apresente seu projeto diretamente com o squad. Os agentes adequados se apresentarão para te ajudar.&quot;
                         </p>
 
                         <Link href="/chat" className="mt-8 bg-black text-white py-5 rounded-2xl font-black text-center flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-2xl">
