@@ -29,7 +29,10 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ─── LLM Engine (self-contained) ─────────────────────────────────────────────
 
-def get_llm_response(system_prompt: str, user_prompt: str) -> str:
+def get_llm_response(system_prompt: str, user_prompt: str, history: list = None) -> str:
+    if history is None:
+        history = []
+        
     anthropic_key = os.getenv("ANTHROPIC_API_KEY")
     openai_key = os.getenv("OPENAI_API_KEY")
     gemini_key = os.getenv("GEMINI_API_KEY")
@@ -37,23 +40,38 @@ def get_llm_response(system_prompt: str, user_prompt: str) -> str:
     if anthropic_key:
         from anthropic import Anthropic
         client = Anthropic(api_key=anthropic_key)
+        
+        msgs = []
+        for h in history:
+            role = "user" if h.get("role") == "user" else "assistant"
+            content = h.get("content", "")
+            if content.strip():
+                msgs.append({"role": role, "content": content})
+        msgs.append({"role": "user", "content": user_prompt})
+        
         response = client.messages.create(
             model="claude-3-5-sonnet-20241022",
             max_tokens=4096,
             system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}]
+            messages=msgs
         )
         return response.content[0].text
 
     elif openai_key:
         from openai import OpenAI
         client = OpenAI(api_key=openai_key)
+        
+        msgs = [{"role": "system", "content": system_prompt}]
+        for h in history:
+            role = "user" if h.get("role") == "user" else "assistant"
+            content = h.get("content", "")
+            if content.strip():
+                msgs.append({"role": role, "content": content})
+        msgs.append({"role": "user", "content": user_prompt})
+        
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ]
+            messages=msgs
         )
         return response.choices[0].message.content
 
@@ -61,9 +79,18 @@ def get_llm_response(system_prompt: str, user_prompt: str) -> str:
         from google import genai
         from google.genai import types
         client = genai.Client(api_key=gemini_key)
+        
+        contents = []
+        for h in history:
+            role = "user" if h.get("role") == "user" else "model"
+            content = h.get("content", "")
+            if content.strip():
+                contents.append(types.Content(role=role, parts=[types.Part.from_text(text=content)]))
+        contents.append(types.Content(role="user", parts=[types.Part.from_text(text=user_prompt)]))
+        
         response = client.models.generate_content(
             model='gemini-2.0-flash',
-            contents=user_prompt,
+            contents=contents,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
             ),
@@ -144,15 +171,53 @@ class ChatRequest(BaseModel):
     tool: str | None = None
     file_url: str | None = None
     file_type: str | None = None
+    history: list = []
 
 
 @app.post("/chat")
 async def chat_interaction(req: ChatRequest):
     try:
-        # Map short names to DB IDs
+        # Original assigned agent
         agent_db_id = req.agent_id
         if agent_db_id == "orch":
             agent_db_id = "orchestrator"
+
+        # Build full message early for routing 
+        full_message = req.message or ""
+
+        # --- ROUTING LOGIC ---
+        # If talking to orch, check if user explicitly requested another agent
+        if agent_db_id == "orchestrator" and full_message.strip():
+            route_prompt = f"""O usuário está enviando uma mensagem para o Orchestrator do Squad. 
+A mensagem: '{full_message}'
+O usuário pediu explicitamente para falar com alguém de Design, UX, Backend, Jurídico ou outro especialista na equipe?
+Responda APENAS com o handle do agente desejado se sim, ou "NOPE" se não pediu para mudar. 
+Possíveis agentes e temas:
+- aurora (Design: imagens, visual, design de interface)
+- victoria (UX: fluxo, wireframes, usabilidade)
+- ryan (Developer: backend, infra, código)
+- theron (Legal: contratos, análise jurídica)
+- cassandra (Copy: textos, marketing)
+- lucas (PO: produto, requisitos)
+- sofia (Banco de Dados)"""
+            
+            try:
+                # Fast classification
+                route_decision = get_llm_response("Você é um roteador rígido. Responda apenas com a palavra pedida.", route_prompt).strip().lower()
+                valid_handles = ["aurora", "victoria", "ryan", "theron", "cassandra", "lucas", "sofia"]
+                if any(h in route_decision for h in valid_handles):
+                    for h in valid_handles:
+                        if h in route_decision:
+                            agent_db_id = "design_chief" if h == "aurora" else ("developer" if h == "ryan" else ("legal_chief" if h == "theron" else ("copy_chief" if h == "cassandra" else h)))
+                            if h == "victoria": agent_db_id = "ux"
+                            if h == "sofia": agent_db_id = "db_sage"
+                            if h == "lucas": agent_db_id = "po"
+                            # Update the returned agent_id!
+                            req.agent_id = h
+                            break
+            except Exception:
+                pass
+
 
         # Build system prompt from DB
         system_prompt = get_agent_prompt(agent_db_id)
@@ -171,17 +236,79 @@ async def chat_interaction(req: ChatRequest):
             )
         )
 
-        # Apply tool-specific prompts
+        # Handle tool logic
         if req.tool == "searchWeb":
             system_prompt += "\n" + get_sys_prompt(
                 "tool_search_web",
-                "MODO DEEP WEB RESEARCH ATIVADO. Busque informações atualizadas com profundidade. Cite fontes quando possível."
+                "MODO DEEP WEB RESEARCH ATIVADO. Cite fontes na conversa."
             )
+            firecrawl_key = os.getenv("FIRECRAWL_API_KEY")
+            if firecrawl_key:
+                try:
+                    import requests as req_lib
+                    search_query_prompt = f"Usuário ordenou pesquisa web sobre: '{full_message}'. Escreva APENAS o termo de busca (sem citações)."
+                    search_query = get_llm_response("Seja direto.", search_query_prompt).strip()
+                    fc_resp = req_lib.post(
+                        "https://api.firecrawl.dev/v1/search", 
+                        json={"query": search_query, "limit": 4}, 
+                        headers={"Authorization": f"Bearer {firecrawl_key}", "Content-Type": "application/json"},
+                        timeout=15
+                    )
+                    if fc_resp.status_code == 200:
+                        results = fc_resp.json().get("data", [])
+                        snippets = "\n\n".join([f"[{r.get('title')}]({r.get('url')}): {r.get('description', '')}" for r in results])
+                        full_message += f"\n\n[CONTEXTO RETORNADO DA WEB VIA FIRECRAWL PARA '{search_query}']:\n{snippets[:3000]}"
+                    else:
+                        full_message += f"\n\n[Firecrawl API falhou com status {fc_resp.status_code}]"
+                except Exception as e:
+                    full_message += f"\n\n[Erro ao tentar Firecrawl: {str(e)}]"
         elif req.tool == "createImage":
-            system_prompt += "\n" + get_sys_prompt(
-                "tool_create_image",
-                "MODO GERAÇÃO DE IMAGEM ATIVADO. Descreva a imagem que seria gerada detalhadamente com base no pedido do usuário."
-            )
+            gemini_key = os.getenv("GEMINI_API_KEY")
+            if gemini_key:
+                from google import genai
+                from google.genai import types
+                import uuid
+                
+                # LLM determines the perfect image generation prompt based on conversation context
+                img_prompt_generator = f"Você é um engenheiro de prompts de imagem. O usuário quer uma imagem. Resumo do pedido: '{full_message}'. Escreva um prompt EXTREMAMENTE detalhado em INGLÊS para o Imagen 3 gerar essa imagem. Responda APENAS com o texto em inglês do prompt."
+                img_req_prompt = get_llm_response(system_prompt, img_prompt_generator, req.history[-3:])
+                
+                try:
+                    client = genai.Client(api_key=gemini_key)
+                    image_resp = client.models.generate_images(
+                        model='imagen-3.0-generate-002',
+                        prompt=img_req_prompt[:1000],
+                        config=types.GenerateImagesConfig(
+                            number_of_images=1,
+                            output_mime_type="image/jpeg",
+                            aspect_ratio="1:1"
+                        )
+                    )
+                    
+                    if not image_resp.generated_images:
+                        raise ValueError("Nenhuma imagem gerada pelo Gemini.")
+                        
+                    img_bytes = image_resp.generated_images[0].image.image_bytes
+                    file_name = f"generated/{uuid.uuid4()}.jpg"
+                    
+                    supabase.storage.from_("images").upload(file_name, img_bytes, {"content-type": "image/jpeg"})
+                    img_url = supabase.storage.from_("images").get_public_url(file_name)
+                    
+                    # Call LLM just to write the message surrounding the image
+                    msg_surround = get_llm_response(system_prompt, f"A imagem pedida acaba de ser gerada com sucesso via Google Imagen 3. Dê uma resposta muito breve confirmando amigavelmente e introduzindo a imagem. O usuário falou: {full_message}")
+                    return {
+                        "agent_id": req.agent_id,
+                        "content": f"{msg_surround}\n\n![Imagem Gerada]({img_url})",
+                        "status": "success"
+                    }
+                except Exception as e:
+                    return {
+                        "agent_id": req.agent_id,
+                        "content": f"Ocorreu um erro ao gerar a imagem no Google Imagen 3: {str(e)}",
+                        "status": "error"
+                    }
+            else:
+                system_prompt += "\nMODO GERAÇÃO DE IMAGEM: A API do Google (Gemini API_KEY) não está configurada, então apenas descreva a imagem."
         elif req.tool == "writeCode":
             system_prompt += "\n" + get_sys_prompt(
                 "tool_write_code",
@@ -213,31 +340,46 @@ async def chat_interaction(req: ChatRequest):
                     "O usuário enviou um PDF. Analise seu conteúdo e responda com base nele."
                 )
 
-        # Build full message
-        full_message = req.message or ""
-
         # For image attachments: use multimodal LLM if possible
         if req.file_url and is_image:
             gemini_key = os.getenv("GEMINI_API_KEY")
             anthropic_key = os.getenv("ANTHROPIC_API_KEY")
 
             if gemini_key:
-                # Gemini supports image URL directly
                 from google import genai
                 from google.genai import types
+                import requests as req_lib
+                
                 client = genai.Client(api_key=gemini_key)
 
-                prompt_parts = []
-                if full_message:
-                    prompt_parts.append(full_message)
-                prompt_parts.append(types.Part.from_uri(file_uri=req.file_url, mime_type=req.file_type or "image/jpeg"))
+                # Fetch the image to bytes since Gemini API requires direct bytes or gs:// URI
+                img_resp = req_lib.get(req.file_url, timeout=10)
+                img_part = types.Part.from_bytes(data=img_resp.content, mime_type=req.file_type or "image/jpeg")
 
-                response = client.models.generate_content(
-                    model='gemini-2.0-flash',
-                    contents=prompt_parts,
-                    config=types.GenerateContentConfig(system_instruction=system_prompt)
-                )
-                return {"agent_id": req.agent_id, "content": response.text, "status": "success"}
+                # Build conversation history for memory
+                contents = []
+                for h in req.history:
+                    role_h = "user" if h.get("role") == "user" else "model"
+                    content_h = h.get("content", "")
+                    if content_h.strip():
+                        contents.append(types.Content(role=role_h, parts=[types.Part.from_text(text=content_h)]))
+                
+                # Current message prompt
+                prompt_parts = [img_part]
+                if full_message:
+                    prompt_parts.append(types.Part.from_text(text=full_message))
+                
+                contents.append(types.Content(role="user", parts=prompt_parts))
+
+                try:
+                    response = client.models.generate_content(
+                        model='gemini-2.0-flash',
+                        contents=contents,
+                        config=types.GenerateContentConfig(system_instruction=system_prompt)
+                    )
+                    return {"agent_id": req.agent_id, "content": response.text, "status": "success"}
+                except Exception as e:
+                    return {"agent_id": req.agent_id, "content": f"Erro na análise de imagem com Gemini: {str(e)}", "status": "error"}
 
             elif anthropic_key:
                 # Anthropic: fetch image and send as base64
@@ -248,17 +390,27 @@ async def chat_interaction(req: ChatRequest):
 
                 from anthropic import Anthropic
                 client = Anthropic(api_key=anthropic_key)
+                
+                msgs = []
+                for h in req.history:
+                    role_h = "user" if h.get("role") == "user" else "assistant"
+                    content_h = h.get("content", "")
+                    if content_h.strip():
+                        msgs.append({"role": role_h, "content": content_h})
+                
+                msgs.append({
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": img_b64}},
+                        {"type": "text", "text": full_message or "Analise esta imagem."}
+                    ]
+                })
+
                 response = client.messages.create(
                     model="claude-3-5-sonnet-20241022",
                     max_tokens=4096,
                     system=system_prompt,
-                    messages=[{
-                        "role": "user",
-                        "content": [
-                            {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": img_b64}},
-                            {"type": "text", "text": full_message or "Analise esta imagem."}
-                        ]
-                    }]
+                    messages=msgs
                 )
                 return {"agent_id": req.agent_id, "content": response.content[0].text, "status": "success"}
 
@@ -275,7 +427,7 @@ async def chat_interaction(req: ChatRequest):
             full_message += f"\n\n[Arquivo anexado: {req.file_url} — Tipo: {req.file_type}]"
 
         # Call LLM (text mode)
-        response_text = get_llm_response(system_prompt, full_message)
+        response_text = get_llm_response(system_prompt, full_message, req.history)
 
         return {
             "agent_id": req.agent_id,

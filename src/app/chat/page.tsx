@@ -196,8 +196,10 @@ export default function ChatPage() {
             const formatted = data.map((m: any) => ({
                 id: m.id,
                 role: m.role,
-                content: m.content,
-                audio_url: m.audio_url,
+                content: m.content || "",
+                audio_url: m.audio_url || undefined,
+                file_url: m.file_url || undefined,
+                file_type: m.file_type || undefined,
                 agent_id: m.agent_id,
                 agent: m.agent_id ? {
                     handle: m.agent_id,
@@ -329,7 +331,8 @@ export default function ChatPage() {
             created_at: new Date()
         };
 
-        setMessages(prev => [...prev, userMsg]);
+        const newMessages = [...messages, userMsg];
+        setMessages(newMessages);
         await saveMessage(userMsg);
 
         setIsThinking(true);
@@ -344,7 +347,8 @@ export default function ChatPage() {
                     project_id: "default",
                     tool: toolId,
                     file_url: fileUrl || audioUrl,
-                    file_type: fileType || (audioUrl ? "audio/webm" : "")
+                    file_type: fileType || (audioUrl ? "audio/webm" : ""),
+                    history: newMessages.map(m => ({ role: m.role, content: m.content }))
                 }),
             });
 
@@ -423,17 +427,6 @@ export default function ChatPage() {
             setMessages(prev => prev.filter(m => m.id !== tempMsg.id));
 
             if (isAudioFile) {
-                // 2. Show user message with audio player immediately
-                const userAudioMsg: Message = {
-                    id: Date.now().toString(),
-                    role: "user",
-                    content: text || "",
-                    audio_url: uploadResult.url,
-                    created_at: new Date()
-                };
-                setMessages(prev => [...prev, userAudioMsg]);
-                await saveMessage(userAudioMsg);
-
                 // 3. Show transcription progress
                 const progressMsg: Message = {
                     id: `progress-${Date.now()}`,
@@ -484,12 +477,12 @@ export default function ChatPage() {
                     // 5. Send transcription to /chat for agent response
                     setIsThinking(false);
                     const contextMessage = text
-                        ? `${text}\n\nTranscrição do áudio enviado:\n${transcription}`
-                        : `Transcrição do áudio enviado:\n${transcription}`;
+                        ? `${text}\n\n[Transcrição Interna do Áudio]:\n${transcription}`
+                        : `[Transcrição Interna do Áudio]:\n${transcription}`;
 
                     await handleSend({
                         text: contextMessage,
-                        fileUrl: uploadResult.url,
+                        audioUrl: uploadResult.url,
                         fileType: uploadResult.type,
                         toolId
                     });
@@ -732,7 +725,8 @@ export default function ChatPage() {
                                                 {msg.audio_url ? (
                                                     <div className="flex flex-col gap-3">
                                                         <AudioPlayer url={msg.audio_url} isUser={msg.role === "user"} />
-                                                        {msg.content && <p className={`pt-2 border-t italic ${msg.role === 'user' ? 'border-white/10 text-white/70' : 'border-neutral-100 text-neutral-500'}`}>{msg.content}</p>}
+                                                        {msg.content && !msg.content.includes("[Transcrição Interna do Áudio]:") && <p className={`pt-2 border-t italic ${msg.role === 'user' ? 'border-white/10 text-white/70' : 'border-neutral-100 text-neutral-500'}`}>{msg.content}</p>}
+                                                        {msg.content && msg.content.includes("[Transcrição Interna do Áudio]:") && msg.content.split("\n\n[Transcrição Interna")[0] && <p className={`pt-2 border-t ${msg.role === 'user' ? 'border-white/10 text-white/90' : 'border-neutral-100 text-neutral-500'}`}>{msg.content.split("\n\n[Transcrição Interna")[0]}</p>}
                                                     </div>
                                                 ) : msg.file_url ? (
                                                     <div className="flex flex-col gap-3">
@@ -769,8 +763,12 @@ export default function ChatPage() {
                                     className="flex justify-start"
                                 >
                                     <div className="flex gap-4 items-center">
-                                        <div className="w-10 h-10 rounded-2xl bg-white border border-neutral-100 flex items-center justify-center shrink-0">
-                                            <Loader2 size={18} className="text-neutral-300 animate-spin" />
+                                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border shadow-sm self-start bg-white border-neutral-200">
+                                            <img
+                                                src={AGENT_MAP["orch"]?.avatar}
+                                                alt="Pensando..."
+                                                className="w-full h-full object-cover rounded-2xl p-1.5 opacity-50 grayscale animate-pulse"
+                                            />
                                         </div>
                                         <div className="bg-white border border-neutral-100 p-3 px-4 rounded-2xl rounded-tl-none">
                                             <ThinkingDots />
