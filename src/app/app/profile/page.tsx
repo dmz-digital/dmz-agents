@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
     User, Mail, Camera, Save, LogOut, ArrowLeft,
-    AtSign, Shield, Loader2, CheckCircle2, AlertCircle
+    AtSign, Shield, Loader2, CheckCircle2, AlertCircle, Plus
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Cropper from "react-easy-crop";
@@ -71,10 +71,11 @@ export default function ProfilePage() {
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
     const [showCropper, setShowCropper] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        document.title = "Profile | DMZ - OS Agents";
+        document.title = "Perfil | DMZ - OS Agents";
         async function loadData() {
             const { data: { user: authUser } } = await supabase.auth.getUser();
             if (!authUser) {
@@ -114,6 +115,31 @@ export default function ProfilePage() {
                 setImageSrc(reader.result as string);
                 setShowCropper(true);
             };
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = () => {
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const file = e.dataTransfer.files[0];
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => {
+                    setImageSrc(reader.result as string);
+                    setShowCropper(true);
+                };
+            }
         }
     };
 
@@ -173,7 +199,7 @@ export default function ProfilePage() {
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
-        router.push("/home");
+        router.push("/");
     };
 
     if (loading) {
@@ -188,8 +214,8 @@ export default function ProfilePage() {
         <div className="min-h-screen bg-[#FDFDFD] pb-32">
             <header className="px-8 pt-12 pb-8 border-b border-neutral-100 mb-10 bg-white/50 backdrop-blur-md sticky top-0 z-20">
                 <div className="max-w-3xl mx-auto flex items-center justify-between">
-                    <Link href="/app" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                        <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center p-2">
+                    <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                        <div className="w-10 h-10 bg-white border border-neutral-100 rounded-xl flex items-center justify-center p-2 shadow-sm">
                             <img src="/logo.svg" alt="DMZ OS Logo" className="w-full h-full" />
                         </div>
                         <div className="flex flex-col">
@@ -209,17 +235,31 @@ export default function ProfilePage() {
 
                     {/* Avatar Section */}
                     <div className="flex flex-col items-center mb-12">
-                        <div className="relative group">
-                            <div className="w-32 h-32 rounded-[40px] bg-neutral-100 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center">
+                        <div
+                            className={`relative group cursor-pointer transition-all duration-300 ${isDragging ? "scale-105" : ""}`}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            <div className={`w-32 h-32 rounded-[40px] bg-neutral-100 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center transition-all ${isDragging ? "ring-4 ring-dmz-accent/20 border-dmz-accent/40" : "group-hover:border-dmz-accent/20"}`}>
                                 {profile.avatar_url ? (
                                     <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
                                     <User size={64} className="text-neutral-300" />
                                 )}
+                                {isDragging && (
+                                    <div className="absolute inset-0 bg-dmz-accent/10 backdrop-blur-sm flex items-center justify-center">
+                                        <Plus className="text-dmz-accent" size={32} />
+                                    </div>
+                                )}
                             </div>
                             <button
-                                onClick={() => fileInputRef.current?.click()}
-                                className="absolute bottom-0 right-0 w-10 h-10 bg-dmz-accent text-white rounded-2xl flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+                                className="absolute bottom-0 right-0 w-10 h-10 bg-dmz-accent text-white rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shadow-dmz-accent/20"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    fileInputRef.current?.click();
+                                }}
                             >
                                 <Camera size={18} />
                             </button>
@@ -231,7 +271,7 @@ export default function ProfilePage() {
                                 onChange={handleFileChange}
                             />
                         </div>
-                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-4">Clique na câmera para alterar avatar</p>
+                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-6">ARRASTE OU CLIQUE PARA MUDAR O AVATAR</p>
                     </div>
 
                     {/* Form */}
@@ -320,11 +360,11 @@ export default function ProfilePage() {
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="bg-white rounded-[32px] w-full max-w-xl overflow-hidden"
+                            className="bg-white rounded-[32px] w-full max-w-xl overflow-hidden shadow-2xl"
                         >
                             <div className="p-6 border-b border-neutral-100 flex justify-between items-center">
                                 <h3 className="font-black text-neutral-900">Ajustar Avatar</h3>
-                                <button onClick={() => setShowCropper(false)} className="text-neutral-400"><X size={20} className="" /></button>
+                                <button onClick={() => setShowCropper(false)} className="p-2 hover:bg-neutral-50 rounded-full transition-colors text-neutral-400"><X size={20} /></button>
                             </div>
 
                             <div className="relative h-80 bg-neutral-900">
@@ -378,7 +418,7 @@ export default function ProfilePage() {
     );
 }
 
-function X({ size, className }: { size: number, className: string }) {
+function X({ size, className }: { size: number, className?: string }) {
     return (
         <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
             <path d="M18 6 6 18" /><path d="m6 6 12 12" />

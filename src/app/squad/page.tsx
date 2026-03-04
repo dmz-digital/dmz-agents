@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Briefcase } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { PublicHeader, PublicFooter } from "@/components/PublicLayout";
 
 // ─── DATA ─────────────────────────────────────────────────────────────────────
 
@@ -462,79 +463,6 @@ const PRINCIPLES = [
 
 // ─── COMPONENTS ───────────────────────────────────────────────────────────────
 
-function Navbar() {
-    return (
-        <header className="fixed top-0 w-full z-50 px-6 py-4">
-            <nav className="max-w-7xl mx-auto flex items-center justify-between bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl px-6 py-3">
-                <Link href="/home" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                    <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center p-1.5">
-                        <img src="/logo.svg" alt="DMZ OS Logo" className="w-full h-full" />
-                    </div>
-                    <span className="font-extrabold text-lg tracking-tight text-[#D8663E]">DMZ – OS Agents</span>
-                </Link>
-
-                <div className="hidden md:flex items-center gap-8 text-sm font-medium text-neutral-400">
-                    <Link href="/home#agents" className="hover:text-white transition-colors">Agentes</Link>
-                    <Link href="/home#cases" className="hover:text-white transition-colors">Casos de Uso</Link>
-                    <Link href="/home#pricing" className="hover:text-white transition-colors">Preços</Link>
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <Link href="/sign-in" className="text-sm font-bold text-neutral-400 hover:text-white transition-colors px-4 py-2">Login</Link>
-                    <Link href="/sign-up" className="bg-dmz-accent text-white text-xs font-bold px-5 py-2.5 rounded-xl hover:bg-orange-500 transition-all shadow-lg shadow-dmz-accent/20">Sign Up</Link>
-                </div>
-            </nav>
-        </header>
-    );
-}
-
-function Footer() {
-    return (
-        <footer className="py-20 border-t border-white/5 bg-[#030303]">
-            <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-12 mb-20">
-                <div className="col-span-2 text-white">
-                    <div className="flex items-center gap-3 mb-6 text-white">
-                        <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center p-1.5">
-                            <img src="/logo.svg" alt="DMZ OS Logo" className="w-full h-full" />
-                        </div>
-                        <span className="font-extrabold text-xl tracking-tight text-[#D8663E]">DMZ – OS Agents</span>
-                    </div>
-                    <p className="text-neutral-500 max-w-sm mb-8">
-                        A camada de inteligência organizacional que torna seu repositório vivo.
-                        Built by agents, for developers.
-                    </p>
-                </div>
-
-                <div>
-                    <h5 className="font-bold text-white mb-6">Plataforma</h5>
-                    <div className="flex flex-col gap-4 text-sm text-neutral-500">
-                        <Link href="/app/agents" className="hover:text-dmz-accent">Especialistas</Link>
-                        <Link href="/app/projects" className="hover:text-dmz-accent">Projetos</Link>
-                        <Link href="/sign-in" className="hover:text-dmz-accent">Login</Link>
-                        <Link href="/sign-up" className="hover:text-dmz-accent">Cadastro</Link>
-                    </div>
-                </div>
-
-                <div>
-                    <h5 className="font-bold text-white mb-6">Legal</h5>
-                    <div className="flex flex-col gap-4 text-sm text-neutral-500">
-                        <Link href="/terms" className="hover:text-dmz-accent">Termos de Uso</Link>
-                        <Link href="/privacy" className="hover:text-dmz-accent">Privacidade</Link>
-                        <Link href="/cookies" className="hover:text-dmz-accent">Cookies</Link>
-                    </div>
-                </div>
-            </div>
-
-            <div className="max-w-7xl mx-auto px-6 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
-                <p className="text-[11px] text-neutral-600 font-medium">© 2024 DMZ Labs. Todos os direitos reservados.</p>
-                <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    <span className="text-[10px] text-neutral-600 uppercase font-black tracking-widest">System Status: All systems go</span>
-                </div>
-            </div>
-        </footer>
-    );
-}
 
 function AgentCard({ agent, onOpen }: { agent: any, onOpen: (a: any) => void }) {
     const Icon = AGENT_ICONS[agent.id] || Bot;
@@ -601,7 +529,7 @@ export default function SquadAboutPage() {
 
     return (
         <div className="bg-[#050505] text-white selection:bg-dmz-accent font-jakarta">
-            <Navbar />
+            <PublicHeader />
 
             {/* Modal */}
             <AnimatePresence>
@@ -854,7 +782,7 @@ export default function SquadAboutPage() {
                 </div>
             </section>
 
-            <Footer />
+            <PublicFooter />
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar {

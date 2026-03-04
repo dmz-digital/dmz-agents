@@ -3,24 +3,27 @@
 import Link from "next/link";
 import { ArrowLeft, Cookie, Zap, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
+import { PublicHeader, PublicFooter } from "@/components/PublicLayout";
 
 export default function CookiesPage() {
     return (
         <div className="min-h-screen bg-[#050505] text-white font-jakarta selection:bg-dmz-accent">
+            <PublicHeader />
+
             {/* Background Decorations */}
             <div className="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-0">
                 <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-dmz-accent/15 blur-[150px] rounded-full" />
                 <div className="absolute top-[40%] left-[-5%] w-[30%] h-[30%] bg-neutral-800/20 blur-[100px] rounded-full" />
             </div>
 
-            <main className="relative z-10 max-w-4xl mx-auto px-6 py-24">
+            <main className="relative z-10 max-w-4xl mx-auto px-6 py-32">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5, ease: "easeOut" }}
                 >
                     <Link
-                        href="/home"
+                        href="/"
                         className="inline-flex items-center gap-2 text-neutral-500 hover:text-white transition-colors mb-12 group"
                     >
                         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
@@ -100,14 +103,16 @@ export default function CookiesPage() {
                         </section>
                     </div>
 
-                    <div className="p-12 border-t border-white/5 flex flex-col items-center text-center">
+                    <div className="p-12 border-t border-white/5 flex flex-col items-center text-center mb-24">
                         <p className="text-sm text-neutral-500 mb-8 max-w-md leadng-relaxed">Você pode gerenciar ou desativar cookies diretamente nas configurações do seu navegador.</p>
-                        <Link href="/home" className="text-black bg-white font-bold py-4 px-12 rounded-2xl hover:bg-neutral-200 transition-all shadow-xl shadow-white/5">
+                        <Link href="/" className="text-black bg-white font-bold py-4 px-12 rounded-2xl hover:bg-neutral-200 transition-all shadow-xl shadow-white/5">
                             Entendido
                         </Link>
                     </div>
                 </motion.div>
             </main>
+
+            <PublicFooter />
         </div>
     );
 }

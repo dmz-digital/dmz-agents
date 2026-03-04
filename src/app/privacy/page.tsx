@@ -3,23 +3,26 @@
 import Link from "next/link";
 import { ArrowLeft, Lock, Eye, Database, Globe } from "lucide-react";
 import { motion } from "framer-motion";
+import { PublicHeader, PublicFooter } from "@/components/PublicLayout";
 
 export default function PrivacyPage() {
     return (
         <div className="min-h-screen bg-[#050505] text-white font-jakarta selection:bg-dmz-accent">
+            <PublicHeader />
+
             {/* Background Decorations */}
             <div className="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-0">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-dmz-accent/10 blur-[120px] rounded-full" />
             </div>
 
-            <main className="relative z-10 max-w-4xl mx-auto px-6 py-24">
+            <main className="relative z-10 max-w-4xl mx-auto px-6 py-32">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                 >
                     <Link
-                        href="/home"
+                        href="/"
                         className="inline-flex items-center gap-2 text-neutral-500 hover:text-white transition-colors mb-12 group"
                     >
                         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
@@ -83,7 +86,7 @@ export default function PrivacyPage() {
                         </section>
                     </div>
 
-                    <div className="p-10 bg-blue-600/10 border border-blue-600/20 rounded-[40px] flex flex-col md:flex-row items-center gap-8 backdrop-blur-md">
+                    <div className="p-10 bg-blue-600/10 border border-blue-600/20 rounded-[40px] flex flex-col md:flex-row items-center gap-8 backdrop-blur-md mb-24">
                         <div className="w-20 h-20 bg-blue-600/20 rounded-3xl flex items-center justify-center shrink-0">
                             <Globe className="text-blue-500" size={40} />
                         </div>
@@ -97,9 +100,7 @@ export default function PrivacyPage() {
                 </motion.div>
             </main>
 
-            <footer className="py-12 border-t border-white/5 text-center text-[10px] text-neutral-600 uppercase font-black tracking-widest">
-                DMZ Labs Privacy Framework v2.1 • © 2026
-            </footer>
+            <PublicFooter />
         </div>
     );
 }

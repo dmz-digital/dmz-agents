@@ -3,23 +3,26 @@
 import Link from "next/link";
 import { ArrowLeft, Shield, Clock, FileText, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { PublicHeader, PublicFooter } from "@/components/PublicLayout";
 
 export default function TermsPage() {
     return (
         <div className="min-h-screen bg-[#050505] text-white font-jakarta selection:bg-dmz-accent">
+            <PublicHeader />
+
             {/* Background Decorations */}
             <div className="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-0">
                 <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-dmz-accent/10 blur-[120px] rounded-full" />
                 <div className="absolute bottom-[-10%] left-[-10%] w-[30%] h-[30%] bg-blue-600/10 blur-[120px] rounded-full" />
             </div>
 
-            <main className="relative z-10 max-w-4xl mx-auto px-6 py-24">
+            <main className="relative z-10 max-w-4xl mx-auto px-6 py-32">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                 >
                     <Link
-                        href="/home"
+                        href="/"
                         className="inline-flex items-center gap-2 text-neutral-500 hover:text-white transition-colors mb-12 group"
                     >
                         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
@@ -101,7 +104,7 @@ export default function TermsPage() {
                         </section>
                     </div>
 
-                    <div className="mt-24 p-12 bg-gradient-to-br from-white/[0.03] to-transparent border border-white/10 rounded-[40px] text-center backdrop-blur-md relative overflow-hidden group">
+                    <div className="mt-24 p-12 bg-gradient-to-br from-white/[0.03] to-transparent border border-white/10 rounded-[40px] text-center backdrop-blur-md relative overflow-hidden group mb-24">
                         <div className="absolute inset-0 bg-dmz-accent/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                         <h3 className="text-xl font-bold text-white mb-4 relative z-10">Dúvidas sobre os termos?</h3>
                         <p className="text-neutral-500 mb-8 relative z-10">Nossa equipe jurídica e o agente @theron estão à disposição.</p>
@@ -113,9 +116,7 @@ export default function TermsPage() {
                 </motion.div>
             </main>
 
-            <footer className="py-12 border-t border-white/5 text-center text-[10px] text-neutral-600 uppercase font-black tracking-widest">
-                © 2026 DMZ Labs • Built by Agents, Verified by Humans
-            </footer>
+            <PublicFooter />
         </div>
     );
 }
