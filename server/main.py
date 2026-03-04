@@ -522,8 +522,37 @@ async def transcribe_audio(req: TranscribeRequest):
         if uploaded_file.state.name == "FAILED":
             raise HTTPException(status_code=500, detail="Gemini failed to process the audio file")
 
-        # 5. Transcribe using Gemini
+        # 5. Transcribe using Gemini — load prompt from admin DB
         print(f"[transcribe] Requesting transcription...")
+        
+        # Fetch transcription prompt from DB (voice_transcription)
+        transcription_prompt = get_sys_prompt("voice_transcription")
+        if not transcription_prompt or len(transcription_prompt) < 50:
+            # Fallback with strong paragraph formatting
+            transcription_prompt = (
+                "Você é o módulo de transcrição de áudio do DMZ.\n"
+                "Sua função é processar e transcrever áudios enviados pelo usuário com máxima fidelidade.\n\n"
+                "REGRAS:\n"
+                "- Mantenha a transcrição fiel ao que foi dito, preservando pausas e ênfases quando relevante.\n"  
+                "- Corrija erros gramaticais óbvios de fala, mas mantenha o tom e vocabulário original.\n"
+                "- Se o áudio estiver inaudível em trechos, indique [inaudível] no ponto exato.\n"
+                "- Se houver múltiplos falantes, tente identificá-los como Falante 1, Falante 2, etc.\n"
+                "- Após a transcrição, ofereça um resumo dos pontos principais se o áudio for longo (>2min)."
+            )
+        
+        # Always append strong paragraph formatting instruction
+        paragraph_instruction = (
+            "\n\nFORMATAÇÃO OBRIGATÓRIA:\n"
+            "- Você DEVE separar a transcrição em parágrafos curtos de no máximo 3-4 frases cada.\n"
+            "- Use DUAS quebras de linha (\\n\\n) entre cada parágrafo.\n"
+            "- Quando o assunto mudar, inicie um novo parágrafo.\n"
+            "- Quando houver pausa natural na fala, inicie um novo parágrafo.\n"
+            "- NUNCA retorne a transcrição como um bloco contínuo de texto.\n"
+            "- O resultado deve ser fácil de ler, com parágrafos bem definidos."
+        )
+        
+        full_transcription_prompt = transcription_prompt + paragraph_instruction
+        
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=[
@@ -531,10 +560,7 @@ async def transcribe_audio(req: TranscribeRequest):
                     file_uri=uploaded_file.uri,
                     mime_type=mime_type
                 ),
-                "Transcreva este áudio completo em português, palavra por palavra. "
-                "Inclua TODO o conteúdo do áudio sem resumir ou omitir nada. "
-                "Separe em parágrafos para facilitar a leitura. "
-                "Se houver múltiplos falantes, identifique-os quando possível."
+                full_transcription_prompt
             ],
             config=types.GenerateContentConfig(
                 max_output_tokens=65536,
