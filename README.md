@@ -47,7 +47,10 @@ Imagine um squad de **44 especialistas** que operam de forma assíncrona, orques
 
 | Feature | Descrição |
 |---|---|
-| **Intelligent Orchestration** | O `@orch` master planeja demandas de alto nível e gerencia o grafo de execução entre os agentes. |
+| **Intelligent Chat** | Nova interface multissegmentada (Chat de Projetos) com histórico persistente e orquestração em tempo real. |
+| **Multimodal Input** | Suporte nativa para upload e entendimento de **PDFs, Imagens e Áudios** diretamente no chat. |
+| **Deep Research** | Pesquisa profunda na internet utilizando **Firecrawl** para extração de dados técnicos e atualizados. |
+| **Intelligent Orchestration** | O `@orch` master planeja demandas de alto nível e gerencia o grafo de execução entre os 44 agentes. |
 | **Specialized Skills** | Cada agente possui um conjunto de competências (skills) refinadas e mapeadas no banco de dados. |
 | **MCP Toolset** | Integração nativa com Model Context Protocol para controle de GitHub, Notion, Vercel e mais. |
 | **Persistent Memory** | Memória vetorial e relacional que permite aos agentes "lembrarem" de conversas e decisões passadas. |
@@ -112,10 +115,11 @@ graph TD
 
 ## 💻 Tech Stack de Elite
 
-- **Frontend:** Next.js 15, Tailwind CSS, Framer Motion (para micro-animações).
+- **Frontend:** Next.js 15, Tailwind CSS, Framer Motion, Lucide Icons.
 - **CLI Engine:** Python 3.12, Typer, Rich (UI de Terminal Premium).
-- **Inteligência:** Claude 3.7 Sonnet (Reasoning), GPT-4o, Gemini 2.0 Flash.
-- **Backend:** Supabase (Real-time DB, Auth, Vector Storage), Railway.
+- **Inteligência:** Claude 3.7 Sonnet (Reasoning), GPT-4o, Gemini 2.5 Pro.
+- **Backend:** Supabase (Real-time DB, Auth, Storage), FastAPI (Railway).
+- **Integrations:** Firecrawl (Web Search), Whisper (Audio Transcription).
 
 ---
 
