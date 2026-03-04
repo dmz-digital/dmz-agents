@@ -16,13 +16,18 @@ export default function AppHeader({
 }: AppHeaderProps) {
     return (
         <div className="flex items-center justify-between mb-10 w-full">
-            <Link href="/app" className="flex flex-col hover:opacity-80 transition-opacity">
-                <h1 className="text-2xl font-black text-neutral-900 tracking-tight leading-none mb-1">
-                    {title}
-                </h1>
-                <p className="text-[13px] text-neutral-400 font-medium">
-                    {subtitle}
-                </p>
+            <Link href="/app" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center p-2">
+                    <img src="/logo.svg" alt="DMZ OS Logo" className="w-full h-full" />
+                </div>
+                <div className="flex flex-col">
+                    <h1 className="text-2xl font-black text-[#D8663E] tracking-tight leading-none mb-1">
+                        {title}
+                    </h1>
+                    <p className="text-[13px] text-neutral-400 font-medium">
+                        {subtitle}
+                    </p>
+                </div>
             </Link>
 
             {showButtons && (

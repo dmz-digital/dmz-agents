@@ -38,6 +38,7 @@ export default function AppDashboard() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        document.title = "Dashboard | DMZ - OS Agents";
         async function fetchProjects() {
             const { data } = await supabase
                 .from('dmz_agents_projects')

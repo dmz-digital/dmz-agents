@@ -466,11 +466,11 @@ function Navbar() {
     return (
         <header className="fixed top-0 w-full z-50 px-6 py-4">
             <nav className="max-w-7xl mx-auto flex items-center justify-between bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl px-6 py-3">
-                <Link href="/home" className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-dmz-accent rounded-lg flex items-center justify-center">
-                        <Bot size={18} className="text-white" />
+                <Link href="/home" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                    <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center p-1.5">
+                        <img src="/logo.svg" alt="DMZ OS Logo" className="w-full h-full" />
                     </div>
-                    <span className="font-extrabold text-lg tracking-tight text-white">DMZ OS</span>
+                    <span className="font-extrabold text-lg tracking-tight text-[#D8663E]">DMZ – OS Agents</span>
                 </Link>
 
                 <div className="hidden md:flex items-center gap-8 text-sm font-medium text-neutral-400">
@@ -493,11 +493,11 @@ function Footer() {
         <footer className="py-20 border-t border-white/5 bg-[#030303]">
             <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-12 mb-20">
                 <div className="col-span-2 text-white">
-                    <div className="flex items-center gap-2 mb-6 text-white">
-                        <div className="w-8 h-8 bg-dmz-accent rounded-lg flex items-center justify-center">
-                            <Bot size={18} className="text-white" />
+                    <div className="flex items-center gap-3 mb-6 text-white">
+                        <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center p-1.5">
+                            <img src="/logo.svg" alt="DMZ OS Logo" className="w-full h-full" />
                         </div>
-                        <span className="font-extrabold text-xl tracking-tight">DMZ OS</span>
+                        <span className="font-extrabold text-xl tracking-tight text-[#D8663E]">DMZ – OS Agents</span>
                     </div>
                     <p className="text-neutral-500 max-w-sm mb-8">
                         A camada de inteligência organizacional que torna seu repositório vivo.

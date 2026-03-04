@@ -123,6 +123,7 @@ export default function ChatPage() {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        document.title = "Chat | DMZ - OS Agents";
         async function loadHistory() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;

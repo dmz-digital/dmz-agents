@@ -399,6 +399,7 @@ function AgentsContent() {
     }, [searchParams]);
 
     useEffect(() => {
+        document.title = "Explore Agents | DMZ - OS Agents";
         async function fetchAgents() {
             const { data } = await supabase
                 .from("dmz_agents_definitions")

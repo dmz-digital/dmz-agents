@@ -825,6 +825,7 @@ function ProjectsPageContent() {
     const [projectCount, setProjectCount] = useState(0);
 
     useEffect(() => {
+        document.title = "Projects | DMZ - OS Agents";
         supabase.from("dmz_agents_projects").select("id", { count: "exact", head: true })
             .then(({ count }) => setProjectCount(count || 0));
     }, []);
