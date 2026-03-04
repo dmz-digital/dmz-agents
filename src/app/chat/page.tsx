@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { v4 as uuidv4 } from 'uuid';
+import { PromptBox } from "@/components/ui/chatgpt-prompt-input";
 
 interface Message {
     id: string;
@@ -192,17 +193,15 @@ export default function ChatPage() {
         return data;
     };
 
-    const handleSend = async (payload?: string | { text: string, audioUrl: string } | React.MouseEvent) => {
+    const handleSend = async (payload?: string | { text: string, audioUrl: string }) => {
         let text = "";
         let audioUrl = "";
 
         if (typeof payload === 'string') {
             text = payload;
         } else if (payload && typeof payload === 'object' && 'text' in payload) {
-            text = (payload as any).text;
-            audioUrl = (payload as any).audioUrl;
-        } else {
-            text = input;
+            text = payload.text;
+            audioUrl = payload.audioUrl;
         }
 
         if (!text.trim() && !audioUrl) return;
@@ -216,7 +215,6 @@ export default function ChatPage() {
         };
 
         setMessages(prev => [...prev, userMsg]);
-        if (typeof payload !== 'object' || !('text' in payload)) setInput("");
 
         const savedUserMsg = await saveMessage(userMsg);
         if (savedUserMsg) {
@@ -266,6 +264,17 @@ export default function ChatPage() {
         }, 1500);
     };
 
+    const handlePromptSend = async (text: string, audioFile?: File | Blob) => {
+        if (audioFile) {
+            await transcribeAudio(audioFile as Blob);
+            if (text.trim()) {
+                handleSend(text);
+            }
+        } else {
+            handleSend(text);
+        }
+    };
+
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -299,9 +308,13 @@ export default function ChatPage() {
     };
 
     const transcribeAudio = async (blob: Blob) => {
+        setIsThinking(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
+            if (!session) {
+                setIsThinking(false);
+                return;
+            }
 
             const formData = new FormData();
             formData.append('file', blob);
@@ -317,10 +330,12 @@ export default function ChatPage() {
             if (!response.ok) throw new Error("Falha na transcrição");
 
             const result = await response.json();
+            setIsThinking(false);
             if (result.text || result.audioUrl) {
                 handleSend({ text: result.text || "", audioUrl: result.audioUrl });
             }
         } catch (err) {
+            setIsThinking(false);
             console.error("Transcription error:", err);
             alert("Erro ao transcrever áudio.");
         }
@@ -432,50 +447,18 @@ export default function ChatPage() {
 
             {/* Input Area */}
             <div className="p-6 bg-white border-t border-neutral-100">
-                <div className="max-w-4xl mx-auto flex items-end gap-3">
-                    <div className="flex-1 bg-neutral-50 rounded-[28px] border border-neutral-100 focus-within:border-dmz-accent transition-all p-2 pr-4 flex items-end">
-                        <button className="p-3 text-neutral-400 hover:text-dmz-accent transition-colors">
-                            <Paperclip size={20} />
-                        </button>
-                        <textarea
-                            rows={1}
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter" && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSend();
-                                }
-                            }}
-                            placeholder="Conte sobre seu projeto ou faça uma pergunta..."
-                            className="flex-1 bg-transparent border-none focus:ring-0 text-neutral-800 text-sm py-3 px-2 resize-none max-h-32"
-                        />
-                        <button
-                            onClick={handleSend}
-                            disabled={!input.trim()}
-                            className={`p-3 rounded-full transition-all ${input.trim()
-                                ? "bg-dmz-accent text-white shadow-lg shadow-dmz-accent/20"
-                                : "text-neutral-300"
-                                }`}
-                        >
-                            <Send size={18} />
-                        </button>
+                <div className="max-w-4xl mx-auto">
+                    <PromptBox
+                        onSend={handlePromptSend}
+                        onStartRecording={startRecording}
+                        onStopRecording={stopRecording}
+                        isRecording={isRecording}
+                    />
+                    <div className="text-center mt-4">
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-[2px]">
+                            {isRecording ? "Gravando áudio..." : "Arraste um áudio ou digite para debater"}
+                        </p>
                     </div>
-
-                    <button
-                        onClick={isRecording ? stopRecording : startRecording}
-                        className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${isRecording
-                            ? "bg-red-500 text-white animate-pulse"
-                            : "bg-white border border-neutral-100 text-neutral-500 hover:border-dmz-accent"
-                            }`}
-                    >
-                        {isRecording ? <StopCircle size={24} /> : <Mic size={24} />}
-                    </button>
-                </div>
-                <div className="text-center mt-4">
-                    <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-[2px]">
-                        {isRecording ? "Gravando áudio..." : "Digite ou envie um áudio para debater"}
-                    </p>
                 </div>
             </div>
         </div>

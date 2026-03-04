@@ -12,8 +12,14 @@ Deno.serve(async (req: Request) => {
     }
 
     try {
+        const supabaseClient = createClient(
+            Deno.env.get('SUPABASE_URL') ?? '',
+            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        );
+
         const contentType = req.headers.get('content-type') || '';
         let audioFile: Blob | null = null;
+        let fileName = `audio-${Date.now()}.mp3`;
 
         if (contentType.includes('multipart/form-data')) {
             const formData = await req.formData();
@@ -29,48 +35,69 @@ Deno.serve(async (req: Request) => {
             });
         }
 
-        const openAiKey = Deno.env.get('OPENAI_API_KEY');
-        if (!openAiKey) {
-            return new Response(JSON.stringify({ error: 'OPENAI_API_KEY environment variable is not set in Supabase' }), {
+        // 1. Upload to Supabase Storage
+        const bucketName = 'dmz_agents_audios_chat';
+        const { data: uploadData, error: uploadError } = await supabaseClient
+            .storage
+            .from(bucketName)
+            .upload(fileName, audioFile, {
+                contentType: audioFile.type || 'audio/mpeg',
+                upsert: true
+            });
+
+        if (uploadError) {
+            console.error('Upload error:', uploadError);
+            return new Response(JSON.stringify({ error: 'Storage upload failed', details: uploadError }), {
                 status: 500,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
         }
 
-        // Prepare Whisper API request
-        const whisperFormData = new FormData();
-        // OpenAI Whisper expects a file with a proper extension. 
-        // We'll create a File object from the blob if it's not one already.
-        const file = new File([audioFile], 'audio.mp3', { type: audioFile.type || 'audio/mpeg' });
-        whisperFormData.append('file', file);
-        whisperFormData.append('model', 'whisper-1');
+        // Get Public URL
+        const { data: { publicUrl } } = supabaseClient
+            .storage
+            .from(bucketName)
+            .getPublicUrl(fileName);
 
-        console.log('Sending to OpenAI Whisper...');
-        const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${openAiKey}`,
-            },
-            body: whisperFormData,
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('OpenAI Error:', errorData);
-            return new Response(JSON.stringify({ error: 'OpenAI Whisper failed', details: errorData }), {
-                status: response.status,
+        // 2. Transcribe with Whisper
+        const openAiKey = Deno.env.get('OPENAI_API_KEY');
+        if (!openAiKey) {
+            return new Response(JSON.stringify({ error: 'OPENAI_API_KEY not set' }), {
+                status: 500,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
         }
 
-        const data = await response.json();
-        console.log('Transcription successful');
+        const whisperFormData = new FormData();
+        const file = new File([audioFile], 'audio.mp3', { type: audioFile.type || 'audio/mpeg' });
+        whisperFormData.append('file', file);
+        whisperFormData.append('model', 'whisper-1');
 
-        return new Response(JSON.stringify(data), {
+        console.log('Transcribing...');
+        const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${openAiKey}` },
+            body: whisperFormData,
+        });
+
+        if (!whisperResponse.ok) {
+            const errorData = await whisperResponse.json();
+            return new Response(JSON.stringify({ error: 'Whisper failed', details: errorData }), {
+                status: whisperResponse.status,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+        }
+
+        const whisperResult = await whisperResponse.json();
+
+        return new Response(JSON.stringify({
+            text: whisperResult.text,
+            audioUrl: publicUrl
+        }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
-    } catch (error) {
-        console.error('Transcription error:', error.message);
+    } catch (error: any) {
+        console.error('Error:', error.message);
         return new Response(JSON.stringify({ error: error.message }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
