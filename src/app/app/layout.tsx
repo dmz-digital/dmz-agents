@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bot, FolderOpen, Brain, Wrench, Users, LayoutDashboard } from "lucide-react";
+import { Bot, FolderOpen, Brain, Wrench, Users, LayoutDashboard, User } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 export default function AppLayout({
@@ -17,6 +17,7 @@ export default function AppLayout({
         { href: "/app/projects", icon: FolderOpen, title: "Projects" },
         { href: "/app/memory", icon: Brain, title: "Memory" },
         { href: "/app/tools", icon: Wrench, title: "Tools" },
+        { href: "/app/profile", icon: User, title: "Profile" },
     ];
 
     return (
