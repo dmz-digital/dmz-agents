@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bot, FolderOpen, Brain, Wrench, Users } from "lucide-react";
+import { Bot, FolderOpen, Brain, Wrench, Users, LayoutDashboard } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 export default function AppLayout({
@@ -12,8 +12,8 @@ export default function AppLayout({
     const pathname = usePathname();
 
     const navItems = [
-        { href: "/app/agents", icon: Bot, title: "DMZ - OS Agents" },
-        { href: "/app/squad", icon: Users, title: "About Squad" },
+        { href: "/app", icon: LayoutDashboard, title: "Dashboard" },
+        { href: "/app/agents", icon: Bot, title: "Squad Experts" },
         { href: "/app/projects", icon: FolderOpen, title: "Projects" },
         { href: "/app/memory", icon: Brain, title: "Memory" },
         { href: "/app/tools", icon: Wrench, title: "Tools" },
@@ -36,8 +36,8 @@ export default function AppLayout({
                             key={item.href}
                             href={item.href}
                             className={`flex items-center justify-center p-3 rounded-full transition-all ${isActive
-                                    ? "text-dmz-accent bg-orange-50/80 shadow-sm"
-                                    : "text-neutral-400 hover:text-dmz-accent hover:bg-orange-50/50"
+                                ? "text-dmz-accent bg-orange-50/80 shadow-sm"
+                                : "text-neutral-400 hover:text-dmz-accent hover:bg-orange-50/50"
                                 }`}
                             title={item.title}
                         >

@@ -17,7 +17,7 @@ export default function SignInPage() {
         // Simulate login
         setTimeout(() => {
             setLoading(false);
-            router.push("/app/agents");
+            router.push("/app");
         }, 1500);
     };
 
