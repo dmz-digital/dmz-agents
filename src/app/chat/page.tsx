@@ -389,24 +389,28 @@ export default function ChatPage() {
         if (!text.trim() && !file) return;
 
         if (file) {
-            // Show immediate user message with file name while uploading
+            const ext = file.name.split('.').pop()?.toLowerCase() || '';
+            const audioExts = ['mp3', 'wav', 'ogg', 'oga', 'opus', 'm4a', 'aac', 'flac', 'wma', '3gp', '3gpp', 'amr', 'caf', 'webm'];
+            const isAudioFile = file.type.startsWith("audio/") || audioExts.includes(ext);
+
+            // Show immediate user message
             const tempMsg: Message = {
                 id: `temp-${Date.now()}`,
                 role: "user",
-                content: text || `🎤 ${file.name}`,
+                content: text || (isAudioFile ? `🎤 ${file.name}` : `📎 ${file.name}`),
                 created_at: new Date()
             };
             setMessages(prev => [...prev, tempMsg]);
             setIsThinking(true);
 
+            // 1. Upload to Supabase
             const uploadResult = await uploadFile(file);
-
             if (!uploadResult) {
                 setIsThinking(false);
                 const errMsg: Message = {
                     id: Date.now().toString(),
                     role: "assistant",
-                    content: "Não consegui fazer o upload do arquivo. Verifique se o tipo de arquivo é suportado e tente novamente.",
+                    content: "Não consegui fazer o upload do arquivo. Verifique se o tipo é suportado e tente novamente.",
                     agent_id: "orch",
                     agent: AGENT_MAP.orch,
                     created_at: new Date()
@@ -415,14 +419,97 @@ export default function ChatPage() {
                 return;
             }
 
-            // Remove temp message, call handleSend with real data
+            // Remove temp, show real user message with AudioPlayer
             setMessages(prev => prev.filter(m => m.id !== tempMsg.id));
-            setIsThinking(false);
 
-            if (uploadResult.isAudio) {
-                // Audio: send with audioUrl so AudioPlayer renders
-                await handleSend({ text, audioUrl: uploadResult.url, fileType: uploadResult.type, toolId });
+            if (isAudioFile) {
+                // 2. Show user message with audio player immediately
+                const userAudioMsg: Message = {
+                    id: Date.now().toString(),
+                    role: "user",
+                    content: text || "",
+                    audio_url: uploadResult.url,
+                    created_at: new Date()
+                };
+                setMessages(prev => [...prev, userAudioMsg]);
+                await saveMessage(userAudioMsg);
+
+                // 3. Show transcription progress
+                const progressMsg: Message = {
+                    id: `progress-${Date.now()}`,
+                    role: "assistant",
+                    content: "📝 Transcrevendo áudio... isso pode levar alguns minutos para arquivos longos.",
+                    agent_id: "orch",
+                    agent: AGENT_MAP.orch,
+                    created_at: new Date()
+                };
+                setMessages(prev => [...prev, progressMsg]);
+
+                // 4. Call /transcribe endpoint
+                try {
+                    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://dmz-agents-production.up.railway.app";
+                    const transcribeResp = await fetch(`${apiUrl}/transcribe`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            audio_url: uploadResult.url,
+                            file_name: file.name
+                        }),
+                    });
+
+                    // Remove progress message
+                    setMessages(prev => prev.filter(m => m.id !== progressMsg.id));
+
+                    if (!transcribeResp.ok) {
+                        throw new Error("Falha na transcrição");
+                    }
+
+                    const transcribeData = await transcribeResp.json();
+                    const transcription = transcribeData.transcription || "";
+
+                    if (!transcription) {
+                        setIsThinking(false);
+                        const errMsg: Message = {
+                            id: Date.now().toString(),
+                            role: "assistant",
+                            content: "Não consegui transcrever o áudio. O arquivo pode estar corrompido ou vazio.",
+                            agent_id: "orch",
+                            agent: AGENT_MAP.orch,
+                            created_at: new Date()
+                        };
+                        setMessages(prev => [...prev, errMsg]);
+                        return;
+                    }
+
+                    // 5. Send transcription to /chat for agent response
+                    setIsThinking(false);
+                    const contextMessage = text
+                        ? `${text}\n\nTranscrição do áudio enviado:\n${transcription}`
+                        : `Transcrição do áudio enviado:\n${transcription}`;
+
+                    await handleSend({
+                        text: contextMessage,
+                        fileUrl: uploadResult.url,
+                        fileType: uploadResult.type,
+                        toolId
+                    });
+
+                } catch (err) {
+                    setIsThinking(false);
+                    setMessages(prev => prev.filter(m => m.id !== progressMsg.id));
+                    const errMsg: Message = {
+                        id: Date.now().toString(),
+                        role: "assistant",
+                        content: "Erro ao transcrever o áudio. Tente novamente ou envie um arquivo menor.",
+                        agent_id: "orch",
+                        agent: AGENT_MAP.orch,
+                        created_at: new Date()
+                    };
+                    setMessages(prev => [...prev, errMsg]);
+                }
             } else {
+                // Non-audio file: send directly
+                setIsThinking(false);
                 await handleSend({ text, fileUrl: uploadResult.url, fileType: uploadResult.type, toolId });
             }
         } else {

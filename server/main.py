@@ -262,8 +262,16 @@ async def chat_interaction(req: ChatRequest):
                 )
                 return {"agent_id": req.agent_id, "content": response.content[0].text, "status": "success"}
 
-        # For non-image or fallback: append context to message text
-        if req.file_url and not is_image:
+        # For audio with transcription: include the full transcription as context
+        if req.file_url and is_audio:
+            if full_message.strip():
+                # The message IS the transcription or user added text alongside audio
+                pass
+            else:
+                full_message = "[O usuário enviou um arquivo de áudio. URL: " + req.file_url + "]"
+
+        # For non-image, non-audio or fallback: append context to message text
+        elif req.file_url and not is_image:
             full_message += f"\n\n[Arquivo anexado: {req.file_url} — Tipo: {req.file_type}]"
 
         # Call LLM (text mode)
@@ -276,6 +284,119 @@ async def chat_interaction(req: ChatRequest):
         }
 
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─── Audio Transcription Endpoint ─────────────────────────────────────────────
+
+class TranscribeRequest(BaseModel):
+    audio_url: str
+    file_name: str = "audio.webm"
+
+@app.post("/transcribe")
+async def transcribe_audio(req: TranscribeRequest):
+    """
+    Downloads audio from URL, uploads to Gemini Files API,
+    and returns full transcription. Supports files up to 2 hours.
+    """
+    import requests as req_lib
+    import tempfile
+    import time
+
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
+
+    try:
+        # 1. Download audio from Supabase
+        print(f"[transcribe] Downloading: {req.audio_url[:80]}...")
+        audio_resp = req_lib.get(req.audio_url, timeout=120, stream=True)
+        if audio_resp.status_code != 200:
+            raise HTTPException(status_code=400, detail=f"Failed to download audio: HTTP {audio_resp.status_code}")
+
+        # Determine MIME type
+        ext = req.file_name.rsplit(".", 1)[-1].lower() if "." in req.file_name else "webm"
+        mime_map = {
+            "mp3": "audio/mpeg", "wav": "audio/wav", "m4a": "audio/m4a",
+            "ogg": "audio/ogg", "opus": "audio/opus", "flac": "audio/flac",
+            "aac": "audio/aac", "webm": "audio/webm", "3gp": "audio/3gpp",
+            "amr": "audio/amr",
+        }
+        mime_type = mime_map.get(ext, f"audio/{ext}")
+
+        # 2. Save to temp file
+        with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as tmp:
+            for chunk in audio_resp.iter_content(chunk_size=8192):
+                tmp.write(chunk)
+            tmp_path = tmp.name
+
+        file_size = os.path.getsize(tmp_path)
+        print(f"[transcribe] Downloaded {file_size / 1024 / 1024:.1f} MB as {mime_type}")
+
+        # 3. Upload to Gemini Files API
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=gemini_key)
+
+        print(f"[transcribe] Uploading to Gemini Files API...")
+        uploaded_file = client.files.upload(
+            file=tmp_path,
+            config={"mime_type": mime_type, "display_name": req.file_name}
+        )
+
+        # 4. Wait for file processing (Gemini processes async for large files)
+        print(f"[transcribe] File uploaded: {uploaded_file.name}, state: {uploaded_file.state}")
+        max_wait = 300  # 5 minutes max wait
+        waited = 0
+        while uploaded_file.state.name == "PROCESSING" and waited < max_wait:
+            time.sleep(5)
+            waited += 5
+            uploaded_file = client.files.get(name=uploaded_file.name)
+            print(f"[transcribe] Waiting... state: {uploaded_file.state} ({waited}s)")
+
+        if uploaded_file.state.name == "FAILED":
+            raise HTTPException(status_code=500, detail="Gemini failed to process the audio file")
+
+        # 5. Transcribe using Gemini
+        print(f"[transcribe] Requesting transcription...")
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[
+                types.Part.from_uri(
+                    file_uri=uploaded_file.uri,
+                    mime_type=mime_type
+                ),
+                "Transcreva este áudio completo em português, palavra por palavra. "
+                "Inclua TODO o conteúdo do áudio sem resumir ou omitir nada. "
+                "Separe em parágrafos para facilitar a leitura. "
+                "Se houver múltiplos falantes, identifique-os quando possível."
+            ],
+            config=types.GenerateContentConfig(
+                max_output_tokens=65536,
+            )
+        )
+
+        transcription = response.text
+        print(f"[transcribe] Done! Transcription length: {len(transcription)} chars")
+
+        # 6. Cleanup
+        try:
+            os.unlink(tmp_path)
+            client.files.delete(name=uploaded_file.name)
+        except Exception:
+            pass
+
+        return {
+            "transcription": transcription,
+            "duration_estimate": f"{file_size / 1024 / 16:.0f}s",  # rough estimate
+            "char_count": len(transcription),
+            "status": "success"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[transcribe] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
