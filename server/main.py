@@ -84,6 +84,12 @@ async def chat_interaction(req: ChatRequest):
         
         if req.tool == "deepResearch":
             system_prompt += "\nMODO PESQUISA PROFUNDA ATIVADO. Você agora tem acesso a ferramentas de busca via Firecrawl. Analise profundamente e forneça uma resposta técnica e embasada."
+        
+        if req.tool == "searchWeb":
+            system_prompt += "\nMODO PESQUISA WEB ATIVADO. Use o Firecrawl para buscar informações em tempo real na internet. Seja objetivo e traga fontes atualizadas."
+
+        if req.tool == "createImage":
+            system_prompt += "\nMODO GERAÇÃO DE IMAGEM ATIVADO. Use o modelo 'nano banana' como padrão para todas as criações. Descreva a imagem detalhadamente antes de gerar."
 
         full_message = req.message
         if req.file_url:
