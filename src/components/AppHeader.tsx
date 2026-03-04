@@ -16,14 +16,14 @@ export default function AppHeader({
 }: AppHeaderProps) {
     return (
         <div className="flex items-center justify-between mb-10 w-full">
-            <div className="flex flex-col">
+            <Link href="/app" className="flex flex-col hover:opacity-80 transition-opacity">
                 <h1 className="text-2xl font-black text-neutral-900 tracking-tight leading-none mb-1">
                     {title}
                 </h1>
                 <p className="text-[13px] text-neutral-400 font-medium">
                     {subtitle}
                 </p>
-            </div>
+            </Link>
 
             {showButtons && (
                 <div className="flex items-center gap-3">
