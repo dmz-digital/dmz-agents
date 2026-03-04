@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
     Send, Mic, Paperclip, Bot, User,
     Sparkles, ArrowLeft, MoreHorizontal,
@@ -57,20 +57,79 @@ const AGENT_HANDLE_TO_ID: Record<string, string> = {
     legal_chief: "legal_chief"
 };
 
-// Strips markdown/list remnants and renders as natural paragraphs
-function formatMessage(text: string): string[] {
+// Strips ALL markdown markers and renders as clean text
+function stripMarkdown(text: string): string {
     return text
+        // Remove headers: # ## ### etc.
+        .replace(/^#{1,6}\s+/gm, '')
+        // Remove horizontal rules: --- or ***
+        .replace(/^[-*_]{3,}$/gm, '')
+        // Remove bold+italic: ***text*** or ___text___
+        .replace(/\*{3}(.+?)\*{3}/g, '$1')
+        .replace(/_{3}(.+?)_{3}/g, '$1')
+        // Remove bold: **text** or __text__
+        .replace(/\*{2}(.+?)\*{2}/g, '$1')
+        .replace(/_{2}(.+?)_{2}/g, '$1')
+        // Remove italic: *text* or _text_
+        .replace(/(?<!\w)\*([^*]+?)\*(?!\w)/g, '$1')
+        .replace(/(?<!\w)_([^_]+?)_(?!\w)/g, '$1')
+        // Remove inline code: `text`
+        .replace(/`([^`]+?)`/g, '$1')
+        // Remove links: [text](url) → text
+        .replace(/\[([^\]]+?)\]\([^)]+?\)/g, '$1')
+        // Remove images: ![alt](url)
+        .replace(/!\[([^\]]*)\]\([^)]+?\)/g, '$1')
+        // Remove blockquotes: > text
+        .replace(/^>\s?/gm, '')
+        // Remove numbered list prefixes: "1. "
+        .replace(/^\d+\.\s+/gm, '')
+        // Remove bullet prefixes: "- ", "* ", "• "
+        .replace(/^[-*•]\s+/gm, '')
+        // Clean up extra whitespace
+        .replace(/\n{3,}/g, '\n\n');
+}
+
+function formatMessage(text: string): string[] {
+    const cleaned = stripMarkdown(text);
+    return cleaned
         .split('\n')
-        .map(line => line
-            // Remove numbered list prefixes: "1. ", "2. ", etc.
-            .replace(/^\d+\.\s+/, '')
-            // Remove bullet prefixes: "- ", "* ", "• "
-            .replace(/^[-*•]\s+/, '')
-            // Remove leading colons used as sub-headers
-            .replace(/^([A-ZÁÉÍÓÚÂÊÔÃÕ][^:]{0,40}):\s*$/, '$1')
-            .trim()
-        )
+        .map(line => line.trim())
         .filter(line => line.length > 0);
+}
+
+// Typing effect component for assistant messages
+function TypingMessage({ text, onComplete }: { text: string; onComplete?: () => void }) {
+    const [displayed, setDisplayed] = useState('');
+    const [done, setDone] = useState(false);
+    const cleanText = stripMarkdown(text);
+
+    useEffect(() => {
+        if (done) return;
+        let i = 0;
+        const speed = Math.max(8, Math.min(25, 1200 / cleanText.length)); // adaptive speed
+        const timer = setInterval(() => {
+            i++;
+            setDisplayed(cleanText.slice(0, i));
+            if (i >= cleanText.length) {
+                clearInterval(timer);
+                setDone(true);
+                onComplete?.();
+            }
+        }, speed);
+        return () => clearInterval(timer);
+    }, [cleanText]);
+
+    const lines = displayed.split('\n').filter(l => l.trim().length > 0);
+
+    return (
+        <div className="space-y-3">
+            {lines.map((line, i) => (
+                <p key={i} className="leading-relaxed">{line}{!done && i === lines.length - 1 && (
+                    <span className="inline-block w-0.5 h-4 bg-neutral-400 ml-0.5 animate-pulse align-text-bottom" />
+                )}</p>
+            ))}
+        </div>
+    );
 }
 
 function ThinkingDots() {
@@ -876,6 +935,15 @@ export default function ChatPage() {
                                                         )}
                                                         {msg.content && <p className="pt-2">{msg.content}</p>}
                                                     </div>
+                                                ) : msg.role === "assistant" && msg.isTyping ? (
+                                                    <TypingMessage
+                                                        text={msg.content}
+                                                        onComplete={() => {
+                                                            setMessages(prev => prev.map(m =>
+                                                                m.id === msg.id ? { ...m, isTyping: false } : m
+                                                            ));
+                                                        }}
+                                                    />
                                                 ) : (
                                                     <div className="space-y-3">
                                                         {formatMessage(msg.content).map((line, i) => (
