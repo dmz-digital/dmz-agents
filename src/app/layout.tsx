@@ -39,10 +39,8 @@ export const metadata: Metadata = {
     creator: "@dmzdigital",
   },
   icons: {
-    icon: [
-      { url: "/favicon.ico" },
-      { url: "/favicon.ico", sizes: "32x32", type: "image/x-icon" },
-    ],
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
     apple: "/logo.svg",
   },
 };

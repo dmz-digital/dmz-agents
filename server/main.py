@@ -77,6 +77,9 @@ async def chat_interaction(req: ChatRequest):
         # Ensure the response is NOT markdown as requested by user
         system_prompt += "\nIMPORTANTE: Sua resposta NÃO pode conter markdown (como bold **, headers #, etc). Use apenas texto simples e quebras de linha para organizar a resposta."
         
+        if req.tool == "deepResearch":
+            system_prompt += "\nMODO PESQUISA PROFUNDA ATIVADO. Você agora tem acesso a ferramentas de busca via Firecrawl. Analise profundamente e forneça uma resposta técnica e embasada."
+
         full_message = req.message
         if req.file_url:
             full_message = f"{full_message}\n\n[Anexo enviado pelo usuário: {req.file_url} (Tipo: {req.file_type})]"
