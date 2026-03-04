@@ -764,11 +764,7 @@ export default function ChatPage() {
                                 >
                                     <div className="flex gap-4 items-center">
                                         <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border shadow-sm self-start bg-white border-neutral-200">
-                                            <img
-                                                src={AGENT_MAP["orch"]?.avatar}
-                                                alt="Pensando..."
-                                                className="w-full h-full object-cover rounded-2xl p-1.5 opacity-50 grayscale animate-pulse"
-                                            />
+                                            <Bot size={20} className="opacity-50 grayscale animate-pulse" />
                                         </div>
                                         <div className="bg-white border border-neutral-100 p-3 px-4 rounded-2xl rounded-tl-none">
                                             <ThinkingDots />
