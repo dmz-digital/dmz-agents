@@ -4,7 +4,7 @@ import * as React from "react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Mic, Send, Plus, Settings2, X, Globe, Pencil, Paintbrush, Telescope, Lightbulb, FileAudio, StopCircle } from "lucide-react";
+import { Mic, Send, Plus, Settings2, X, Globe, Pencil, Paintbrush, Telescope, Lightbulb, FileAudio, StopCircle, Play, Pause } from "lucide-react";
 
 // --- Utility Function & Radix Primitives ---
 type ClassValue = string | number | boolean | null | undefined;
@@ -46,12 +46,21 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
     ({ className, onSend, onStartRecording, onStopRecording, isRecording, ...props }, ref) => {
         const internalTextareaRef = React.useRef<HTMLTextAreaElement>(null);
         const fileInputRef = React.useRef<HTMLInputElement>(null);
+        const audioPreviewRef = React.useRef<HTMLAudioElement>(null);
+        const localMediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+        const localAudioChunksRef = React.useRef<Blob[]>([]);
+
         const [value, setValue] = React.useState("");
         const [attachedFile, setAttachedFile] = React.useState<File | null>(null);
         const [selectedTool, setSelectedTool] = React.useState<string | null>(null);
         const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
-        const [isAudioPreviewOpen, setIsAudioPreviewOpen] = React.useState(false);
         const [isDragging, setIsDragging] = React.useState(false);
+        const [isLocalRecording, setIsLocalRecording] = React.useState(false);
+        const [recordedBlob, setRecordedBlob] = React.useState<Blob | null>(null);
+        const [audioPreviewUrl, setAudioPreviewUrl] = React.useState<string | null>(null);
+        const [audioPlaying, setAudioPlaying] = React.useState(false);
+        const [recordingSeconds, setRecordingSeconds] = React.useState(0);
+        const recordingTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
         React.useImperativeHandle(ref, () => internalTextareaRef.current!, []);
 
@@ -73,6 +82,57 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
             fileInputRef.current?.click();
         };
 
+        // ── Internal audio recording (self-contained, gives preview) ──────────
+        const startLocalRecording = async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const recorder = new MediaRecorder(stream);
+                localMediaRecorderRef.current = recorder;
+                localAudioChunksRef.current = [];
+                recorder.ondataavailable = (ev) => localAudioChunksRef.current.push(ev.data);
+                recorder.onstop = () => {
+                    const blob = new Blob(localAudioChunksRef.current, { type: 'audio/webm' });
+                    const url = URL.createObjectURL(blob);
+                    setRecordedBlob(blob);
+                    setAudioPreviewUrl(url);
+                    setIsLocalRecording(false);
+                    stream.getTracks().forEach(t => t.stop());
+                    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+                };
+                recorder.start();
+                setIsLocalRecording(true);
+                setRecordingSeconds(0);
+                recordingTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
+                onStartRecording?.();
+            } catch {
+                alert('Não foi possível acessar o microfone.');
+            }
+        };
+
+        const stopLocalRecording = () => {
+            if (localMediaRecorderRef.current && isLocalRecording) {
+                localMediaRecorderRef.current.stop();
+                onStopRecording?.();
+            }
+        };
+
+        const discardRecording = () => {
+            if (audioPreviewUrl) URL.revokeObjectURL(audioPreviewUrl);
+            setRecordedBlob(null);
+            setAudioPreviewUrl(null);
+            setAudioPlaying(false);
+        };
+
+        const toggleAudioPlay = () => {
+            const el = audioPreviewRef.current;
+            if (!el) return;
+            if (audioPlaying) { el.pause(); setAudioPlaying(false); }
+            else { el.play(); setAudioPlaying(true); }
+        };
+
+        const formatSeconds = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
+
+        // ── File handlers ────────────────────────────────────────────────────
         const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
             const file = event.target.files?.[0];
             if (file) {
@@ -100,9 +160,15 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
         };
 
         const handleSubmit = () => {
-            if (onSend) {
-                onSend(value, attachedFile || undefined, selectedTool);
+            if (recordedBlob) {
+                // Convert blob to a File so it goes through the upload flow
+                const audioFile = new File([recordedBlob], `audio-${Date.now()}.webm`, { type: 'audio/webm' });
+                onSend?.(value, audioFile, selectedTool);
+                setValue("");
+                discardRecording();
+                return;
             }
+            onSend?.(value, attachedFile || undefined, selectedTool);
             setValue("");
             setAttachedFile(null);
         };
@@ -142,7 +208,9 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
             }
         };
 
-        const hasValue = value.trim().length > 0 || attachedFile;
+        const hasValue = value.trim().length > 0 || !!attachedFile || !!recordedBlob;
+        const hasAnything = hasValue;
+        const canSend = hasAnything && !isLocalRecording;
         const activeTool = selectedTool ? toolsList.find(t => t.id === selectedTool) : null;
         const ActiveToolIcon = activeTool?.icon;
 
@@ -165,6 +233,39 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
                     accept="audio/*,image/*,application/pdf,.m4a,.ogg,.opus,.flac,.3gp,.amr,.caf,.heic,.heif,.avif"
                 />
 
+                {/* Recorded audio preview */}
+                {audioPreviewUrl && (
+                    <div className="flex items-center gap-3 bg-neutral-900 text-white p-2 px-4 rounded-2xl mb-2 group">
+                        <button
+                            type="button"
+                            onClick={toggleAudioPlay}
+                            className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors shrink-0"
+                        >
+                            {audioPlaying
+                                ? <Pause size={13} className="text-white" fill="white" />
+                                : <Play size={13} className="text-white ml-0.5" fill="white" />}
+                        </button>
+                        <div className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
+                            <div className="h-full bg-white/70 rounded-full w-full" style={{ animation: audioPlaying ? 'none' : undefined }} />
+                        </div>
+                        <span className="text-[10px] font-bold text-white/60 shrink-0">{formatSeconds(recordingSeconds)}</span>
+                        <button onClick={discardRecording} className="p-1 hover:bg-white/20 rounded-full transition-all shrink-0">
+                            <X size={13} className="text-white/60" />
+                        </button>
+                        <audio ref={audioPreviewRef} src={audioPreviewUrl} onEnded={() => setAudioPlaying(false)} className="hidden" />
+                    </div>
+                )}
+
+                {/* Recording indicator */}
+                {isLocalRecording && (
+                    <div className="flex items-center gap-3 bg-red-50 p-2 px-4 rounded-2xl mb-2">
+                        <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse shrink-0" />
+                        <span className="text-xs font-bold text-red-600">Gravando... {formatSeconds(recordingSeconds)}</span>
+                        <span className="text-xs text-red-400 ml-auto">Clique em parar para finalizar</span>
+                    </div>
+                )}
+
+                {/* Regular file attachment */}
                 {attachedFile && (
                     <div className="flex items-center gap-3 bg-neutral-50 p-2 px-4 rounded-2xl mb-2 w-fit group">
                         {attachedFile.type.startsWith("image/") ? (
@@ -244,33 +345,40 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
                             <div className="ml-auto flex items-center gap-2">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        {isRecording || hasValue ? (
+                                        {/* RECORDING: stop button */}
+                                        {isLocalRecording ? (
                                             <button
                                                 type="button"
-                                                onClick={isRecording ? onStopRecording : handleSubmit}
-                                                className={cn(
-                                                    "flex h-10 w-10 items-center justify-center rounded-full transition-all focus-visible:outline-none shadow-xl active:scale-95 translate-x-1",
-                                                    isRecording
-                                                        ? "bg-red-500 text-white animate-pulse shadow-red-500/20"
-                                                        : "bg-neutral-900 text-white hover:bg-neutral-800 shadow-neutral-900/10"
-                                                )}
+                                                onClick={stopLocalRecording}
+                                                className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white animate-pulse shadow-xl shadow-red-500/30 active:scale-95 transition-all focus-visible:outline-none"
                                             >
-                                                {isRecording ? <StopCircle size={20} strokeWidth={2.5} /> : <Send size={18} strokeWidth={2.5} />}
-                                                <span className="sr-only font-bold">{isRecording ? "Parar" : "Enviar"}</span>
+                                                <StopCircle size={20} strokeWidth={2.5} />
+                                                <span className="sr-only">Parar Gravação</span>
+                                            </button>
+                                        ) : canSend ? (
+                                            /* HAS CONTENT / RECORDED AUDIO: send button */
+                                            <button
+                                                type="button"
+                                                onClick={handleSubmit}
+                                                className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-900 text-white hover:bg-neutral-800 shadow-xl shadow-neutral-900/10 active:scale-95 transition-all focus-visible:outline-none translate-x-1"
+                                            >
+                                                <Send size={18} strokeWidth={2.5} />
+                                                <span className="sr-only">Enviar</span>
                                             </button>
                                         ) : (
+                                            /* IDLE: mic button */
                                             <button
                                                 type="button"
-                                                onClick={onStartRecording}
+                                                onClick={startLocalRecording}
                                                 className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-400 hover:bg-neutral-100 hover:text-dmz-accent transition-all focus-visible:outline-none"
                                             >
                                                 <Mic size={20} strokeWidth={2} />
-                                                <span className="sr-only">Gravar voz</span>
+                                                <span className="sr-only">Gravar Voz</span>
                                             </button>
                                         )}
                                     </TooltipTrigger>
                                     <TooltipContent side="top" showArrow={true}>
-                                        <p>{isRecording ? "Parar Gravação" : hasValue ? "Enviar Mensagem" : "Gravar Voz"}</p>
+                                        <p>{isLocalRecording ? "Parar Gravação" : canSend ? "Enviar Mensagem" : "Gravar Voz"}</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </div>
