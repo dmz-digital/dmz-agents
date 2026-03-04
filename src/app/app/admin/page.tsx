@@ -89,9 +89,18 @@ export default function AdminDashboard() {
 
     return (
         <div className="min-h-screen bg-[#FDFDFD] font-jakarta">
-            <AppHeader />
+            {/* Header — padrão das páginas internas */}
+            <header className="px-8 pt-10 pb-4">
+                <div className="max-w-6xl mx-auto">
+                    <AppHeader
+                        title="DMZ – OS Agents"
+                        subtitle="Manage your squad specialists"
+                        showButtons={false}
+                    />
+                </div>
+            </header>
 
-            <main className="max-w-6xl mx-auto px-6 py-12">
+            <main className="max-w-6xl mx-auto px-8 py-8">
                 <div className="flex items-center gap-4 mb-12">
                     <Link href="/app/profile" className="p-2 hover:bg-neutral-100 rounded-xl text-neutral-400 transition-all">
                         <ArrowLeft size={20} />
