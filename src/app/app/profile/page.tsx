@@ -91,11 +91,52 @@ export default function ProfilePage() {
                 .single();
 
             if (profileData) {
-                setProfile({
-                    full_name: profileData.full_name || "",
-                    username: profileData.username || "",
-                    avatar_url: profileData.avatar_url || ""
-                });
+                const metadata = authUser.user_metadata;
+
+                // Fallback to metadata if DB fields are empty
+                const finalProfile = {
+                    full_name: profileData.full_name || metadata.full_name || metadata.name || "",
+                    username: profileData.username || metadata.user_name || authUser.email?.split('@')[0] || "",
+                    avatar_url: profileData.avatar_url || metadata.avatar_url || metadata.picture || ""
+                };
+
+                setProfile(finalProfile);
+
+                // If we pulled data from metadata that was missing in DB, update DB proactively
+                if (!profileData.full_name && finalProfile.full_name || !profileData.avatar_url && finalProfile.avatar_url) {
+                    await supabase
+                        .from("user_profiles")
+                        .update({
+                            full_name: finalProfile.full_name,
+                            avatar_url: finalProfile.avatar_url,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq("id", authUser.id);
+                }
+            } else {
+                // Profile doesn't exist, create it from metadata
+                const metadata = authUser.user_metadata;
+                const newProfile = {
+                    id: authUser.id,
+                    email: authUser.email,
+                    full_name: metadata.full_name || metadata.name || "",
+                    avatar_url: metadata.avatar_url || metadata.picture || "",
+                    username: metadata.user_name || authUser.email?.split('@')[0] || "",
+                };
+
+                const { data: createdProfile } = await supabase
+                    .from("user_profiles")
+                    .upsert(newProfile)
+                    .select()
+                    .single();
+
+                if (createdProfile) {
+                    setProfile({
+                        full_name: createdProfile.full_name || "",
+                        username: createdProfile.username || "",
+                        avatar_url: createdProfile.avatar_url || ""
+                    });
+                }
             }
             setLoading(false);
         }

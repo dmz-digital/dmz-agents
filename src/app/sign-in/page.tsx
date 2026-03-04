@@ -115,7 +115,7 @@ export default function SignInPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-dmz-accent text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-orange-500 transition-all shadow-xl shadow-dmz-accent/20 disabled:opacity-50"
+                            className="w-full bg-dmz-accent text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-orange-500 hover:-translate-y-0.5 active:scale-[0.98] transition-all shadow-xl shadow-dmz-accent/20 disabled:opacity-50"
                         >
                             {loading ? "Entrando..." : (
                                 <>Entrar no Dashboard <ArrowRight size={18} /></>
@@ -133,7 +133,7 @@ export default function SignInPage() {
                     <button
                         onClick={handleGoogleLogin}
                         type="button"
-                        className="w-full bg-white border border-neutral-200 py-3.5 rounded-2xl font-bold text-neutral-600 flex items-center justify-center gap-3 hover:bg-neutral-50 transition-all"
+                        className="w-full bg-white border border-neutral-200 py-3.5 rounded-2xl font-bold text-neutral-600 flex items-center justify-center gap-3 hover:bg-neutral-50 hover:border-neutral-300 hover:-translate-y-0.5 active:scale-[0.98] transition-all"
                     >
                         <div className="w-5 h-5 flex items-center justify-center">
                             <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">

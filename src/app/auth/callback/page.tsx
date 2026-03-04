@@ -9,13 +9,35 @@ export default function AuthCallbackPage() {
 
     useEffect(() => {
         const handleAuthCallback = async () => {
-            const { error } = await supabase.auth.getSession();
+            const { data: { session }, error } = await supabase.auth.getSession();
             if (error) {
                 console.error("Auth callback error:", error.message);
                 router.push("/sign-in?error=auth_callback_failed");
-            } else {
-                router.push("/app");
+                return;
             }
+
+            if (session?.user) {
+                const user = session.user;
+                const metadata = user.user_metadata;
+
+                // Sync profile data from OAuth metadata
+                const { error: profileError } = await supabase
+                    .from("user_profiles")
+                    .upsert({
+                        id: user.id,
+                        email: user.email,
+                        full_name: metadata.full_name || metadata.name || "",
+                        avatar_url: metadata.avatar_url || metadata.picture || "",
+                        username: metadata.user_name || user.email?.split('@')[0] || "",
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'id' });
+
+                if (profileError) {
+                    console.error("Error syncing profile:", profileError);
+                }
+            }
+
+            router.push("/app");
         };
 
         handleAuthCallback();

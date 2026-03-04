@@ -203,7 +203,7 @@ export default function SignUpPage() {
                                     <button
                                         onClick={handleGoogleLogin}
                                         type="button"
-                                        className="w-full bg-white border border-neutral-200 py-4 rounded-2xl font-bold text-neutral-700 flex items-center justify-center gap-3 hover:bg-neutral-50 transition-all"
+                                        className="w-full bg-white border border-neutral-200 py-4 rounded-2xl font-bold text-neutral-700 flex items-center justify-center gap-3 hover:bg-neutral-50 hover:border-neutral-300 hover:-translate-y-0.5 active:scale-[0.98] transition-all"
                                     >
                                         <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
                                             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -235,7 +235,7 @@ export default function SignUpPage() {
                                                 />
                                             </div>
                                         </div>
-                                        <button type="submit" className="w-full bg-dmz-accent text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-orange-500 transition-all shadow-xl shadow-dmz-accent/20">
+                                        <button type="submit" className="w-full bg-dmz-accent text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-orange-500 hover:-translate-y-0.5 active:scale-[0.98] transition-all shadow-xl shadow-dmz-accent/20">
                                             Continuar cadastro <ArrowRight size={18} />
                                         </button>
                                     </form>
@@ -381,7 +381,7 @@ export default function SignUpPage() {
                                     <button
                                         type="submit"
                                         disabled={!isFormValid || loading}
-                                        className="w-full bg-dmz-accent text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-orange-500 transition-all shadow-xl shadow-dmz-accent/20 disabled:opacity-30 disabled:grayscale"
+                                        className="w-full bg-dmz-accent text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-orange-500 hover:-translate-y-0.5 active:scale-[0.98] transition-all shadow-xl shadow-dmz-accent/20 disabled:opacity-30 disabled:grayscale"
                                     >
                                         {loading ? "Criando Conta..." : "Finalizar Cadastro e Iniciar"}
                                     </button>

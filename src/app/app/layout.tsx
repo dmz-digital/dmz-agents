@@ -18,12 +18,53 @@ export default function AppLayout({
         async function loadProfile() {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
+                // Fetch profile
                 const { data } = await supabase
                     .from("user_profiles")
                     .select("*")
                     .eq("id", user.id)
                     .single();
-                if (data) setProfile(data);
+
+                if (data) {
+                    setProfile(data);
+
+                    // Optional: If name or avatar is missing in DB but present in metadata, update it
+                    if (!data.full_name || !data.avatar_url) {
+                        const metadata = user.user_metadata;
+                        const updates: any = {};
+                        if (!data.full_name && (metadata.full_name || metadata.name)) {
+                            updates.full_name = metadata.full_name || metadata.name;
+                        }
+                        if (!data.avatar_url && (metadata.avatar_url || metadata.picture)) {
+                            updates.avatar_url = metadata.avatar_url || metadata.picture;
+                        }
+
+                        if (Object.keys(updates).length > 0) {
+                            const { data: updatedProfile } = await supabase
+                                .from("user_profiles")
+                                .update(updates)
+                                .eq("id", user.id)
+                                .select()
+                                .single();
+                            if (updatedProfile) setProfile(updatedProfile);
+                        }
+                    }
+                } else {
+                    // Profile doesn't exist, create it from metadata
+                    const metadata = user.user_metadata;
+                    const { data: newProfile } = await supabase
+                        .from("user_profiles")
+                        .upsert({
+                            id: user.id,
+                            email: user.email,
+                            full_name: metadata.full_name || metadata.name || "",
+                            avatar_url: metadata.avatar_url || metadata.picture || "",
+                            username: metadata.user_name || user.email?.split('@')[0] || "",
+                        })
+                        .select()
+                        .single();
+                    if (newProfile) setProfile(newProfile);
+                }
             }
         }
         loadProfile();
