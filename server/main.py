@@ -172,7 +172,7 @@ async def chat_interaction(req: ChatRequest):
         elif req.tool == "createImage":
             system_prompt += "\n" + get_sys_prompt(
                 "tool_create_image",
-                "MODO GERAÇÃO DE IMAGEM ATIVADO. Use o modelo 'nano banana' como padrão. Descreva a imagem detalhadamente antes de gerar."
+                "MODO GERAÇÃO DE IMAGEM ATIVADO. Descreva a imagem que seria gerada detalhadamente com base no pedido do usuário."
             )
         elif req.tool == "writeCode":
             system_prompt += "\n" + get_sys_prompt(
@@ -180,22 +180,85 @@ async def chat_interaction(req: ChatRequest):
                 "MODO CÓDIGO ATIVADO. Foque em soluções técnicas e arquitetura limpa. Explique o código linha a linha quando necessário."
             )
 
-        # Apply attachment-specific prompts
-        if req.file_url:
-            att_type = (req.file_type or "").lower()
-            if "pdf" in att_type:
-                system_prompt += "\n" + get_sys_prompt("attachment_pdf", "O usuário enviou um PDF. Analise seu conteúdo e responda com base nele.")
-            elif "image" in att_type:
-                system_prompt += "\n" + get_sys_prompt("attachment_image", "O usuário enviou uma imagem. Descreva e analise o conteúdo visual detalhadamente.")
-            elif "audio" in att_type:
-                system_prompt += "\n" + get_sys_prompt("attachment_audio", "O usuário enviou um arquivo de áudio. Analise o conteúdo conforme o contexto da transcrição.")
+        # Detect attachment type
+        att_type = (req.file_type or "").lower()
+        file_ext = (req.file_url or "").split(".")[-1].lower() if req.file_url else ""
+        is_image = "image" in att_type or file_ext in ["jpg", "jpeg", "png", "gif", "webp", "heic", "avif"]
+        is_audio = "audio" in att_type or file_ext in ["mp3", "wav", "m4a", "ogg", "opus", "flac", "aac"]
+        is_pdf = "pdf" in att_type or file_ext == "pdf"
 
-        # Build full message (with optional attachment context)
-        full_message = req.message
+        # Apply attachment-specific system prompts
         if req.file_url:
+            if is_image:
+                system_prompt += "\n" + get_sys_prompt(
+                    "attachment_image",
+                    "O usuário enviou uma imagem. Analise visualmente o conteúdo da imagem e responda de forma detalhada sobre o que você vê."
+                )
+            elif is_audio:
+                system_prompt += "\n" + get_sys_prompt(
+                    "attachment_audio",
+                    "O usuário enviou um arquivo de áudio transcrito. Analise o conteúdo da transcrição e responda com base nela."
+                )
+            elif is_pdf:
+                system_prompt += "\n" + get_sys_prompt(
+                    "attachment_pdf",
+                    "O usuário enviou um PDF. Analise seu conteúdo e responda com base nele."
+                )
+
+        # Build full message
+        full_message = req.message or ""
+
+        # For image attachments: use multimodal LLM if possible
+        if req.file_url and is_image:
+            gemini_key = os.getenv("GEMINI_API_KEY")
+            anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+
+            if gemini_key:
+                # Gemini supports image URL directly
+                from google import genai
+                from google.genai import types
+                client = genai.Client(api_key=gemini_key)
+
+                prompt_parts = []
+                if full_message:
+                    prompt_parts.append(full_message)
+                prompt_parts.append(types.Part.from_uri(file_uri=req.file_url, mime_type=req.file_type or "image/jpeg"))
+
+                response = client.models.generate_content(
+                    model='gemini-2.0-flash',
+                    contents=prompt_parts,
+                    config=types.GenerateContentConfig(system_instruction=system_prompt)
+                )
+                return {"agent_id": req.agent_id, "content": response.text, "status": "success"}
+
+            elif anthropic_key:
+                # Anthropic: fetch image and send as base64
+                import base64, requests as req_lib
+                img_resp = req_lib.get(req.file_url, timeout=10)
+                img_b64 = base64.standard_b64encode(img_resp.content).decode("utf-8")
+                media_type = req.file_type or "image/jpeg"
+
+                from anthropic import Anthropic
+                client = Anthropic(api_key=anthropic_key)
+                response = client.messages.create(
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=4096,
+                    system=system_prompt,
+                    messages=[{
+                        "role": "user",
+                        "content": [
+                            {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": img_b64}},
+                            {"type": "text", "text": full_message or "Analise esta imagem."}
+                        ]
+                    }]
+                )
+                return {"agent_id": req.agent_id, "content": response.content[0].text, "status": "success"}
+
+        # For non-image or fallback: append context to message text
+        if req.file_url and not is_image:
             full_message += f"\n\n[Arquivo anexado: {req.file_url} — Tipo: {req.file_type}]"
 
-        # Call LLM
+        # Call LLM (text mode)
         response_text = get_llm_response(system_prompt, full_message)
 
         return {

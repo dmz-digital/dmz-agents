@@ -76,9 +76,13 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
         const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
             const file = event.target.files?.[0];
             if (file) {
-                const isAudio = file.type.startsWith("audio/");
-                const isImage = file.type.startsWith("image/");
-                const isPDF = file.type === "application/pdf";
+                const ext = file.name.split('.').pop()?.toLowerCase() || '';
+                const audioExts = ['mp3', 'wav', 'ogg', 'oga', 'opus', 'm4a', 'aac', 'flac', 'wma', '3gp', '3gpp', 'amr', 'caf'];
+                const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'heic', 'heif', 'avif'];
+
+                const isAudio = file.type.startsWith("audio/") || audioExts.includes(ext);
+                const isImage = file.type.startsWith("image/") || imageExts.includes(ext);
+                const isPDF = file.type === "application/pdf" || ext === 'pdf';
 
                 if (isAudio || isImage || isPDF) {
                     setAttachedFile(file);
@@ -124,9 +128,13 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
             setIsDragging(false);
             const file = e.dataTransfer.files?.[0];
             if (file) {
-                const isAudio = file.type.startsWith("audio/");
-                const isImage = file.type.startsWith("image/");
-                const isPDF = file.type === "application/pdf";
+                const ext = file.name.split('.').pop()?.toLowerCase() || '';
+                const audioExts = ['mp3', 'wav', 'ogg', 'oga', 'opus', 'm4a', 'aac', 'flac', 'wma', '3gp', '3gpp', 'amr', 'caf'];
+                const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'heic', 'heif', 'avif'];
+
+                const isAudio = file.type.startsWith("audio/") || audioExts.includes(ext);
+                const isImage = file.type.startsWith("image/") || imageExts.includes(ext);
+                const isPDF = file.type === "application/pdf" || ext === 'pdf';
 
                 if (isAudio || isImage || isPDF) {
                     setAttachedFile(file);
@@ -154,7 +162,7 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
                     ref={fileInputRef}
                     onChange={handleFileChange}
                     className="hidden"
-                    accept="audio/*,image/*,application/pdf"
+                    accept="audio/*,image/*,application/pdf,.m4a,.ogg,.opus,.flac,.3gp,.amr,.caf,.heic,.heif,.avif"
                 />
 
                 {attachedFile && (
