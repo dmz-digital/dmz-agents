@@ -9,9 +9,8 @@ import {
     MessageSquare, Plus, Search, ChevronRight,
     Clock, Trash2, Menu, Heart, Copy, Reply,
     Check, Pencil, BookOpen, Target, Brain, Scale, Activity,
-    CloudUpload
+    CloudUpload, Maximize, X
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
 function splitIntoParagraphMessages(content: string): string[] {
@@ -266,18 +265,44 @@ function TypingMessage({ text, onComplete }: { text: string; onComplete?: () => 
     );
 }
 
-function ThinkingDots() {
+function ThinkingStatus() {
+    const [step, setStep] = useState(0);
+    const steps = [
+        "Analisando contexto e intenção...",
+        "Orquestrando o melhor agente...",
+        "Agente assumindo o controle...",
+        "Executando a tarefa..."
+    ];
+
+    useEffect(() => {
+        const timers = [
+            setTimeout(() => setStep(1), 2000),
+            setTimeout(() => setStep(2), 4000),
+            setTimeout(() => setStep(3), 6500)
+        ];
+        return () => timers.forEach(clearTimeout);
+    }, []);
+
     return (
-        <div className="flex gap-1 px-2 py-1">
-            {[0, 1, 2].map((i) => (
-                <motion.div
-                    key={i}
-                    animate={{ y: [0, -4, 0] }}
-                    transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.1 }}
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: '#838485' }}
-                />
-            ))}
+        <div className="flex flex-col gap-2.5 py-1.5 px-2">
+            {steps.map((text, i) => {
+                if (i > step) return null; // Don't show future steps yet
+                return (
+                    <motion.div
+                        initial={{ opacity: 0, x: -5 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        key={i}
+                        className={`flex items-center gap-3 text-xs ${i === step ? "text-neutral-800 font-medium" : "text-neutral-400"}`}
+                    >
+                        {i === step ? (
+                            <Loader2 size={12} className="animate-spin text-dmz-accent" />
+                        ) : (
+                            <Check size={12} className="text-green-500" />
+                        )}
+                        <span>{text}</span>
+                    </motion.div>
+                );
+            })}
         </div>
     );
 }
@@ -337,6 +362,7 @@ export default function ChatPage() {
     const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
     const [editingTitle, setEditingTitle] = useState("");
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [previewHtml, setPreviewHtml] = useState<string | null>(null);
 
     useEffect(() => {
         const timer = setTimeout(async () => {
@@ -375,7 +401,7 @@ export default function ChatPage() {
     const [userProfile, setUserProfile] = useState<any>(null);
     const [isRecording, setIsRecording] = useState(false);
     const [isThinking, setIsThinking] = useState(false);
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -1205,20 +1231,30 @@ export default function ChatPage() {
                                                                     <div key={i} className="relative rounded-xl overflow-hidden my-2 max-w-full">
                                                                         <div className="flex items-center justify-between px-4 py-2 bg-[#1e1e2e] border-b border-white/5">
                                                                             <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">{block.language}</span>
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    navigator.clipboard.writeText(block.code);
-                                                                                    setCopiedId(`code-${msg.id}-${i}`);
-                                                                                    setTimeout(() => setCopiedId(null), 2000);
-                                                                                }}
-                                                                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold text-white/50 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-                                                                            >
-                                                                                {copiedId === `code-${msg.id}-${i}` ? (
-                                                                                    <><Check size={12} className="text-green-400" /> Copiado</>
-                                                                                ) : (
-                                                                                    <><Copy size={12} /> Copiar</>
+                                                                            <div className="flex gap-2">
+                                                                                {block.language === "html" && (
+                                                                                    <button
+                                                                                        onClick={() => setPreviewHtml(block.code)}
+                                                                                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold text-white/50 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                                                                                    >
+                                                                                        <Maximize size={12} /> Visualizar
+                                                                                    </button>
                                                                                 )}
-                                                                            </button>
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        navigator.clipboard.writeText(block.code);
+                                                                                        setCopiedId(`code-${msg.id}-${i}`);
+                                                                                        setTimeout(() => setCopiedId(null), 2000);
+                                                                                    }}
+                                                                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold text-white/50 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                                                                                >
+                                                                                    {copiedId === `code-${msg.id}-${i}` ? (
+                                                                                        <><Check size={12} className="text-green-400" /> Copiado</>
+                                                                                    ) : (
+                                                                                        <><Copy size={12} /> Copiar</>
+                                                                                    )}
+                                                                                </button>
+                                                                            </div>
                                                                         </div>
                                                                         <pre className="bg-[#1e1e2e] text-[#cdd6f4] text-[13px] leading-relaxed p-4 pb-4 overflow-x-auto font-mono code-scrollbar">
                                                                             <code>{block.code}</code>
@@ -1293,7 +1329,7 @@ export default function ChatPage() {
                                             </span>
                                         </div>
                                         <div className="bg-white border border-neutral-100 p-3 px-4 rounded-2xl rounded-tl-none w-max">
-                                            <ThinkingDots />
+                                            <ThinkingStatus />
                                         </div>
                                     </div>
                                 </motion.div>
@@ -1314,6 +1350,36 @@ export default function ChatPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Preview Panel overlay or side-by-side depending on screen width */}
+            <AnimatePresence>
+                {previewHtml && (
+                    <motion.div
+                        initial={{ opacity: 0, x: 50, width: 0 }}
+                        animate={{ opacity: 1, x: 0, width: "100%", maxWidth: "800px" }}
+                        exit={{ opacity: 0, x: 50, width: 0 }}
+                        className="fixed md:relative top-0 right-0 h-full bg-white md:border-l border-neutral-200 shadow-2xl z-50 flex flex-col"
+                    >
+                        <div className="flex items-center justify-between p-4 px-6 border-b border-neutral-100 bg-[#F9FAFB]">
+                            <div className="flex items-center gap-3 text-neutral-800">
+                                <Code2 size={18} className="text-neutral-500" />
+                                <span className="font-bold text-[15px]">Visualização</span>
+                            </div>
+                            <button onClick={() => setPreviewHtml(null)} className="p-2 hover:bg-neutral-200 transition-colors rounded-xl text-neutral-500 hover:text-neutral-800">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="flex-1 w-full relative bg-white overflow-hidden">
+                            <iframe
+                                srcDoc={`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{margin:0;font-family:sans-serif;}</style></head><body>${previewHtml}</body></html>`}
+                                className="w-full h-full border-none"
+                                sandbox="allow-scripts allow-same-origin allow-popups"
+                                title="HTML Preview"
+                            />
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar {
