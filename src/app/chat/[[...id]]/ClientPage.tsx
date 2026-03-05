@@ -331,13 +331,20 @@ export default function ChatPage() {
     const params = useParams();
     const router = useRouter();
 
-    // In catch-all [[...id]], params.id is an array
-    const sessionIdFromUrl = Array.isArray(params?.id) ? params.id[0] : (params?.id as string);
+    // Client-side fallback for static exports where params might be empty on first render
+    const [currentSessionId, setCurrentSessionId] = useState<string | null>(() => {
+        if (typeof window !== "undefined") {
+            const parts = window.location.pathname.split("/").filter(Boolean);
+            if (parts[0] === "chat" && parts[1]) {
+                return parts[1];
+            }
+        }
+        return Array.isArray(params?.id) ? params.id[0] : (params?.id as string) || null;
+    });
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [sessions, setSessions] = useState<ChatSession[]>([]);
     const [loading, setLoading] = useState(true);
-    const [currentSessionId, setCurrentSessionId] = useState<string | null>(sessionIdFromUrl || null);
 
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
@@ -366,16 +373,24 @@ export default function ChatPage() {
         setTimeout(() => inputRef.current?.focus(), 100);
     }, []);
 
-    // Effect to handle URL synchronization and fresh session redirection
+    // Ensure the session ID is set and URL is synced avoiding infinite loops
     useEffect(() => {
-        if (!sessionIdFromUrl) {
-            // If we hit /chat, always start fresh as requested
+        if (!currentSessionId) {
+            // Generate a fresh ID uniquely once if genuinely missing
             const newId = uuidv4();
-            router.replace(`/chat/${newId}`);
-        } else if (sessionIdFromUrl !== currentSessionId) {
-            setCurrentSessionId(sessionIdFromUrl);
+            setCurrentSessionId(newId);
+            window.history.replaceState(null, '', `/chat/${newId}`);
+        } else {
+            // If we have params later from Next.js hydration, sync it if needed
+            let routeId = Array.isArray(params?.id) ? params.id[0] : (params?.id as string);
+            if (routeId && routeId !== currentSessionId) {
+                // If the user actually navigated via Next.js router
+                // (e.g., clicking on a session in the sidebar)
+                // then currentSessionId should update to match
+                setCurrentSessionId(routeId);
+            }
         }
-    }, [sessionIdFromUrl, router, currentSessionId]);
+    }, [params, currentSessionId]);
 
     // Force URL synchronization for masked domains/iframes
     useEffect(() => {
