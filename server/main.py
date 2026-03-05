@@ -321,6 +321,8 @@ Possíveis agentes e temas:
             "\n   [Todo o código aqui]"
             "\n</dmz_artifact>"
             "\n"
+            "\nIMPORTANTE: NUNCA envolva a tag <dmz_artifact> em blocos de código markdown (```). Use as tags XML diretamente no seu texto."
+            "\n"
             "\n## REGRAS ESTÉTICAS ABSOLUTAS PARA HTML/UI (NÍVEL PREMIUM/LUXURY):"
             "\nO usuário do DMZ abomina UIs genéricas (ex: tela branca com Inter e botões azuis simples). Você deve surpreendê-lo com design digno de prêmios (Awwwards)."
             "\n"

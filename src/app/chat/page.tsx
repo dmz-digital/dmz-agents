@@ -182,13 +182,20 @@ type ContentBlock =
 
 function formatMessageBlocks(text: string): ContentBlock[] {
     const blocks: ContentBlock[] = [];
-    const images = extractImages(text);
+
+    // Pre-process: if an artifact is wrapped in ```html ... ```, unwrap it
+    // Some models do this automatically even when told not to.
+    let processedText = text.replace(/```[a-z]*\s*\n*(<dmz_artifact[\s\S]*?(?:<\/dmz_artifact>|$))\n*\s*(?:```|$)/g, '$1');
+
+    const images = extractImages(processedText);
 
     // Remove image markdown from text before processing
-    let remaining = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '');
+    let remaining = processedText.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '');
 
     // Match either <dmz_artifact ...>...</dmz_artifact> OR ```...```
-    // The (?:<\/dmz_artifact>|$) allows it to match even if the LLM didn't close the tag yet or it got truncated
+    // Indices:
+    // 1: full artifact, 2: type, 3: filename, 4: title, 5: url, 6: content
+    // 7: full code block, 8: language, 9: code
     const blockRegex = /(<dmz_artifact\s+type="([^"]+)"\s+filename="([^"]+)"\s+title="([^"]+)"(?:.*?url="([^"]+)")?>([\s\S]*?)(?:<\/dmz_artifact>|$))|(```(\w*)\n?([\s\S]*?)(?:```|$))/g;
     let lastIndex = 0;
     let match;
@@ -204,7 +211,7 @@ function formatMessageBlocks(text: string): ContentBlock[] {
         if (match[1]) {
             // It's an artifact
             let innerContent = match[6].trim();
-            // In case the LLM wrapped the inner content in markdown triple backticks, strip them out
+            // In case the LLM wrapped the inner content in markdown triple backticks (redundant but possible), strip them out
             if (innerContent.startsWith('```')) {
                 const lines = innerContent.split('\n');
                 if (lines[0].startsWith('```')) lines.shift();
@@ -220,10 +227,10 @@ function formatMessageBlocks(text: string): ContentBlock[] {
                 url: match[5],
                 content: innerContent
             });
-        } else if (match[6]) {
+        } else if (match[7]) {
             // It's a code block
-            const language = match[7] || 'text';
-            const code = match[8].trim();
+            const language = match[8] || 'text';
+            const code = match[9].trim();
             if (code) {
                 blocks.push({ type: 'code', language, code });
             }
