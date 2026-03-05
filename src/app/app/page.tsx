@@ -6,12 +6,12 @@ import {
     LayoutDashboard, Users, Bot, FolderOpen,
     History, MessageSquare, ChevronRight,
     Star, ArrowRight, Music2, ClipboardList,
-    Code2, ShieldAlert, Sparkles, TrendingUp
+    Code2, ShieldAlert, Sparkles, TrendingUp,
+    Target, PenLine, Blocks, Database, Megaphone, Scale, Plus
 } from "lucide-react";
 import { motion } from "framer-motion";
 import AppHeader from "@/components/AppHeader";
 import { supabase } from "@/lib/supabase";
-import { Plus } from "lucide-react";
 
 const CAT_COLORS: Record<string, string> = {
     Orchestration: "#E85D2F",
@@ -21,7 +21,11 @@ const CAT_COLORS: Record<string, string> = {
     Strategy: "#D97706",
     Design: "#DB2777",
     Sales: "#10B981",
-    Marketing: "#059669"
+    Marketing: "#059669",
+    Copy: "#7C3AED",
+    Frameworks: "#475569",
+    Data: "#0369A1",
+    Legal: "#64748B"
 };
 
 const CATEGORIES = [
@@ -29,8 +33,14 @@ const CATEGORIES = [
     { name: "Product", icon: ClipboardList },
     { name: "Development", icon: Code2 },
     { name: "Security", icon: ShieldAlert },
+    { name: "Strategy", icon: Target },
     { name: "Design", icon: Sparkles },
-    { name: "Sales", icon: TrendingUp }
+    { name: "Sales", icon: TrendingUp },
+    { name: "Marketing", icon: Megaphone },
+    { name: "Copy", icon: PenLine },
+    { name: "Frameworks", icon: Blocks },
+    { name: "Data", icon: Database },
+    { name: "Legal", icon: Scale }
 ];
 
 export default function AppDashboard() {
@@ -86,18 +96,18 @@ export default function AppDashboard() {
                             </Link>
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 relative z-10">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 relative z-10">
                             {CATEGORIES.map((cat) => (
                                 <Link
                                     key={cat.name}
                                     href={`/app/agents?category=${cat.name}`}
-                                    className="flex flex-col gap-4 p-5 rounded-2xl border border-neutral-50 hover:border-dmz-accent/20 hover:bg-orange-50/20 transition-all group"
+                                    className="flex flex-col gap-3 p-4 rounded-2xl border border-neutral-50 hover:border-dmz-accent/20 hover:bg-orange-50/20 transition-all group"
                                 >
-                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                                    <div className="w-8 h-8 rounded-xl flex items-center justify-center"
                                         style={{ backgroundColor: `${CAT_COLORS[cat.name]}10`, color: CAT_COLORS[cat.name] }}>
-                                        <cat.icon size={20} />
+                                        <cat.icon size={16} />
                                     </div>
-                                    <span className="text-xs font-bold text-neutral-700 tracking-tight uppercase">{cat.name}</span>
+                                    <span className="text-[10px] sm:text-[11px] font-bold text-neutral-700 tracking-tight uppercase truncate">{cat.name}</span>
                                 </Link>
                             ))}
                         </div>
@@ -140,7 +150,8 @@ export default function AppDashboard() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.4 }}
-                        className="bg-white border border-neutral-100 rounded-[32px] p-8 shadow-sm flex flex-col"
+                        onClick={() => window.location.href = '/app/projects'}
+                        className="bg-white border border-neutral-100 rounded-[32px] p-8 shadow-sm flex flex-col cursor-pointer hover:shadow-md transition-shadow group"
                     >
                         <div className="flex items-center gap-3 mb-8">
                             <div className="w-10 h-10 bg-blue-50/50 rounded-xl flex items-center justify-center">
