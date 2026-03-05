@@ -1221,12 +1221,12 @@ export default function ChatPage() {
                                                     </span>
                                                 </a>
                                             )}
-                                            <div className={`py-4 px-6 rounded-[28px] text-[15px] leading-relaxed transition-all min-w-0 w-max max-w-full ${msg.role === "user"
+                                            <div className={`py-4 px-6 rounded-[28px] text-[15px] leading-relaxed transition-all min-w-0 w-fit max-w-full ${msg.role === "user"
                                                 ? "bg-neutral-900 text-white rounded-tr-none border border-neutral-800"
                                                 : "bg-[#F3F4F6] border border-neutral-100 text-neutral-800 rounded-tl-none"
                                                 }`}>
                                                 {msg.audio_url ? (
-                                                    <div className="flex flex-col gap-3">
+                                                    <div className="flex flex-col gap-3 min-w-0">
                                                         <AudioPlayer url={msg.audio_url} isUser={msg.role === "user"} />
                                                         {msg.content && !msg.content.includes("[Transcrição Interna do Áudio]:") && <p className={`pt-2 border-t italic ${msg.role === 'user' ? 'border-white/10 text-white/70' : 'border-neutral-100 text-neutral-500'}`}>{msg.content}</p>}
                                                     </div>
@@ -1319,10 +1319,9 @@ export default function ChatPage() {
                                                                     </div>
                                                                 );
                                                             }
-                                                            // text block
                                                             if (block.type === 'text') {
                                                                 return block.text.split('\n').map((line: string, j: number) => (
-                                                                    <p key={`${i}-${j}`} className="leading-relaxed break-words whitespace-pre-wrap">{line}</p>
+                                                                    <p key={`${i}-${j}`} className="leading-relaxed break-words break-all md:break-words whitespace-pre-wrap min-w-0">{line}</p>
                                                                 ));
                                                             }
                                                             return null;
