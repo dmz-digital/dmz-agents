@@ -916,383 +916,387 @@ export default function ChatPage() {
                 )}
             </AnimatePresence>
 
-            {/* Main Chat Area */}
-            <main className="flex flex-col relative h-full min-w-0 bg-white shadow-sm" style={{ flex: previewHtml ? `0 0 ${100 - previewWidth}%` : '1 1 0%' }}>
-                {/* Header */}
-                <div className="h-16 border-b border-neutral-100 px-6 flex items-center justify-between shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-30">
-                    <div className="flex items-center gap-4 min-w-0">
-                        <button
-                            onClick={() => setSidebarOpen(!sidebarOpen)}
-                            className="p-2 hover:bg-neutral-50 rounded-xl text-neutral-400 transition-colors"
-                        >
-                            {sidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
-                        </button>
-                        <div className="h-4 w-[1px] bg-neutral-100 md:block hidden" />
-                        <h2 className="text-sm font-bold text-neutral-900 truncate tracking-tight">
-                            {sessions.find(s => s.session_id === currentSessionId)?.title || "Nova Conversa"}
-                        </h2>
-                    </div>
-                </div>
-
-                {/* Messages Container */}
-                <div
-                    ref={scrollRef}
-                    className="flex-1 overflow-y-auto px-6 py-8 pb-32 custom-scrollbar scroll-smooth"
+            {/* Main Content Wrapper */}
+            <div className="flex-1 flex overflow-hidden min-w-0">
+                {/* Main Chat Area */}
+                <main
+                    className="flex flex-col relative h-full min-w-0 bg-white shadow-sm shrink-0"
+                    style={{ width: previewHtml ? `calc(${100 - previewWidth}% - 2px)` : '100%' }}
                 >
-                    <div className="max-w-3xl mx-auto space-y-12">
-                        {messages.map((msg, i) => {
-                            const isUser = msg.role === "user";
-                            const agent = msg.agent;
+                    {/* Header */}
+                    <div className="h-16 border-b border-neutral-100 px-6 flex items-center justify-between shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-30">
+                        <div className="flex items-center gap-4 min-w-0">
+                            <button
+                                onClick={() => setSidebarOpen(!sidebarOpen)}
+                                className="p-2 hover:bg-neutral-50 rounded-xl text-neutral-400 transition-colors"
+                            >
+                                {sidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
+                            </button>
+                            <div className="h-4 w-[1px] bg-neutral-100 md:block hidden" />
+                            <h2 className="text-sm font-bold text-neutral-900 truncate tracking-tight">
+                                {sessions.find(s => s.session_id === currentSessionId)?.title || "Nova Conversa"}
+                            </h2>
+                        </div>
+                    </div>
 
-                            return (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    key={msg.id}
-                                    className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
-                                >
-                                    <div className={`flex gap-4 max-w-[85%] ${isUser ? "flex-row-reverse" : "flex-row"}`}>
-                                        <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center border shadow-sm ${isUser ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-100"}`}>
-                                            {isUser ? <User size={16} className="text-white" /> : <Bot size={16} style={{ color: agent?.color || '#D8663E' }} />}
-                                        </div>
+                    {/* Messages Container */}
+                    <div
+                        ref={scrollRef}
+                        className="flex-1 overflow-y-auto px-6 py-8 pb-32 custom-scrollbar scroll-smooth"
+                    >
+                        <div className="max-w-3xl mx-auto space-y-12">
+                            {messages.map((msg, i) => {
+                                const isUser = msg.role === "user";
+                                const agent = msg.agent;
 
-                                        <div className="flex flex-col gap-2 min-w-0">
-                                            <div className="flex items-center gap-2 px-1">
-                                                <span className="text-[10px] font-black text-neutral-900 uppercase tracking-wider">
-                                                    {isUser ? "Você" : agent?.name || "Assistente"}
-                                                </span>
-                                                {!isUser && agent?.handle && (
-                                                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-neutral-100 text-neutral-500">
-                                                        @{agent.handle}
-                                                    </span>
-                                                )}
-                                                <span className="text-[9px] text-neutral-300 font-medium">
-                                                    {msg.created_at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
+                                return (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        key={msg.id}
+                                        className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
+                                    >
+                                        <div className={`flex gap-4 max-w-[85%] ${isUser ? "flex-row-reverse" : "flex-row"}`}>
+                                            <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center border shadow-sm ${isUser ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-100"}`}>
+                                                {isUser ? <User size={16} className="text-white" /> : <Bot size={16} style={{ color: agent?.color || '#D8663E' }} />}
                                             </div>
 
-                                            <div className={`relative px-5 py-4 rounded-[24px] ${isUser ? "bg-neutral-900 text-white shadow-lg shadow-neutral-900/10" : "bg-white border border-neutral-100 text-neutral-800"}`}>
-                                                <div className="space-y-4">
-                                                    {!isUser && msg.isTyping && i === messages.length - 1 ? (
-                                                        <TypingMessage text={msg.content} onComplete={() => {
-                                                            setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isTyping: false } : m));
-                                                        }} />
-                                                    ) : (
-                                                        <>
-                                                            {formatMessageBlocks(msg.content).map((block, bi) => {
-                                                                if (block.type === 'text') {
-                                                                    const lines = block.text.split('\n').filter(l => l.trim().length > 0);
-                                                                    return (
-                                                                        <div key={bi} className="space-y-3">
-                                                                            {lines.map((l, li) => <p key={li} className="leading-relaxed text-[13px] sm:text-[14px]">{l}</p>)}
-                                                                        </div>
-                                                                    );
-                                                                }
-                                                                if (block.type === 'image') {
-                                                                    return (
-                                                                        <div key={bi} className="my-4 rounded-2xl overflow-hidden border border-neutral-100 group relative">
-                                                                            <img src={block.url} alt={block.alt} title={block.url} className="w-full h-auto max-h-[400px] object-contain bg-neutral-50" />
-                                                                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                                                                                <a href={block.url} target="_blank" rel="noreferrer" className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-neutral-500 hover:text-dmz-accent shadow-xl flex items-center gap-1.5 transition-all active:scale-95 border border-neutral-100">
-                                                                                    <Maximize size={10} />
-                                                                                    Ver original
-                                                                                </a>
+                                            <div className="flex flex-col gap-2 min-w-0">
+                                                <div className="flex items-center gap-2 px-1">
+                                                    <span className="text-[10px] font-black text-neutral-900 uppercase tracking-wider">
+                                                        {isUser ? "Você" : agent?.name || "Assistente"}
+                                                    </span>
+                                                    {!isUser && agent?.handle && (
+                                                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-neutral-100 text-neutral-500">
+                                                            @{agent.handle}
+                                                        </span>
+                                                    )}
+                                                    <span className="text-[9px] text-neutral-300 font-medium">
+                                                        {msg.created_at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </div>
+
+                                                <div className={`relative px-5 py-4 rounded-[24px] ${isUser ? "bg-neutral-900 text-white shadow-lg shadow-neutral-900/10" : "bg-white border border-neutral-100 text-neutral-800"}`}>
+                                                    <div className="space-y-4">
+                                                        {!isUser && msg.isTyping && i === messages.length - 1 ? (
+                                                            <TypingMessage text={msg.content} onComplete={() => {
+                                                                setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isTyping: false } : m));
+                                                            }} />
+                                                        ) : (
+                                                            <>
+                                                                {formatMessageBlocks(msg.content).map((block, bi) => {
+                                                                    if (block.type === 'text') {
+                                                                        const lines = block.text.split('\n').filter(l => l.trim().length > 0);
+                                                                        return (
+                                                                            <div key={bi} className="space-y-3">
+                                                                                {lines.map((l, li) => <p key={li} className="leading-relaxed text-[13px] sm:text-[14px]">{l}</p>)}
                                                                             </div>
-                                                                        </div>
-                                                                    );
-                                                                }
-                                                                if (block.type === 'code') {
-                                                                    return (
-                                                                        <div key={bi} className="my-6 rounded-2xl overflow-hidden border border-neutral-200 bg-[#1E1E1E] shadow-xl group">
-                                                                            <div className="px-4 py-2 border-b border-white/5 bg-white/5 flex items-center justify-between">
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <FileCode size={12} className="text-white/40" />
-                                                                                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{block.language}</span>
+                                                                        );
+                                                                    }
+                                                                    if (block.type === 'image') {
+                                                                        return (
+                                                                            <div key={bi} className="my-4 rounded-2xl overflow-hidden border border-neutral-100 group relative">
+                                                                                <img src={block.url} alt={block.alt} title={block.url} className="w-full h-auto max-h-[400px] object-contain bg-neutral-50" />
+                                                                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                                                                                    <a href={block.url} target="_blank" rel="noreferrer" className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-neutral-500 hover:text-dmz-accent shadow-xl flex items-center gap-1.5 transition-all active:scale-95 border border-neutral-100">
+                                                                                        <Maximize size={10} />
+                                                                                        Ver original
+                                                                                    </a>
                                                                                 </div>
-                                                                                <button
-                                                                                    onClick={() => navigator.clipboard.writeText(block.code)}
-                                                                                    className="p-1 hover:bg-white/10 rounded-md transition-all"
-                                                                                >
-                                                                                    <Copy size={12} className="text-white/40 hover:text-white" />
-                                                                                </button>
                                                                             </div>
-                                                                            <pre className="p-4 overflow-x-auto custom-scrollbar">
-                                                                                <code className="text-xs text-neutral-200 font-mono leading-relaxed">{block.code}</code>
-                                                                            </pre>
-                                                                        </div>
-                                                                    );
-                                                                }
-                                                                if (block.type === 'artifact') {
-                                                                    const isHtml = block.artifactType === 'html' || block.filename.endsWith('.html');
-                                                                    return (
-                                                                        <div key={bi} className="my-6 border border-neutral-200 rounded-[28px] overflow-hidden bg-white shadow-xl shadow-neutral-100/50 group/art">
-                                                                            <div className="p-5 flex items-center justify-between border-b border-neutral-50 bg-neutral-50/50">
-                                                                                <div className="flex items-center gap-4 min-w-0">
-                                                                                    <div className="w-10 h-10 rounded-2xl bg-white border border-neutral-100 flex items-center justify-center text-dmz-accent shadow-sm">
-                                                                                        {isHtml ? <Layout size={20} /> : <FileCode size={20} />}
+                                                                        );
+                                                                    }
+                                                                    if (block.type === 'code') {
+                                                                        return (
+                                                                            <div key={bi} className="my-6 rounded-2xl overflow-hidden border border-neutral-200 bg-[#1E1E1E] shadow-xl group">
+                                                                                <div className="px-4 py-2 border-b border-white/5 bg-white/5 flex items-center justify-between">
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <FileCode size={12} className="text-white/40" />
+                                                                                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{block.language}</span>
                                                                                     </div>
-                                                                                    <div className="min-w-0">
-                                                                                        <div className="text-[13px] font-black text-neutral-900 truncate tracking-tight">{block.title}</div>
-                                                                                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{block.filename}</div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                <div className="flex items-center gap-2">
-                                                                                    {isHtml && (
-                                                                                        <button
-                                                                                            onClick={() => {
-                                                                                                setPreviewHtml(block.content);
-                                                                                                setPreviewMode('visual');
-                                                                                            }}
-                                                                                            className="px-4 py-2 bg-neutral-900 hover:bg-black text-white rounded-xl text-[11px] font-black flex items-center gap-2 transition-all shadow-lg active:scale-95"
-                                                                                        >
-                                                                                            <Maximize size={12} />
-                                                                                            Visualizar
-                                                                                        </button>
-                                                                                    )}
                                                                                     <button
-                                                                                        onClick={() => {
-                                                                                            const blob = new Blob([block.content], { type: 'text/plain' });
-                                                                                            const url = URL.createObjectURL(blob);
-                                                                                            const a = document.createElement('a');
-                                                                                            a.href = url;
-                                                                                            a.download = block.filename;
-                                                                                            a.click();
-                                                                                            URL.revokeObjectURL(url);
-                                                                                        }}
-                                                                                        className="p-2 border border-neutral-200 hover:bg-neutral-50 rounded-xl text-neutral-500 transition-all active:scale-90"
-                                                                                        title="Download"
+                                                                                        onClick={() => navigator.clipboard.writeText(block.code)}
+                                                                                        className="p-1 hover:bg-white/10 rounded-md transition-all"
                                                                                     >
-                                                                                        <Download size={16} />
+                                                                                        <Copy size={12} className="text-white/40 hover:text-white" />
                                                                                     </button>
                                                                                 </div>
+                                                                                <pre className="p-4 overflow-x-auto custom-scrollbar">
+                                                                                    <code className="text-xs text-neutral-200 font-mono leading-relaxed">{block.code}</code>
+                                                                                </pre>
                                                                             </div>
-                                                                            <div className="p-4 bg-neutral-50/30">
-                                                                                <div className="bg-[#1e1e1e] rounded-2xl p-4 overflow-hidden border border-neutral-200">
-                                                                                    <pre className="text-[11px] text-neutral-300 font-mono whitespace-pre-wrap line-clamp-[10] scrollbar-hide">
-                                                                                        {block.content}
-                                                                                    </pre>
+                                                                        );
+                                                                    }
+                                                                    if (block.type === 'artifact') {
+                                                                        const isHtml = block.artifactType === 'html' || block.filename.endsWith('.html');
+                                                                        return (
+                                                                            <div key={bi} className="my-6 border border-neutral-200 rounded-[28px] overflow-hidden bg-white shadow-xl shadow-neutral-100/50 group/art">
+                                                                                <div className="p-5 flex items-center justify-between border-b border-neutral-50 bg-neutral-50/50">
+                                                                                    <div className="flex items-center gap-4 min-w-0">
+                                                                                        <div className="w-10 h-10 rounded-2xl bg-white border border-neutral-100 flex items-center justify-center text-dmz-accent shadow-sm">
+                                                                                            {isHtml ? <Layout size={20} /> : <FileCode size={20} />}
+                                                                                        </div>
+                                                                                        <div className="min-w-0">
+                                                                                            <div className="text-[13px] font-black text-neutral-900 truncate tracking-tight">{block.title}</div>
+                                                                                            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{block.filename}</div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        {isHtml && (
+                                                                                            <button
+                                                                                                onClick={() => {
+                                                                                                    setPreviewHtml(block.content);
+                                                                                                    setPreviewMode('visual');
+                                                                                                }}
+                                                                                                className="px-4 py-2 bg-neutral-900 hover:bg-black text-white rounded-xl text-[11px] font-black flex items-center gap-2 transition-all shadow-lg active:scale-95"
+                                                                                            >
+                                                                                                <Maximize size={12} />
+                                                                                                Visualizar
+                                                                                            </button>
+                                                                                        )}
+                                                                                        <button
+                                                                                            onClick={() => {
+                                                                                                const blob = new Blob([block.content], { type: 'text/plain' });
+                                                                                                const url = URL.createObjectURL(blob);
+                                                                                                const a = document.createElement('a');
+                                                                                                a.href = url;
+                                                                                                a.download = block.filename;
+                                                                                                a.click();
+                                                                                                URL.revokeObjectURL(url);
+                                                                                            }}
+                                                                                            className="p-2 border border-neutral-200 hover:bg-neutral-50 rounded-xl text-neutral-500 transition-all active:scale-90"
+                                                                                            title="Download"
+                                                                                        >
+                                                                                            <Download size={16} />
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="p-4 bg-neutral-50/30">
+                                                                                    <div className="bg-[#1e1e1e] rounded-2xl p-4 overflow-hidden border border-neutral-200">
+                                                                                        <pre className="text-[11px] text-neutral-300 font-mono whitespace-pre-wrap line-clamp-[10] scrollbar-hide">
+                                                                                            {block.content}
+                                                                                        </pre>
+                                                                                    </div>
                                                                                 </div>
                                                                             </div>
-                                                                        </div>
-                                                                    );
-                                                                }
-                                                                return null;
-                                                            })}
-                                                        </>
-                                                    )}
-                                                </div>
-
-                                                {msg.audio_url && <div className="mt-4"><AudioPlayer url={msg.audio_url} isUser={isUser} /></div>}
-
-                                                <div className={`absolute bottom-[-28px] ${isUser ? 'right-2' : 'left-2'} flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
-                                                    <button
-                                                        onClick={() => copyMessage(msg)}
-                                                        className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
-                                                        title="Copiar"
-                                                    >
-                                                        {copiedId === msg.id ? (
-                                                            <Check size={12} className="text-green-500" />
-                                                        ) : (
-                                                            <Copy size={12} className="text-neutral-400 hover:text-neutral-600" />
+                                                                        );
+                                                                    }
+                                                                    return null;
+                                                                })}
+                                                            </>
                                                         )}
-                                                    </button>
-                                                    {(formatMessageBlocks(msg.content).some(b => b.type === 'artifact' || b.type === 'image') || msg.file_url) ? (
+                                                    </div>
+
+                                                    {msg.audio_url && <div className="mt-4"><AudioPlayer url={msg.audio_url} isUser={isUser} /></div>}
+
+                                                    <div className={`absolute bottom-[-28px] ${isUser ? 'right-2' : 'left-2'} flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
                                                         <button
-                                                            onClick={async () => {
-                                                                const forceDownload = async (url: string, filename: string) => {
-                                                                    try {
-                                                                        const resp = await fetch(url);
-                                                                        const blob = await resp.blob();
-                                                                        const blobUrl = URL.createObjectURL(blob);
-                                                                        const a = document.createElement('a');
-                                                                        a.href = blobUrl;
-                                                                        a.download = filename;
-                                                                        document.body.appendChild(a);
-                                                                        a.click();
-                                                                        document.body.removeChild(a);
-                                                                        URL.revokeObjectURL(blobUrl);
-                                                                    } catch {
-                                                                        // Fallback: open with download hint
+                                                            onClick={() => copyMessage(msg)}
+                                                            className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
+                                                            title="Copiar"
+                                                        >
+                                                            {copiedId === msg.id ? (
+                                                                <Check size={12} className="text-green-500" />
+                                                            ) : (
+                                                                <Copy size={12} className="text-neutral-400 hover:text-neutral-600" />
+                                                            )}
+                                                        </button>
+                                                        {(formatMessageBlocks(msg.content).some(b => b.type === 'artifact' || b.type === 'image') || msg.file_url) ? (
+                                                            <button
+                                                                onClick={async () => {
+                                                                    const forceDownload = async (url: string, filename: string) => {
+                                                                        try {
+                                                                            const resp = await fetch(url);
+                                                                            const blob = await resp.blob();
+                                                                            const blobUrl = URL.createObjectURL(blob);
+                                                                            const a = document.createElement('a');
+                                                                            a.href = blobUrl;
+                                                                            a.download = filename;
+                                                                            document.body.appendChild(a);
+                                                                            a.click();
+                                                                            document.body.removeChild(a);
+                                                                            URL.revokeObjectURL(blobUrl);
+                                                                        } catch {
+                                                                            // Fallback: open with download hint
+                                                                            const a = document.createElement('a');
+                                                                            a.href = url;
+                                                                            a.download = filename;
+                                                                            a.setAttribute('download', filename);
+                                                                            document.body.appendChild(a);
+                                                                            a.click();
+                                                                            document.body.removeChild(a);
+                                                                        }
+                                                                    };
+
+                                                                    if (msg.file_url) {
+                                                                        const ext = msg.file_url.split('.').pop()?.split('?')[0] || 'file';
+                                                                        await forceDownload(msg.file_url, msg.file_name || `download.${ext}`);
+                                                                        return;
+                                                                    }
+                                                                    const block = formatMessageBlocks(msg.content).find(b => b.type === 'artifact' || b.type === 'image');
+                                                                    if (!block) return;
+                                                                    if (block.type === 'artifact') {
+                                                                        const blob = new Blob([block.content], { type: 'text/html' });
+                                                                        const url = URL.createObjectURL(blob);
                                                                         const a = document.createElement('a');
                                                                         a.href = url;
-                                                                        a.download = filename;
-                                                                        a.setAttribute('download', filename);
+                                                                        a.download = block.filename || 'artifact.html';
                                                                         document.body.appendChild(a);
                                                                         a.click();
                                                                         document.body.removeChild(a);
+                                                                        URL.revokeObjectURL(url);
+                                                                    } else if (block.type === 'image') {
+                                                                        await forceDownload(block.url, `image-${Date.now()}.png`);
                                                                     }
-                                                                };
-
-                                                                if (msg.file_url) {
-                                                                    const ext = msg.file_url.split('.').pop()?.split('?')[0] || 'file';
-                                                                    await forceDownload(msg.file_url, msg.file_name || `download.${ext}`);
-                                                                    return;
-                                                                }
-                                                                const block = formatMessageBlocks(msg.content).find(b => b.type === 'artifact' || b.type === 'image');
-                                                                if (!block) return;
-                                                                if (block.type === 'artifact') {
-                                                                    const blob = new Blob([block.content], { type: 'text/html' });
-                                                                    const url = URL.createObjectURL(blob);
-                                                                    const a = document.createElement('a');
-                                                                    a.href = url;
-                                                                    a.download = block.filename || 'artifact.html';
-                                                                    document.body.appendChild(a);
-                                                                    a.click();
-                                                                    document.body.removeChild(a);
-                                                                    URL.revokeObjectURL(url);
-                                                                } else if (block.type === 'image') {
-                                                                    await forceDownload(block.url, `image-${Date.now()}.png`);
-                                                                }
-                                                            }}
-                                                            className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
-                                                            title="Baixar"
-                                                        >
-                                                            <Download size={12} className="text-neutral-400 hover:text-neutral-600" />
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => replyToMessage(msg)}
-                                                            className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
-                                                            title="Responder"
-                                                        >
-                                                            <Reply size={12} className="text-neutral-400 hover:text-neutral-600" />
-                                                        </button>
-                                                    )}
+                                                                }}
+                                                                className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
+                                                                title="Baixar"
+                                                            >
+                                                                <Download size={12} className="text-neutral-400 hover:text-neutral-600" />
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => replyToMessage(msg)}
+                                                                className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
+                                                                title="Responder"
+                                                            >
+                                                                <Reply size={12} className="text-neutral-400 hover:text-neutral-600" />
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
+                                        </div>
+                                    </motion.div>
+                                );
+                            })}
+
+                            {isThinking && (
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4">
+                                    <div className="w-8 h-8 rounded-xl bg-orange-50/50 flex items-center justify-center border border-dmz-accent/10">
+                                        <Sparkles size={16} className="text-dmz-accent" />
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <span className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1">Orquestrador</span>
+                                        <div className="bg-neutral-50/30 border border-neutral-100 rounded-[24px] p-2 min-w-[240px]">
+                                            <ThinkingStatus />
                                         </div>
                                     </div>
                                 </motion.div>
-                            );
-                        })}
+                            )}
+                        </div>
+                    </div>
 
-                        {isThinking && (
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4">
-                                <div className="w-8 h-8 rounded-xl bg-orange-50/50 flex items-center justify-center border border-dmz-accent/10">
-                                    <Sparkles size={16} className="text-dmz-accent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-6 z-40">
+                        <div className="max-w-3xl mx-auto">
+                            <PromptBox onSend={handlePromptSend} />
+                        </div>
+                    </div>
+                </main>
+
+                <AnimatePresence>
+                    {isSearchOpen && (
+                        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-24 px-6 md:px-0 bg-white/20 backdrop-blur-md">
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                className="w-full max-w-2xl bg-white rounded-[32px] shadow-[0_32px_128px_-16px_rgba(0,0,0,0.1)] border border-neutral-100 overflow-hidden"
+                            >
+                                <div className="p-4 border-b border-neutral-100 flex items-center gap-4">
+                                    <Search className="text-neutral-400 ml-2" size={20} />
+                                    <input
+                                        autoFocus
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        placeholder="Buscar em todas as conversas..."
+                                        className="flex-1 bg-transparent py-4 outline-none text-neutral-800 font-medium"
+                                    />
+                                    <button onClick={() => setIsSearchOpen(false)} className="p-2 hover:bg-neutral-100 rounded-xl text-neutral-400">
+                                        <X size={20} />
+                                    </button>
                                 </div>
-                                <div className="flex flex-col gap-2">
-                                    <span className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1">Orquestrador</span>
-                                    <div className="bg-neutral-50/30 border border-neutral-100 rounded-[24px] p-2 min-w-[240px]">
-                                        <ThinkingStatus />
-                                    </div>
+                                <div className="max-h-[400px] overflow-y-auto p-4 space-y-2">
+                                    {isSearching ? (
+                                        <div className="p-8 text-center text-neutral-400">Buscando na memória...</div>
+                                    ) : searchResults.length > 0 ? (
+                                        searchResults.map(res => (
+                                            <div
+                                                key={res.session_id}
+                                                onClick={() => {
+                                                    router.push(`/chat/${res.session_id}`);
+                                                    setIsSearchOpen(false);
+                                                }}
+                                                className="p-4 rounded-2xl hover:bg-neutral-50 cursor-pointer border border-transparent hover:border-neutral-100 transition-all group"
+                                            >
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <MessageSquare size={14} className="text-dmz-accent" />
+                                                        <span className="text-xs font-black text-neutral-900 tracking-tight">Sessão {res.session_id.substring(0, 8)}</span>
+                                                    </div>
+                                                    <span className="text-[10px] text-neutral-400">{new Date(res.created_at).toLocaleDateString()}</span>
+                                                </div>
+                                                <p className="text-xs text-neutral-500 line-clamp-2 italic">&quot;{res.last_message}&quot;</p>
+                                            </div>
+                                        ))
+                                    ) : searchQuery.length > 1 ? (
+                                        <div className="p-8 text-center text-neutral-400">Nenhum resultado encontrado.</div>
+                                    ) : (
+                                        <div className="p-8 text-center text-neutral-400">Digite para buscar no rastro de IA...</div>
+                                    )}
                                 </div>
                             </motion.div>
-                        )}
-                    </div>
-                </div>
+                        </div>
+                    )}
+                </AnimatePresence>
 
-                <div className="absolute bottom-0 left-0 right-0 p-6 z-40">
-                    <div className="max-w-3xl mx-auto">
-                        <PromptBox onSend={handlePromptSend} />
-                    </div>
-                </div>
-            </main>
-
-            <AnimatePresence>
-                {isSearchOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-24 px-6 md:px-0 bg-white/20 backdrop-blur-md">
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="w-full max-w-2xl bg-white rounded-[32px] shadow-[0_32px_128px_-16px_rgba(0,0,0,0.1)] border border-neutral-100 overflow-hidden"
+                {/* Draggable Splitter + Preview Panel */}
+                {previewHtml && (
+                    <>
+                        {/* Splitter Handle */}
+                        <div
+                            onMouseDown={handleSplitterMouseDown}
+                            className="w-[2px] h-full shrink-0 bg-neutral-200 relative group z-50"
+                            style={{ cursor: 'col-resize' }}
                         >
-                            <div className="p-4 border-b border-neutral-100 flex items-center gap-4">
-                                <Search className="text-neutral-400 ml-2" size={20} />
-                                <input
-                                    autoFocus
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Buscar em todas as conversas..."
-                                    className="flex-1 bg-transparent py-4 outline-none text-neutral-800 font-medium"
-                                />
-                                <button onClick={() => setIsSearchOpen(false)} className="p-2 hover:bg-neutral-100 rounded-xl text-neutral-400">
+                            <div className="absolute inset-y-0 -left-[4px] -right-[4px]" style={{ cursor: 'col-resize' }} />
+                        </div>
+
+                        {/* Preview Panel */}
+                        <div className="h-full flex flex-col bg-white shrink-0 shadow-[-4px_0_24px_-12px_rgba(0,0,0,0.1)]" style={{ width: `${previewWidth}%` }}>
+                            <div className="h-16 border-b border-neutral-100 px-6 flex items-center justify-between bg-white shrink-0">
+                                <div className="flex items-center gap-6">
+                                    <h3 className="text-sm font-black text-neutral-900 tracking-tight flex items-center gap-3">
+                                        <Layout size={18} className="text-dmz-accent" />
+                                        Visualização
+                                    </h3>
+                                    <div className="flex bg-neutral-100 p-1 rounded-xl">
+                                        <button
+                                            onClick={() => setPreviewMode('visual')}
+                                            className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${previewMode === 'visual' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+                                        >
+                                            •• Preview
+                                        </button>
+                                        <button
+                                            onClick={() => setPreviewMode('code')}
+                                            className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${previewMode === 'code' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+                                        >
+                                            &lt;/&gt; Código
+                                        </button>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setPreviewHtml(null)}
+                                    className="w-10 h-10 rounded-2xl bg-neutral-100 flex items-center justify-center text-neutral-500 hover:bg-neutral-200 hover:text-neutral-900 transition-all active:scale-95 shadow-sm"
+                                >
                                     <X size={20} />
                                 </button>
                             </div>
-                            <div className="max-h-[400px] overflow-y-auto p-4 space-y-2">
-                                {isSearching ? (
-                                    <div className="p-8 text-center text-neutral-400">Buscando na memória...</div>
-                                ) : searchResults.length > 0 ? (
-                                    searchResults.map(res => (
-                                        <div
-                                            key={res.session_id}
-                                            onClick={() => {
-                                                router.push(`/chat/${res.session_id}`);
-                                                setIsSearchOpen(false);
-                                            }}
-                                            className="p-4 rounded-2xl hover:bg-neutral-50 cursor-pointer border border-transparent hover:border-neutral-100 transition-all group"
-                                        >
-                                            <div className="flex justify-between items-center mb-1">
-                                                <div className="flex items-center gap-2">
-                                                    <MessageSquare size={14} className="text-dmz-accent" />
-                                                    <span className="text-xs font-black text-neutral-900 tracking-tight">Sessão {res.session_id.substring(0, 8)}</span>
-                                                </div>
-                                                <span className="text-[10px] text-neutral-400">{new Date(res.created_at).toLocaleDateString()}</span>
-                                            </div>
-                                            <p className="text-xs text-neutral-500 line-clamp-2 italic">&quot;{res.last_message}&quot;</p>
-                                        </div>
-                                    ))
-                                ) : searchQuery.length > 1 ? (
-                                    <div className="p-8 text-center text-neutral-400">Nenhum resultado encontrado.</div>
-                                ) : (
-                                    <div className="p-8 text-center text-neutral-400">Digite para buscar no rastro de IA...</div>
-                                )}
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-
-            {/* Draggable Splitter + Preview Panel */}
-            {previewHtml && (
-                <>
-                    {/* Splitter Handle */}
-                    <div
-                        onMouseDown={handleSplitterMouseDown}
-                        className="w-[6px] h-full shrink-0 bg-neutral-100 hover:bg-dmz-accent/30 active:bg-dmz-accent/50 transition-colors relative group z-50"
-                        style={{ cursor: 'col-resize' }}
-                    >
-                        <div className="absolute inset-y-0 -left-[6px] -right-[6px]" style={{ cursor: 'col-resize' }} />
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 rounded-full bg-neutral-300 group-hover:bg-dmz-accent transition-colors" />
-                    </div>
-
-                    {/* Preview Panel */}
-                    <div className="h-full flex flex-col bg-white" style={{ flex: `0 0 ${previewWidth}%` }}>
-                        <div className="h-16 border-b border-neutral-100 px-6 flex items-center justify-between bg-white shrink-0">
-                            <div className="flex items-center gap-6">
-                                <h3 className="text-sm font-black text-neutral-900 tracking-tight flex items-center gap-3">
-                                    <Layout size={18} className="text-dmz-accent" />
-                                    Visualização
-                                </h3>
-                                <div className="flex bg-neutral-100 p-1 rounded-xl">
-                                    <button
-                                        onClick={() => setPreviewMode('visual')}
-                                        className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${previewMode === 'visual' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
-                                    >
-                                        •• Preview
-                                    </button>
-                                    <button
-                                        onClick={() => setPreviewMode('code')}
-                                        className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${previewMode === 'code' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
-                                    >
-                                        &lt;/&gt; Código
-                                    </button>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setPreviewHtml(null)}
-                                className="w-10 h-10 rounded-2xl bg-neutral-100 flex items-center justify-center text-neutral-500 hover:bg-neutral-200 hover:text-neutral-900 transition-all active:scale-95 shadow-sm"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <div className="flex-1 overflow-hidden bg-neutral-50 p-4">
-                            {previewMode === 'visual' ? (
-                                <div className="w-full h-full bg-white rounded-2xl overflow-hidden border border-neutral-100 shadow-xl relative">
-                                    <iframe
-                                        srcDoc={`
+                            <div className="flex-1 overflow-hidden bg-neutral-50 p-4">
+                                {previewMode === 'visual' ? (
+                                    <div className="w-full h-full bg-white rounded-2xl overflow-hidden border border-neutral-100 shadow-xl relative">
+                                        <iframe
+                                            srcDoc={`
                                             <!DOCTYPE html>
                                             <html>
                                                 <head>
@@ -1310,19 +1314,20 @@ export default function ChatPage() {
                                                 <body>${previewHtml}</body>
                                             </html>
                                         `}
-                                        className="w-full h-full border-none"
-                                        title="Preview"
-                                    />
-                                </div>
-                            ) : (
-                                <div className="w-full h-full bg-[#1e1e1e] rounded-2xl overflow-hidden border border-neutral-800 shadow-xl p-6 font-mono text-[13px] text-neutral-300 overflow-y-auto whitespace-pre-wrap custom-scrollbar">
-                                    {previewHtml}
-                                </div>
-                            )}
+                                            className="w-full h-full border-none"
+                                            title="Preview"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="w-full h-full bg-[#1e1e1e] rounded-2xl overflow-hidden border border-neutral-800 shadow-xl p-6 font-mono text-[13px] text-neutral-300 overflow-y-auto whitespace-pre-wrap custom-scrollbar">
+                                        {previewHtml}
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                </>
-            )}
+                    </>
+                )}
+            </div>
         </div>
     );
 }
