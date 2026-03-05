@@ -626,13 +626,16 @@ Regra: Se a mensagem mencionar "gerar imagem" ou "crie uma foto/ilustração", m
         elif req.file_url and not is_image:
             full_message += f"\n\n[Arquivo anexado: {req.file_url} — Tipo: {req.file_type}]"
 
+        # Call LLM (standard response)
+        response_text = get_llm_response(system_prompt, full_message, req.history)
+
         # --- ARTIFACT SPECIALIST PASS (Claude for Quality) ---
         # If the response mentions creating a file, artifact or layout, we can trigger a specialist pass
         # for maximum quality in HTML/PDF/JSX using the dedicated Claude key
-        if any(keyword in response_text.lower() for keyword in ["<dmz_artifact", "html", "contrato", "proposta", "site", "landing page"]):
+        if any(keyword in response_text.lower() for keyword in ["<dmz_artifact", "html", "contrato", "proposta", "site", "landing page", "código", "script"]):
             try:
                 # Fetch artifact specialist config
-                res_spec = supabase.table("admin_system_models").select("*").eq("purpose", "artifact_generation").eq("active", true).limit(1).execute()
+                res_spec = supabase.table("admin_system_models").select("*").eq("purpose", "artifact_generation").eq("active", True).limit(1).execute()
                 if res_spec.data:
                     spec_config = res_spec.data[0]
                     spec_key = spec_config.get("config", {}).get("api_key")
