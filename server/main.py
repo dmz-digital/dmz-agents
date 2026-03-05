@@ -51,7 +51,7 @@ def get_llm_response(system_prompt: str, user_prompt: str, history: list = None)
         
         response = client.messages.create(
             model="claude-3-5-sonnet-20241022",
-            max_tokens=4096,
+            max_tokens=8192,
             system=system_prompt,
             messages=msgs
         )
@@ -71,7 +71,8 @@ def get_llm_response(system_prompt: str, user_prompt: str, history: list = None)
         
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=msgs
+            messages=msgs,
+            max_tokens=4096
         )
         return response.choices[0].message.content
 
@@ -94,6 +95,7 @@ def get_llm_response(system_prompt: str, user_prompt: str, history: list = None)
             contents=contents,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
+                max_output_tokens=8192
             ),
         )
         return response.text
@@ -338,6 +340,13 @@ Possíveis agentes e temas:
             "\n   - Só anime \"opacity\" e \"transform\". NUNCA use loops infinitos nervosos nem anime \"width/margin/left\"."
             "\n6. Arquitetura Independente: Adicione Tailwind via script CDN (<script src=\"https://cdn.tailwindcss.com\"></script>), inclua os ícones SVG via lucide-react CDN."
             "\n7. Tudo precisa funcionar auto-contido. O documento HTML que você devolver dentro de <html> até </html> não pode depender de mais nada local."
+            "\n"
+            "\n## ESTRUTURA E COMPLEXIDADE (LANDING PAGES COMPLETAS):"
+            "\n- NUNCA crie apenas uma seção 'Hero'. Se o usuário pediu uma landing page, ele espera um fluxo de conversão completo."
+            "\n- OBRIGATÓRIO ter no mínimo 5 seções distintas: 1. Hero, 2. Problema/Solução ou Features detalhadas, 3. Social Proof/Depoimentos ou Números, 4. FAQ ou Processo, 5. CTA Final e Footer."
+            "\n- Use espaçamentos generosos (py-24, py-32) entre seções. Dê respiro ao design."
+            "\n- Cada seção deve ter um layout visualmente diferente da anterior (ex: zig-zag de imagens/texto, grids de cards, seções full-width com background accent)."
+            "\n- NÃO SEJA PREGUIÇOSO. Escreva o código completo para uma experiência de navegação rica."
         )
 
 
