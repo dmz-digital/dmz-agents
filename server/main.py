@@ -46,8 +46,17 @@ def get_llm_response(system_prompt: str, user_prompt: str, history: list = None)
             role = "user" if h.get("role") == "user" else "assistant"
             content = h.get("content", "")
             if content.strip():
-                msgs.append({"role": role, "content": content})
-        msgs.append({"role": "user", "content": user_prompt})
+                if not msgs and role == "assistant":
+                    msgs.append({"role": "user", "content": "(Sessão iniciada)"})
+                if msgs and msgs[-1]["role"] == role:
+                    msgs[-1]["content"] += "\n\n" + content
+                else:
+                    msgs.append({"role": role, "content": content})
+        
+        if msgs and msgs[-1]["role"] == "user":
+            msgs[-1]["content"] += "\n\n" + user_prompt
+        else:
+            msgs.append({"role": "user", "content": user_prompt})
         
         response = client.messages.create(
             model="claude-3-5-sonnet-20241022",
@@ -86,8 +95,17 @@ def get_llm_response(system_prompt: str, user_prompt: str, history: list = None)
             role = "user" if h.get("role") == "user" else "model"
             content = h.get("content", "")
             if content.strip():
-                contents.append(types.Content(role=role, parts=[types.Part.from_text(text=content)]))
-        contents.append(types.Content(role="user", parts=[types.Part.from_text(text=user_prompt)]))
+                if not contents and role == "model":
+                    contents.append(types.Content(role="user", parts=[types.Part.from_text(text="(Sessão iniciada)")]))
+                if contents and contents[-1].role == role:
+                    contents[-1].parts[0].text += "\n\n" + content
+                else:
+                    contents.append(types.Content(role=role, parts=[types.Part.from_text(text=content)]))
+                    
+        if contents and contents[-1].role == "user":
+            contents[-1].parts[0].text += "\n\n" + user_prompt
+        else:
+            contents.append(types.Content(role="user", parts=[types.Part.from_text(text=user_prompt)]))
         
         chat_model = get_model("chat", "gemini-2.0-flash")
         response = client.models.generate_content(
@@ -598,12 +616,21 @@ Regra: Se a mensagem mencionar "gerar imagem" ou "crie uma foto/ilustração", m
                     role_h = "user" if h.get("role") == "user" else "model"
                     content_h = h.get("content", "")
                     if content_h.strip():
-                        contents.append(types.Content(role=role_h, parts=[types.Part.from_text(text=content_h)]))
+                        if not contents and role_h == "model":
+                            contents.append(types.Content(role="user", parts=[types.Part.from_text(text="(Sessão iniciada)")]))
+                        if contents and contents[-1].role == role_h:
+                            contents[-1].parts[0].text += "\n\n" + content_h
+                        else:
+                            contents.append(types.Content(role=role_h, parts=[types.Part.from_text(text=content_h)]))
                 
                 prompt_parts = img_parts.copy()
                 if full_message:
                     prompt_parts.append(types.Part.from_text(text=full_message))
-                contents.append(types.Content(role="user", parts=prompt_parts))
+                
+                if contents and contents[-1].role == "user":
+                    contents[-1].parts.extend(prompt_parts)
+                else:
+                    contents.append(types.Content(role="user", parts=prompt_parts))
 
                 try:
                     response = client.models.generate_content(
@@ -625,7 +652,12 @@ Regra: Se a mensagem mencionar "gerar imagem" ou "crie uma foto/ilustração", m
                     role_h = "user" if h.get("role") == "user" else "assistant"
                     content_h = h.get("content", "")
                     if content_h.strip():
-                        msgs.append({"role": role_h, "content": content_h})
+                        if not msgs and role_h == "assistant":
+                            msgs.append({"role": "user", "content": "(Sessão iniciada)"})
+                        if msgs and msgs[-1]["role"] == role_h:
+                            msgs[-1]["content"] += "\n\n" + content_h
+                        else:
+                            msgs.append({"role": role_h, "content": content_h})
                 
                 content_block = []
                 for img in image_files:
@@ -641,7 +673,14 @@ Regra: Se a mensagem mencionar "gerar imagem" ou "crie uma foto/ilustração", m
                 
                 if full_message:
                     content_block.append({"type": "text", "text": full_message})
-                msgs.append({"role": "user", "content": content_block})
+                
+                if msgs and msgs[-1]["role"] == "user":
+                    if isinstance(msgs[-1]["content"], str):
+                        msgs[-1]["content"] = [{"type": "text", "text": msgs[-1]["content"]}] + content_block
+                    else:
+                        msgs[-1]["content"].extend(content_block)
+                else:
+                    msgs.append({"role": "user", "content": content_block})
 
                 response = client.messages.create(
                     model="claude-3-5-sonnet-20241022",
