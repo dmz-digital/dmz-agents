@@ -735,7 +735,10 @@ export default function ChatPage() {
                     file_type: primaryFileType || (audioUrl ? "audio/webm" : ""),
                     file_name: primaryFileName,
                     files: filesData,
-                    history: newMessages.map(m => ({ role: m.role, content: m.content }))
+                    history: newMessages.map(m => ({
+                        role: m.role,
+                        content: (m.role === 'assistant' && m.agent?.name) ? `[${m.agent.name}]: ${m.content}` : m.content
+                    }))
                 }),
             });
 

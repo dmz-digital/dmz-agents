@@ -307,8 +307,8 @@ Regra: Se a mensagem mencionar "gerar imagem" ou "crie uma foto/ilustração", m
                             req.agent_id = h
                             # Add routing context for the specialist
                             full_message = f"[CONTEXTO: Especialista {h} chamado. Execute a tarefa agora de forma direta. Se houver comandos de ferramentas (como gerar imagem ou código), execute-os imediatamente.]\n\n{full_message}"
-                            # Clear irrelevant history to focus the specialist
-                            req.history = req.history[-4:] if len(req.history) > 4 else req.history
+                            # Mantém todo o histórico intacto para contexto linear
+                            req.history = req.history
                             print(f"[routing] Rerouted to specialist: {h}")
                             break
             except Exception as e:
@@ -335,10 +335,10 @@ Regra: Se a mensagem mencionar "gerar imagem" ou "crie uma foto/ilustração", m
         time_str = now_sp.strftime("%H:%M")
         
         system_prompt += (
-            f"\n\nCONTEXTO TEMPORAL (FONTE ABSOLUTA DE VERDADE):"
+            f"\n\nCONTEXTO TEMPORAL E CONTINUIDADE:"
             f"\n- Data atual: {date_str}"
             f"\n- Horário atual: {time_str} (fuso horário: GMT-3, América/São Paulo)"
-            f"\n- NUNCA invente ou adivinhe a data/hora. Use SEMPRE os valores acima."
+            f"\n- CONTINUIDADE DO SQUAD: Você está atuando em uma linha do tempo cooperativa com outros especialistas no chat. Se houver mensagens anteriores no histórico começando com algo como [Aurora]: ou [Lucas]:, saiba que essa mensagem não foi dita pelo usuário, mas sim pelo seu COB (Colega de Squad). Leia TUDO o que foi falado antes e continue o projeto a partir do último ponto de forma harmoniosa."
         )
 
         # CRITICAL: Behavior rules
