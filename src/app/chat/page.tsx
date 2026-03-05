@@ -9,7 +9,7 @@ import {
     MessageSquare, Plus, Search, ChevronRight,
     Clock, Trash2, Menu, Heart, Copy, Reply,
     Check, Pencil, BookOpen, Target, Brain, Scale, Activity,
-    CloudUpload, Maximize, X, FileCode, PanelLeftClose, PanelLeftOpen
+    CloudUpload, Maximize, X, FileCode, PanelLeftClose, PanelLeftOpen, Download
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -1374,13 +1374,42 @@ export default function ChatPage() {
                                                                 <Copy size={12} className="text-neutral-400 hover:text-neutral-600" />
                                                             )}
                                                         </button>
-                                                        <button
-                                                            onClick={() => replyToMessage(msg)}
-                                                            className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
-                                                            title="Responder"
-                                                        >
-                                                            <Reply size={12} className="text-neutral-400 hover:text-neutral-600" />
-                                                        </button>
+                                                        {formatMessageBlocks(msg.content).some(b => b.type === 'artifact' || b.type === 'image') ? (
+                                                            <button
+                                                                onClick={() => {
+                                                                    const block = formatMessageBlocks(msg.content).find(b => b.type === 'artifact' || b.type === 'image');
+                                                                    if (!block) return;
+
+                                                                    if (block.type === 'artifact') {
+                                                                        const blob = new Blob([block.content], { type: 'text/plain' });
+                                                                        const url = URL.createObjectURL(blob);
+                                                                        const a = document.createElement('a');
+                                                                        a.href = url;
+                                                                        a.download = block.filename;
+                                                                        a.click();
+                                                                        URL.revokeObjectURL(url);
+                                                                    } else if (block.type === 'image') {
+                                                                        const a = document.createElement('a');
+                                                                        a.href = block.url;
+                                                                        a.download = `image-${Date.now()}.png`;
+                                                                        a.target = "_blank";
+                                                                        a.click();
+                                                                    }
+                                                                }}
+                                                                className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
+                                                                title="Baixar Arquivo"
+                                                            >
+                                                                <Download size={12} className="text-neutral-400 hover:text-neutral-600" />
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => replyToMessage(msg)}
+                                                                className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
+                                                                title="Responder"
+                                                            >
+                                                                <Reply size={12} className="text-neutral-400 hover:text-neutral-600" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>
