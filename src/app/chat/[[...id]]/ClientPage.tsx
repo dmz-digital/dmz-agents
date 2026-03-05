@@ -978,7 +978,7 @@ export default function ChatPage() {
                     {/* Messages Container */}
                     <div
                         ref={scrollRef}
-                        className="flex-1 overflow-y-auto px-3 sm:px-6 py-8 pb-32 custom-scrollbar scroll-smooth"
+                        className="flex-1 overflow-y-auto px-3 sm:px-6 py-8 pb-48 custom-scrollbar scroll-smooth"
                     >
                         <div className="max-w-3xl mx-auto space-y-12">
                             {messages.map((msg, i) => {
@@ -993,9 +993,19 @@ export default function ChatPage() {
                                         className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
                                     >
                                         <div className={`flex gap-3 sm:gap-4 max-w-[92%] sm:max-w-[85%] ${isUser ? "flex-row-reverse" : "flex-row"}`}>
-                                            <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center border shadow-sm ${isUser ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-100"}`}>
-                                                {isUser ? <User size={16} className="text-white" /> : <Bot size={16} style={{ color: agent?.color || '#D8663E' }} />}
-                                            </div>
+                                            {isUser ? (
+                                                <div className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center border shadow-sm bg-neutral-900 border-neutral-800 overflow-hidden">
+                                                    {userProfile?.avatar_url ? (
+                                                        <img src={userProfile.avatar_url} alt="You" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <span className="text-[10px] font-black text-white">{getUserInitials()}</span>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center border shadow-sm bg-white border-neutral-100">
+                                                    <Bot size={16} style={{ color: agent?.color || '#D8663E' }} />
+                                                </div>
+                                            )}
 
                                             <div className="flex flex-col gap-2 min-w-0">
                                                 <div className="flex items-center gap-2 px-1">
