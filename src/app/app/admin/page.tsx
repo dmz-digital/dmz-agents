@@ -6,7 +6,7 @@ import {
     Shield, MessageSquare, Bot, Settings,
     ArrowLeft, ChevronRight, Sparkles,
     Code2, Globe, Paintbrush, FileText,
-    ArrowRight
+    ArrowRight, Cpu
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
@@ -72,6 +72,15 @@ export default function AdminDashboard() {
             color: "bg-purple-500",
             href: "/app/admin/settings",
             features: ["Modelos por Agente", "API Keys", "Logs de Execução"]
+        },
+        {
+            id: "models",
+            title: "Modelos de IA",
+            description: "Gerencie os modelos utilizados para chat, imagens, transcrição e roteamento.",
+            icon: Cpu,
+            color: "bg-emerald-500",
+            href: "/app/admin/models",
+            features: ["Chat & Fallback", "Geração de Imagens", "Transcrição de Áudio"]
         }
     ];
 
@@ -116,7 +125,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {adminCards.map((card, idx) => (
                         <motion.div
                             key={card.id}

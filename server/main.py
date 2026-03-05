@@ -88,8 +88,9 @@ def get_llm_response(system_prompt: str, user_prompt: str, history: list = None)
                 contents.append(types.Content(role=role, parts=[types.Part.from_text(text=content)]))
         contents.append(types.Content(role="user", parts=[types.Part.from_text(text=user_prompt)]))
         
+        chat_model = get_model("chat", "gemini-2.0-flash")
         response = client.models.generate_content(
-            model='gemini-2.0-flash',
+            model=chat_model,
             contents=contents,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
@@ -133,6 +134,22 @@ def get_sys_prompt(p_id: str) -> str:
     except Exception as e:
         print(f"[WARN] Failed to load sys prompt '{p_id}': {e}")
     return ""
+
+
+def get_model(purpose: str, default: str = "gemini-2.0-flash") -> str:
+    """Fetches the model ID for a given purpose from admin_system_models table."""
+    try:
+        res = supabase.table("admin_system_models") \
+            .select("model_id") \
+            .eq("purpose", purpose) \
+            .eq("active", True) \
+            .limit(1) \
+            .execute()
+        if res.data and res.data[0].get("model_id"):
+            return res.data[0]["model_id"]
+    except Exception as e:
+        print(f"[WARN] Failed to load model for '{purpose}': {e}")
+    return default
 
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
@@ -314,8 +331,8 @@ Possíveis agentes e temas:
                 from google import genai
                 from google.genai import types
                 import uuid
-                
                 import re as re_mod
+                import base64
                 
                 # Clean internal markers from the message for cleaner prompt
                 clean_msg = full_message.replace("[Transcrição Interna do Áudio]:", "").strip()
@@ -324,34 +341,49 @@ Possíveis agentes e temas:
                 
                 # Detect how many images requested (default 1, max 4)
                 num_match = re_mod.search(r'(\d+)\s*imagen[s]?', clean_msg.lower())
+                if not num_match:
+                    num_match = re_mod.search(r'(\d+)\s*foto[s]?', clean_msg.lower())
+                if not num_match:
+                    num_match = re_mod.search(r'(\d+)\s*ilustra', clean_msg.lower())
                 num_images = min(int(num_match.group(1)), 4) if num_match else 1
                 
-                img_prompt_generator = f"Você é um engenheiro de prompts de imagem. O usuário quer {num_images} imagem(ns). Resumo do pedido: '{clean_msg}'. Escreva um prompt EXTREMAMENTE detalhado em INGLÊS para o Imagen 3 gerar essa imagem. Responda APENAS com o texto em inglês do prompt."
-                img_req_prompt = get_llm_response(system_prompt, img_prompt_generator, req.history[-3:])
+                # Get model from admin (default: gemini-3-pro-image-preview)
+                image_model = get_model("image_generation", "gemini-2.0-flash-preview-image-generation")
+                print(f"[chat] Using image model: {image_model}, generating {num_images} image(s)")
                 
                 try:
                     client = genai.Client(api_key=gemini_key)
                     generated_urls = []
                     
                     for i in range(num_images):
-                        image_resp = client.models.generate_images(
-                            model='imagen-3.0-generate-002',
-                            prompt=img_req_prompt[:1000],
-                            config=types.GenerateImagesConfig(
-                                number_of_images=1,
-                                output_mime_type="image/jpeg",
-                                aspect_ratio="1:1"
-                            )
+                        # Use generate_content API (required for gemini-3-pro-image-preview)
+                        img_prompt = f"Generate a high quality, photorealistic image: {clean_msg}"
+                        if num_images > 1:
+                            img_prompt += f" (variation {i+1} of {num_images}, make each unique)"
+                        
+                        response = client.models.generate_content(
+                            model=image_model,
+                            contents=img_prompt,
+                            config=types.GenerateContentConfig(
+                                response_modalities=['TEXT', 'IMAGE'],
+                            ),
                         )
-                        if image_resp.generated_images:
-                            img_bytes = image_resp.generated_images[0].image.image_bytes
-                            file_name = f"generated/{uuid.uuid4()}.jpg"
-                            supabase.storage.from_("images").upload(file_name, img_bytes, {"content-type": "image/jpeg"})
-                            img_url = supabase.storage.from_("images").get_public_url(file_name)
-                            generated_urls.append(img_url)
+                        
+                        # Extract image from response parts
+                        if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
+                            for part in response.candidates[0].content.parts:
+                                if part.inline_data and part.inline_data.mime_type and part.inline_data.mime_type.startswith("image/"):
+                                    img_bytes = part.inline_data.data
+                                    ext = "png" if "png" in part.inline_data.mime_type else "jpg"
+                                    file_name = f"generated/{uuid.uuid4()}.{ext}"
+                                    content_type = part.inline_data.mime_type
+                                    supabase.storage.from_("images").upload(file_name, img_bytes, {"content-type": content_type})
+                                    img_url = supabase.storage.from_("images").get_public_url(file_name)
+                                    generated_urls.append(img_url)
+                                    break  # one image per iteration
                     
                     if not generated_urls:
-                        raise ValueError("Nenhuma imagem gerada.")
+                        raise ValueError("O modelo não retornou imagens na resposta.")
                     
                     images_md = "\n".join([f"![Imagem {i+1}]({url})" for i, url in enumerate(generated_urls)])
                     count_word = f"{len(generated_urls)} imagens" if len(generated_urls) > 1 else "a imagem"
@@ -367,6 +399,7 @@ Possíveis agentes e temas:
                         "status": "success"
                     }
                 except Exception as e:
+                    print(f"[chat] Image generation error: {e}")
                     return {
                         "agent_id": req.agent_id,
                         "content": f"Não foi possível gerar a imagem neste momento. Erro: {str(e)}",
@@ -601,8 +634,9 @@ async def transcribe_audio(req: TranscribeRequest):
         
         full_transcription_prompt = transcription_prompt + paragraph_instruction
         
+        transcription_model = get_model("transcription", "gemini-2.0-flash")
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=transcription_model,
             contents=[
                 types.Part.from_uri(
                     file_uri=uploaded_file.uri,
