@@ -321,6 +321,24 @@ Regra: Se a mensagem mencionar "gerar imagem" ou "crie uma foto/ilustração", m
         if formatting:
             system_prompt += "\n" + formatting
 
+        # Inject current date/time in GMT-3 (São Paulo)
+        from datetime import datetime, timezone, timedelta
+        tz_sp = timezone(timedelta(hours=-3))
+        now_sp = datetime.now(tz_sp)
+        day_names = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"]
+        month_names = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
+        day_name = day_names[now_sp.weekday()]
+        month_name = month_names[now_sp.month - 1]
+        date_str = f"{day_name}, {now_sp.day} de {month_name} de {now_sp.year}"
+        time_str = now_sp.strftime("%H:%M")
+        
+        system_prompt += (
+            f"\n\nCONTEXTO TEMPORAL (FONTE ABSOLUTA DE VERDADE):"
+            f"\n- Data atual: {date_str}"
+            f"\n- Horário atual: {time_str} (fuso horário: GMT-3, América/São Paulo)"
+            f"\n- NUNCA invente ou adivinhe a data/hora. Use SEMPRE os valores acima."
+        )
+
         # CRITICAL: Behavior rules
         system_prompt += (
             "\n\nREGRAS ABSOLUTAS (NUNCA VIOLAR):"
