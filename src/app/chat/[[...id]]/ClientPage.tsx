@@ -18,11 +18,36 @@ import { supabase } from "@/lib/supabase";
 import { v4 as uuidv4 } from 'uuid';
 import { PromptBox } from "@/components/ui/chatgpt-prompt-input";
 
+export async function forceDownloadFile(url: string, filename: string) {
+    try {
+        const resp = await fetch(url);
+        const blob = await resp.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+    } catch {
+        // Fallback: open with download hint
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.setAttribute('download', filename);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+}
+
 function splitIntoParagraphMessages(content: string): string[] {
     const parts: string[] = [];
     let currentPart = "";
     let inCodeBlock = false;
     let inList = false;
+    let inArtifact = false;
 
     const lines = content.split('\n');
     for (let i = 0; i < lines.length; i++) {
@@ -36,10 +61,18 @@ function splitIntoParagraphMessages(content: string): string[] {
         if (isListItem) inList = true;
         if (line.trim() === "") inList = false;
 
+        if (line.includes("<dmz_artifact")) {
+            inArtifact = true;
+        }
+
         currentPart += line + '\n';
 
-        // Break at empty lines if outside code block/list
-        if (line.trim() === "" && !inCodeBlock && !inList) {
+        if (line.includes("</dmz_artifact>")) {
+            inArtifact = false;
+        }
+
+        // Break at empty lines if outside code block/list/artifact
+        if (line.trim() === "" && !inCodeBlock && !inList && !inArtifact) {
             if (currentPart.trim()) {
                 parts.push(currentPart.trim());
                 currentPart = "";
@@ -56,7 +89,7 @@ function splitIntoParagraphMessages(content: string): string[] {
     for (const part of parts) {
         if (!currentGroup) {
             currentGroup = part;
-        } else if (currentGroup.length + part.length < 400 && !part.includes("```")) {
+        } else if (currentGroup.length + part.length < 400 && !part.includes("```") && !part.includes("<dmz_artifact")) {
             currentGroup += "\n\n" + part;
         } else {
             groupedParts.push(currentGroup);
@@ -998,10 +1031,13 @@ export default function ChatPage() {
                                                                             <div key={bi} className="my-4 rounded-2xl overflow-hidden border border-neutral-100 group relative">
                                                                                 <img src={block.url} alt={block.alt} title={block.url} className="w-full h-auto max-h-[400px] object-contain bg-neutral-50" />
                                                                                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                                                                                    <a href={block.url} target="_blank" rel="noreferrer" className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-neutral-500 hover:text-dmz-accent shadow-xl flex items-center gap-1.5 transition-all active:scale-95 border border-neutral-100">
-                                                                                        <Maximize size={10} />
-                                                                                        Ver original
-                                                                                    </a>
+                                                                                    <button
+                                                                                        onClick={() => forceDownloadFile(block.url, `image-${Date.now()}.png`)}
+                                                                                        className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-neutral-500 hover:text-dmz-accent shadow-xl flex items-center gap-1.5 transition-all active:scale-95 border border-neutral-100 cursor-pointer"
+                                                                                    >
+                                                                                        <Download size={10} />
+                                                                                        Download
+                                                                                    </button>
                                                                                 </div>
                                                                             </div>
                                                                         );
@@ -1104,33 +1140,9 @@ export default function ChatPage() {
                                                         {(formatMessageBlocks(msg.content).some(b => b.type === 'artifact' || b.type === 'image') || msg.file_url) ? (
                                                             <button
                                                                 onClick={async () => {
-                                                                    const forceDownload = async (url: string, filename: string) => {
-                                                                        try {
-                                                                            const resp = await fetch(url);
-                                                                            const blob = await resp.blob();
-                                                                            const blobUrl = URL.createObjectURL(blob);
-                                                                            const a = document.createElement('a');
-                                                                            a.href = blobUrl;
-                                                                            a.download = filename;
-                                                                            document.body.appendChild(a);
-                                                                            a.click();
-                                                                            document.body.removeChild(a);
-                                                                            URL.revokeObjectURL(blobUrl);
-                                                                        } catch {
-                                                                            // Fallback: open with download hint
-                                                                            const a = document.createElement('a');
-                                                                            a.href = url;
-                                                                            a.download = filename;
-                                                                            a.setAttribute('download', filename);
-                                                                            document.body.appendChild(a);
-                                                                            a.click();
-                                                                            document.body.removeChild(a);
-                                                                        }
-                                                                    };
-
                                                                     if (msg.file_url) {
                                                                         const ext = msg.file_url.split('.').pop()?.split('?')[0] || 'file';
-                                                                        await forceDownload(msg.file_url, msg.file_name || `download.${ext}`);
+                                                                        await forceDownloadFile(msg.file_url, msg.file_name || `download.${ext}`);
                                                                         return;
                                                                     }
                                                                     const block = formatMessageBlocks(msg.content).find(b => b.type === 'artifact' || b.type === 'image');
@@ -1146,7 +1158,7 @@ export default function ChatPage() {
                                                                         document.body.removeChild(a);
                                                                         URL.revokeObjectURL(url);
                                                                     } else if (block.type === 'image') {
-                                                                        await forceDownload(block.url, `image-${Date.now()}.png`);
+                                                                        await forceDownloadFile(block.url, `image-${Date.now()}.png`);
                                                                     }
                                                                 }}
                                                                 className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
