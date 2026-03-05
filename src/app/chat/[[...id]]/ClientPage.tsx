@@ -390,6 +390,7 @@ export default function ChatPage() {
     const [previewMode, setPreviewMode] = useState<'visual' | 'code'>('visual');
     const [previewWidth, setPreviewWidth] = useState(50); // percentage
     const isDraggingRef = useRef(false);
+    const [isDragging, setIsDragging] = useState(false);
     const dragStartXRef = useRef(0);
     const dragStartWidthRef = useRef(50);
 
@@ -815,6 +816,7 @@ export default function ChatPage() {
     const handleSplitterMouseDown = (e: React.MouseEvent) => {
         e.preventDefault();
         isDraggingRef.current = true;
+        setIsDragging(true);
         dragStartXRef.current = e.clientX;
         dragStartWidthRef.current = previewWidth;
         document.body.style.cursor = 'col-resize';
@@ -832,6 +834,7 @@ export default function ChatPage() {
 
         const handleMouseUp = () => {
             isDraggingRef.current = false;
+            setIsDragging(false);
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
             document.removeEventListener('mousemove', handleMouseMove);
@@ -1327,6 +1330,7 @@ export default function ChatPage() {
                                             </html>
                                         `}
                                             className="w-full h-full border-none"
+                                            style={{ pointerEvents: isDragging ? 'none' : 'auto' }}
                                             title="Preview"
                                         />
                                     </div>
