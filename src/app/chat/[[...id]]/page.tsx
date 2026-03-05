@@ -9,7 +9,7 @@ import {
     MessageSquare, Plus, Search, ChevronRight,
     Clock, Trash2, Menu, Heart, Copy, Reply,
     Check, Pencil, BookOpen, Target, Brain, Scale, Activity,
-    CloudUpload, Maximize, X, FileCode, PanelLeftClose, PanelLeftOpen, Download
+    CloudUpload, Maximize, X, FileCode, PanelLeftClose, PanelLeftOpen, Download, Layout
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -134,6 +134,7 @@ const AGENT_HANDLE_TO_ID: Record<string, string> = {
 
 // Strips ALL markdown markers and renders as clean text
 function stripMarkdown(text: string): string {
+    if (!text) return "";
     return text
         // Remove headers: # ## ### etc.
         .replace(/^#{1,6}\s+/gm, '')
@@ -151,9 +152,9 @@ function stripMarkdown(text: string): string {
         // Remove inline code: `text`
         .replace(/`([^`]+?)`/g, '$1')
         // Remove links: [text](url) → text
-        .replace(/\[([^\]]+?)\]\([^)]+?\)/g, '$1')
-        // Remove images: ![alt](url)
-        .replace(/!\[([^\]]*)\]\([^)]+?\)/g, '$1')
+        .replace(/\[([^\]]+?)\]\(([^)]+?)\)/g, '$1')
+        // Remove images: ![alt](url) -> "" (keep it clean)
+        .replace(/!\[([^\]]*)\]\(([^)]+?)\)/g, '')
         // Remove blockquotes: > text
         .replace(/^>\s?/gm, '')
         // Remove numbered list prefixes: "1. "
@@ -161,18 +162,8 @@ function stripMarkdown(text: string): string {
         // Remove bullet prefixes: "- ", "* ", "• "
         .replace(/^[-*•]\s+/gm, '')
         // Clean up extra whitespace
-        .replace(/\n{3,}/g, '\n\n');
-}
-
-// Extract inline images from markdown before stripping
-function extractImages(text: string): { url: string; alt: string }[] {
-    const imgs: { url: string; alt: string }[] = [];
-    const re = /!\[([^\]]*)\]\(([^)]+)\)/g;
-    let m;
-    while ((m = re.exec(text)) !== null) {
-        imgs.push({ alt: m[1], url: m[2] });
-    }
-    return imgs;
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
 }
 
 type ContentBlock =
@@ -183,25 +174,29 @@ type ContentBlock =
 
 function formatMessageBlocks(text: string): ContentBlock[] {
     const blocks: ContentBlock[] = [];
+    const supabaseUrl = "https://mqqiyyxcoutbmuszwejz.supabase.co"; // Base URL for relative paths
 
     // Pre-process: if an artifact is wrapped in ```html ... ```, unwrap it
     let processedText = text.replace(/```[a-z]*\s*\n*(<dmz_artifact[\s\S]*?(?:<\/dmz_artifact>|$))\n*\s*(?:```|$)/g, '$1');
 
-    const images = extractImages(processedText);
-    let remaining = processedText.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '');
+    // Regex elements to capture sequentially
+    // 1: Artifact
+    // 6: Image Markdown
+    // 9: Code Block
+    const blockRegex = /(<dmz_artifact\s+type="([^"]+)"\s+filename="([^"]+)"\s+title="([^"]+)"(?:.*?url="([^"]+)")?>([\s\S]*?)(?:<\/dmz_artifact>|$))|(!\[([^\]]*)\]\(([^)]+)\))|(```(\w*)\n?([\s\S]*?)(?:```|$))/g;
 
-    const blockRegex = /(<dmz_artifact\s+type="([^"]+)"\s+filename="([^"]+)"\s+title="([^"]+)"(?:.*?url="([^"]+)")?>([\s\S]*?)(?:<\/dmz_artifact>|$))|(```(\w*)\n?([\s\S]*?)(?:```|$))/g;
     let lastIndex = 0;
     let match;
 
-    while ((match = blockRegex.exec(remaining)) !== null) {
-        const before = remaining.slice(lastIndex, match.index);
-        const cleanBefore = stripMarkdown(before).trim();
-        if (cleanBefore) {
-            blocks.push({ type: 'text', text: cleanBefore });
+    while ((match = blockRegex.exec(processedText)) !== null) {
+        const precedingText = processedText.slice(lastIndex, match.index);
+        const cleanText = stripMarkdown(precedingText);
+        if (cleanText) {
+            blocks.push({ type: 'text', text: cleanText });
         }
 
         if (match[1]) {
+            // Artifact matched
             let innerContent = match[6].trim();
             if (innerContent.startsWith('```')) {
                 const lines = innerContent.split('\n');
@@ -219,8 +214,30 @@ function formatMessageBlocks(text: string): ContentBlock[] {
                 content: innerContent
             });
         } else if (match[7]) {
-            const language = match[8] || 'text';
-            const code = match[9].trim();
+            // Image Markdown matched: ![alt](url)
+            const alt = match[8] || "Imagem";
+            let url = (match[9] || "").trim();
+
+            // Handle relative Supabase paths
+            if (url && !url.startsWith("http") && !url.startsWith("data:")) {
+                if (url.startsWith("/")) url = url.slice(1);
+                // Prepend Supabase Storage public URL if it looks like a bucket path
+                if (url.includes("storage/v1/object/public/")) {
+                    url = `${supabaseUrl}/${url}`;
+                } else if (!url.includes("/")) {
+                    // Fallback to images bucket if it's just a filename
+                    url = `${supabaseUrl}/storage/v1/object/public/images/${url}`;
+                } else {
+                    // Generic prepend if it has a slash but no storage prefix
+                    url = `${supabaseUrl}/storage/v1/object/public/${url}`;
+                }
+            }
+
+            blocks.push({ type: 'image', url, alt });
+        } else if (match[10]) {
+            // Code Block matched
+            const language = match[11] || 'text';
+            const code = match[12].trim();
             if (code) {
                 blocks.push({ type: 'code', language, code });
             }
@@ -228,19 +245,13 @@ function formatMessageBlocks(text: string): ContentBlock[] {
         lastIndex = match.index + match[0].length;
     }
 
-    const after = remaining.slice(lastIndex);
-    const cleanAfter = stripMarkdown(after).trim();
-    if (cleanAfter) {
-        blocks.push({ type: 'text', text: cleanAfter });
+    const remainingText = processedText.slice(lastIndex);
+    const cleanRemaining = stripMarkdown(remainingText);
+    if (cleanRemaining) {
+        blocks.push({ type: 'text', text: cleanRemaining });
     }
 
-    const normalContent = blocks.filter(b => b.type !== 'artifact' && b.type !== 'image');
-    const specialContent: ContentBlock[] = blocks.filter(b => b.type === 'artifact');
-    for (const img of images) {
-        specialContent.push({ type: 'image', url: img.url, alt: img.alt });
-    }
-
-    return [...normalContent, ...specialContent];
+    return blocks;
 }
 
 function ThinkingStatus() {
