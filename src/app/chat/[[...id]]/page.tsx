@@ -348,6 +348,10 @@ export default function ChatPage() {
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [previewHtml, setPreviewHtml] = useState<string | null>(null);
     const [previewMode, setPreviewMode] = useState<'visual' | 'code'>('visual');
+    const [previewWidth, setPreviewWidth] = useState(50); // percentage
+    const isDraggingRef = useRef(false);
+    const dragStartXRef = useRef(0);
+    const dragStartWidthRef = useRef(50);
 
     const [userProfile, setUserProfile] = useState<any>(null);
     const [isThinking, setIsThinking] = useState(false);
@@ -759,6 +763,37 @@ export default function ChatPage() {
 
     if (!currentSessionId) return null;
 
+    // Drag handlers for the splitter
+    const handleSplitterMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault();
+        isDraggingRef.current = true;
+        dragStartXRef.current = e.clientX;
+        dragStartWidthRef.current = previewWidth;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+
+        const handleMouseMove = (ev: MouseEvent) => {
+            if (!isDraggingRef.current) return;
+            const containerWidth = window.innerWidth;
+            const deltaX = ev.clientX - dragStartXRef.current;
+            // Moving left = increase preview, moving right = decrease preview
+            const deltaPct = (deltaX / containerWidth) * 100;
+            const newWidth = Math.min(80, Math.max(25, dragStartWidthRef.current - deltaPct));
+            setPreviewWidth(newWidth);
+        };
+
+        const handleMouseUp = () => {
+            isDraggingRef.current = false;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    };
+
     return (
         <div className="flex h-screen bg-[#FDFDFD] overflow-hidden">
             {/* Sidebar */}
@@ -792,7 +827,10 @@ export default function ChatPage() {
                             {sessions.map((s) => (
                                 <div
                                     key={s.session_id}
-                                    onClick={() => router.push(`/chat/${s.session_id}`)}
+                                    onClick={() => {
+                                        setCurrentSessionId(s.session_id);
+                                        router.push(`/chat/${s.session_id}`);
+                                    }}
                                     className={`w-full p-4 rounded-2xl text-left border transition-all group relative cursor-pointer ${s.session_id === currentSessionId
                                         ? "bg-white border-dmz-accent/20"
                                         : "bg-neutral-50 border-transparent group-hover:bg-white group-hover:border-neutral-200"
@@ -864,7 +902,7 @@ export default function ChatPage() {
             </AnimatePresence>
 
             {/* Main Chat Area */}
-            <main className="flex-1 flex flex-col relative h-full min-w-0 bg-white shadow-sm">
+            <main className="flex flex-col relative h-full min-w-0 bg-white shadow-sm" style={{ flex: previewHtml ? `0 0 ${100 - previewWidth}%` : '1 1 0%' }}>
                 {/* Header */}
                 <div className="h-16 border-b border-neutral-100 px-6 flex items-center justify-between shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-30">
                     <div className="flex items-center gap-4 min-w-0">
@@ -1183,27 +1221,39 @@ export default function ChatPage() {
                 )}
             </AnimatePresence>
 
-            <AnimatePresence>
-                {previewHtml && (
-                    <div className="fixed inset-0 z-[200] bg-white flex flex-col">
+            {/* Draggable Splitter + Preview Panel */}
+            {previewHtml && (
+                <>
+                    {/* Splitter Handle */}
+                    <div
+                        onMouseDown={handleSplitterMouseDown}
+                        className="w-[6px] h-full shrink-0 bg-neutral-100 hover:bg-dmz-accent/30 active:bg-dmz-accent/50 transition-colors relative group z-50"
+                        style={{ cursor: 'col-resize' }}
+                    >
+                        <div className="absolute inset-y-0 -left-[6px] -right-[6px]" style={{ cursor: 'col-resize' }} />
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 rounded-full bg-neutral-300 group-hover:bg-dmz-accent transition-colors" />
+                    </div>
+
+                    {/* Preview Panel */}
+                    <div className="h-full flex flex-col bg-white" style={{ flex: `0 0 ${previewWidth}%` }}>
                         <div className="h-16 border-b border-neutral-100 px-6 flex items-center justify-between bg-white shrink-0">
                             <div className="flex items-center gap-6">
                                 <h3 className="text-sm font-black text-neutral-900 tracking-tight flex items-center gap-3">
                                     <Layout size={18} className="text-dmz-accent" />
-                                    Visualização de Artefato
+                                    Visualização
                                 </h3>
                                 <div className="flex bg-neutral-100 p-1 rounded-xl">
                                     <button
                                         onClick={() => setPreviewMode('visual')}
                                         className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${previewMode === 'visual' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
                                     >
-                                        Visualização
+                                        •• Preview
                                     </button>
                                     <button
                                         onClick={() => setPreviewMode('code')}
                                         className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${previewMode === 'code' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
                                     >
-                                        Código
+                                        &lt;/&gt; Código
                                     </button>
                                 </div>
                             </div>
@@ -1214,9 +1264,9 @@ export default function ChatPage() {
                                 <X size={20} />
                             </button>
                         </div>
-                        <div className="flex-1 overflow-hidden bg-neutral-50 p-6">
+                        <div className="flex-1 overflow-hidden bg-neutral-50 p-4">
                             {previewMode === 'visual' ? (
-                                <div className="w-full h-full bg-white rounded-[32px] overflow-hidden border border-neutral-100 shadow-2xl relative">
+                                <div className="w-full h-full bg-white rounded-2xl overflow-hidden border border-neutral-100 shadow-xl relative">
                                     <iframe
                                         srcDoc={`
                                             <!DOCTYPE html>
@@ -1241,14 +1291,14 @@ export default function ChatPage() {
                                     />
                                 </div>
                             ) : (
-                                <div className="w-full h-full bg-[#1e1e1e] rounded-[32px] overflow-hidden border border-neutral-800 shadow-2xl p-8 font-mono text-[13px] text-neutral-300 overflow-y-auto whitespace-pre-wrap custom-scrollbar">
+                                <div className="w-full h-full bg-[#1e1e1e] rounded-2xl overflow-hidden border border-neutral-800 shadow-xl p-6 font-mono text-[13px] text-neutral-300 overflow-y-auto whitespace-pre-wrap custom-scrollbar">
                                     {previewHtml}
                                 </div>
                             )}
                         </div>
                     </div>
-                )}
-            </AnimatePresence>
+                </>
+            )}
         </div>
     );
 }
