@@ -95,7 +95,7 @@ def get_llm_response(system_prompt: str, user_prompt: str, history: list = None)
             contents=contents,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
-                max_output_tokens=8192
+                max_output_tokens=16384
             ),
         )
         return response.text
@@ -347,6 +347,11 @@ Possíveis agentes e temas:
             "\n- Use espaçamentos generosos (py-24, py-32) entre seções. Dê respiro ao design."
             "\n- Cada seção deve ter um layout visualmente diferente da anterior (ex: zig-zag de imagens/texto, grids de cards, seções full-width com background accent)."
             "\n- NÃO SEJA PREGUIÇOSO. Escreva o código completo para uma experiência de navegação rica."
+            "\n"
+            "\n## REGRAS PARA DOCUMENTOS (PDF, WORD, CONTRATOS, PROPOSTAS):"
+            "\n- NUNCA diga que não consegue criar arquivos PDF ou Word diretamente. Se o usuário pedir um PDF ou Word, você deve gerar uma versão HTML/CSS altamente formatada como um documento profissional e entregar via `<dmz_artifact type=\"html\" ...>`. O usuário pode imprimir ou salvar o que você renderizar."
+            "\n- Design de Documento: Use fundo branco (#FFFFFF), margens generosas (padding: 40px), tipografia serifada profissional (Ex: 'Lora', 'Playfair Display') para títulos e sans-serif limpa para o corpo."
+            "\n- Estrutura: Inclua sempre cabeçalho com logo/título, data, seções numeradas e rodapé."
         )
 
 
