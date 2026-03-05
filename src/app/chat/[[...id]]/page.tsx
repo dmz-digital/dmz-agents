@@ -1083,41 +1083,50 @@ export default function ChatPage() {
                                                     </button>
                                                     {(formatMessageBlocks(msg.content).some(b => b.type === 'artifact' || b.type === 'image') || msg.file_url) ? (
                                                         <button
-                                                            onClick={() => {
+                                                            onClick={async () => {
+                                                                const forceDownload = async (url: string, filename: string) => {
+                                                                    try {
+                                                                        const resp = await fetch(url);
+                                                                        const blob = await resp.blob();
+                                                                        const blobUrl = URL.createObjectURL(blob);
+                                                                        const a = document.createElement('a');
+                                                                        a.href = blobUrl;
+                                                                        a.download = filename;
+                                                                        document.body.appendChild(a);
+                                                                        a.click();
+                                                                        document.body.removeChild(a);
+                                                                        URL.revokeObjectURL(blobUrl);
+                                                                    } catch {
+                                                                        // Fallback: open with download hint
+                                                                        const a = document.createElement('a');
+                                                                        a.href = url;
+                                                                        a.download = filename;
+                                                                        a.setAttribute('download', filename);
+                                                                        document.body.appendChild(a);
+                                                                        a.click();
+                                                                        document.body.removeChild(a);
+                                                                    }
+                                                                };
+
                                                                 if (msg.file_url) {
-                                                                    const a = document.createElement('a');
-                                                                    a.href = msg.file_url;
-                                                                    a.download = msg.file_name || 'arquivo';
-                                                                    a.target = "_blank";
-                                                                    a.click();
+                                                                    const ext = msg.file_url.split('.').pop()?.split('?')[0] || 'file';
+                                                                    await forceDownload(msg.file_url, msg.file_name || `download.${ext}`);
                                                                     return;
                                                                 }
                                                                 const block = formatMessageBlocks(msg.content).find(b => b.type === 'artifact' || b.type === 'image');
                                                                 if (!block) return;
                                                                 if (block.type === 'artifact') {
-                                                                    const blob = new Blob([block.content], { type: 'text/plain' });
+                                                                    const blob = new Blob([block.content], { type: 'text/html' });
                                                                     const url = URL.createObjectURL(blob);
                                                                     const a = document.createElement('a');
                                                                     a.href = url;
-                                                                    a.download = block.filename;
+                                                                    a.download = block.filename || 'artifact.html';
+                                                                    document.body.appendChild(a);
                                                                     a.click();
+                                                                    document.body.removeChild(a);
                                                                     URL.revokeObjectURL(url);
                                                                 } else if (block.type === 'image') {
-                                                                    fetch(block.url)
-                                                                        .then(resp => resp.blob())
-                                                                        .then(blob => {
-                                                                            const url = URL.createObjectURL(blob);
-                                                                            const a = document.createElement('a');
-                                                                            a.href = url;
-                                                                            a.download = `image-${Date.now()}.png`;
-                                                                            document.body.appendChild(a);
-                                                                            a.click();
-                                                                            document.body.removeChild(a);
-                                                                            URL.revokeObjectURL(url);
-                                                                        })
-                                                                        .catch(err => {
-                                                                            window.open(block.url, '_blank');
-                                                                        });
+                                                                    await forceDownload(block.url, `image-${Date.now()}.png`);
                                                                 }
                                                             }}
                                                             className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
