@@ -9,7 +9,7 @@ import {
     MessageSquare, Plus, Search, ChevronRight,
     Clock, Trash2, Menu, Heart, Copy, Reply,
     Check, Pencil, BookOpen, Target, Brain, Scale, Activity,
-    CloudUpload, Maximize, X
+    CloudUpload, Maximize, X, FileCode
 } from "lucide-react";
 import Link from "next/link";
 
@@ -176,7 +176,8 @@ function extractImages(text: string): { url: string; alt: string }[] {
 type ContentBlock =
     | { type: 'text'; text: string }
     | { type: 'image'; url: string; alt: string }
-    | { type: 'code'; language: string; code: string };
+    | { type: 'code'; language: string; code: string }
+    | { type: 'artifact'; artifactType: string; filename: string; title: string; content: string };
 
 function formatMessageBlocks(text: string): ContentBlock[] {
     const blocks: ContentBlock[] = [];
@@ -185,30 +186,41 @@ function formatMessageBlocks(text: string): ContentBlock[] {
     // Remove image markdown from text before processing
     let remaining = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '');
 
-    // Split by code blocks (```language\n...\n```)
-    const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g;
+    // Match either <dmz_artifact ...>...</dmz_artifact> OR ```...```
+    const blockRegex = /(<dmz_artifact\s+type="([^"]+)"\s+filename="([^"]+)"\s+title="([^"]+)">([\s\S]*?)<\/dmz_artifact>)|(```(\w*)\n?([\s\S]*?)```)/g;
     let lastIndex = 0;
     let match;
 
-    while ((match = codeBlockRegex.exec(remaining)) !== null) {
-        // Text before code block
+    while ((match = blockRegex.exec(remaining)) !== null) {
+        // Text before block
         const before = remaining.slice(lastIndex, match.index);
         const cleanBefore = stripMarkdown(before).trim();
         if (cleanBefore) {
             blocks.push({ type: 'text', text: cleanBefore });
         }
 
-        // Code block itself
-        const language = match[1] || 'text';
-        const code = match[2].trim();
-        if (code) {
-            blocks.push({ type: 'code', language, code });
+        if (match[1]) {
+            // It's an artifact
+            blocks.push({
+                type: 'artifact',
+                artifactType: match[2],
+                filename: match[3],
+                title: match[4],
+                content: match[5].trim()
+            });
+        } else if (match[6]) {
+            // It's a code block
+            const language = match[7] || 'text';
+            const code = match[8].trim();
+            if (code) {
+                blocks.push({ type: 'code', language, code });
+            }
         }
 
         lastIndex = match.index + match[0].length;
     }
 
-    // Remaining text after last code block
+    // Remaining text after last block
     const after = remaining.slice(lastIndex);
     const cleanAfter = stripMarkdown(after).trim();
     if (cleanAfter) {
@@ -1262,10 +1274,44 @@ export default function ChatPage() {
                                                                     </div>
                                                                 );
                                                             }
+                                                            if (block.type === 'artifact') {
+                                                                return (
+                                                                    <div key={i} className="my-2 border border-neutral-100 rounded-xl overflow-hidden bg-white hover:border-dmz-accent/30 transition-colors shadow-sm cursor-pointer group" onClick={() => {
+                                                                        if (['html', 'jsx', 'svg', 'code'].includes(block.artifactType)) {
+                                                                            setPreviewHtml(block.content);
+                                                                        } else {
+                                                                            const blob = new Blob([block.content], { type: 'text/plain' });
+                                                                            const url = URL.createObjectURL(blob);
+                                                                            const a = document.createElement('a');
+                                                                            a.href = url;
+                                                                            a.download = block.filename || 'documento';
+                                                                            a.click();
+                                                                        }
+                                                                    }}>
+                                                                        <div className="flex items-center justify-between p-3 px-4">
+                                                                            <div className="flex items-center gap-3">
+                                                                                <div className="p-2 bg-[#F3F4F6] rounded-lg text-neutral-500 group-hover:text-dmz-accent group-hover:bg-dmz-accent/10 transition-colors">
+                                                                                    {['html', 'jsx'].includes(block.artifactType) ? <Maximize size={16} /> : <FileCode size={16} />}
+                                                                                </div>
+                                                                                <div className="flex flex-col items-start text-left">
+                                                                                    <h4 className="font-bold text-[13px] text-neutral-800">{block.title || block.filename}</h4>
+                                                                                    <span className="text-[10px] text-neutral-400 font-medium">{block.filename} • Clique para {['html', 'jsx', 'code'].includes(block.artifactType) ? 'abrir painel' : 'baixar arquivo'}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="text-[10px] font-bold text-neutral-400 bg-neutral-100 px-2 py-1 rounded-md uppercase tracking-wider group-hover:bg-white transition-colors">
+                                                                                {['html', 'jsx'].includes(block.artifactType) ? 'RENDERIZAR' : 'ABRIR'}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            }
                                                             // text block
-                                                            return block.text.split('\n').map((line: string, j: number) => (
-                                                                <p key={`${i}-${j}`} className="leading-relaxed break-words whitespace-pre-wrap">{line}</p>
-                                                            ));
+                                                            if (block.type === 'text') {
+                                                                return block.text.split('\n').map((line: string, j: number) => (
+                                                                    <p key={`${i}-${j}`} className="leading-relaxed break-words whitespace-pre-wrap">{line}</p>
+                                                                ));
+                                                            }
+                                                            return null;
                                                         })}
                                                     </div>
                                                 )}

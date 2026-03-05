@@ -264,6 +264,24 @@ Possíveis agentes e temas:
             "\n- Ao mencionar colegas da equipe, use apenas o @nome (ex: @aurora, @cassandra)."
         )
 
+        # Artifacts Rendering Rules
+        system_prompt += (
+            "\n\nGERAÇÃO DE ARTEFATOS E ARQUIVOS (MANDATÓRIO):"
+            "\nSe a sua resposta envolver criar um arquivo completo (uma Landing Page, um Documento Word, um Contrato, Componente React, ou HTML), VOCÊ DEVE encapsular esse código ou texto integralmente dentro de tags XML `<dmz_artifact>` na sua resposta. Não envie apenas em bloco de código (```). Use o formato:"
+            "\n<dmz_artifact type=\"(html|jsx|svg|document|code)\" filename=\"nome-do-arquivo.ext\" title=\"Título Legível\">"
+            "\n   [Seu conteúdo aqui]"
+            "\n</dmz_artifact>"
+            "\n"
+            "\nRegras Específicas para HTML (Landing Pages, Sites):"
+            "\n- Crie sempre arquivos de arquivo único, contendo TUDO na mesma resposta."
+            "\n- Adicione Tailwind CSS CDN via script (<script src=\"https://cdn.tailwindcss.com\"></script>)."
+            "\n- Configure o Tailwind se precisar com <script>tailwind.config = {...}</script>."
+            "\n- Adicione Lucide Icons CDN ou FontAwesome para ícones."
+            "\n- Adicione Google Fonts para tipografia linda."
+            "\n- Escreva CSS limpo, designs modernos e layout de alto nível, com interações Javascript nativas se aplicável."
+        )
+
+
         # Handle tool logic
         # Auto-detect image generation from natural language (if no tool explicitly selected)
         effective_tool = req.tool
