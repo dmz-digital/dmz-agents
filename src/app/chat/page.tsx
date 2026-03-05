@@ -9,7 +9,7 @@ import {
     MessageSquare, Plus, Search, ChevronRight,
     Clock, Trash2, Menu, Heart, Copy, Reply,
     Check, Pencil, BookOpen, Target, Brain, Scale, Activity,
-    CloudUpload, Maximize, X, FileCode
+    CloudUpload, Maximize, X, FileCode, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -188,7 +188,8 @@ function formatMessageBlocks(text: string): ContentBlock[] {
     let remaining = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '');
 
     // Match either <dmz_artifact ...>...</dmz_artifact> OR ```...```
-    const blockRegex = /(<dmz_artifact\s+type="([^"]+)"\s+filename="([^"]+)"\s+title="([^"]+)"(?:.*?url="([^"]+)")?>([\s\S]*?)<\/dmz_artifact>)|(```(\w*)\n?([\s\S]*?)```)/g;
+    // The (?:<\/dmz_artifact>|$) allows it to match even if the LLM didn't close the tag yet or it got truncated
+    const blockRegex = /(<dmz_artifact\s+type="([^"]+)"\s+filename="([^"]+)"\s+title="([^"]+)"(?:.*?url="([^"]+)")?>([\s\S]*?)(?:<\/dmz_artifact>|$))|(```(\w*)\n?([\s\S]*?)(?:```|$))/g;
     let lastIndex = 0;
     let match;
 
@@ -202,13 +203,22 @@ function formatMessageBlocks(text: string): ContentBlock[] {
 
         if (match[1]) {
             // It's an artifact
+            let innerContent = match[6].trim();
+            // In case the LLM wrapped the inner content in markdown triple backticks, strip them out
+            if (innerContent.startsWith('```')) {
+                const lines = innerContent.split('\n');
+                if (lines[0].startsWith('```')) lines.shift();
+                if (lines.length > 0 && lines[lines.length - 1].startsWith('```')) lines.pop();
+                innerContent = lines.join('\n').trim();
+            }
+
             blocks.push({
                 type: 'artifact',
                 artifactType: match[2],
                 filename: match[3],
                 title: match[4],
                 url: match[5],
-                content: match[6].trim()
+                content: innerContent
             });
         } else if (match[6]) {
             // It's a code block
@@ -1118,13 +1128,13 @@ export default function ChatPage() {
                             onClick={() => setSidebarOpen(!sidebarOpen)}
                             className="md:hidden p-2 hover:bg-neutral-100 rounded-xl text-neutral-500 transition-colors"
                         >
-                            <Menu size={20} />
+                            {sidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
                         </button>
                         <button
                             onClick={() => setSidebarOpen(!sidebarOpen)}
                             className="hidden md:block p-2 hover:bg-neutral-100 rounded-xl text-neutral-500 transition-colors"
                         >
-                            <ArrowLeft size={20} className={sidebarOpen ? "" : "rotate-180 transition-transform"} />
+                            {sidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
                         </button>
                         <div>
                             <h1 className="text-lg md:text-lg font-black text-neutral-900 tracking-tight">Chat de Projetos</h1>
