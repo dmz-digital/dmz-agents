@@ -236,20 +236,53 @@ Possíveis agentes e temas:
         if formatting:
             system_prompt += "\n" + formatting
 
+        # CRITICAL: Never expose internal names, always execute tasks
+        system_prompt += (
+            "\n\nREGRAS ABSOLUTAS DE COMPORTAMENTO (NUNCA VIOLAR):"
+            "\n- NUNCA mencione nomes internos de ferramentas, IDs, ou handles técnicos na resposta ao usuário."
+            "\n- NUNCA escreva coisas como ('image_generator'), ('tool_name'), agent_id, etc."
+            "\n- Se o usuário pedir para gerar imagens, GERE as imagens. Não diga que vai 'acionar um especialista'."
+            "\n- Se o usuário pedir para pesquisar, PESQUISE. Não diga que vai 'chamar alguém'."
+            "\n- Responda DIRETO ao pedido do usuário com a ação executada."
+            "\n- Ao mencionar colegas da equipe, use apenas o @nome (ex: @aurora, @cassandra)."
+        )
+
         # Handle tool logic
         # Auto-detect image generation from natural language (if no tool explicitly selected)
         effective_tool = req.tool
         if not effective_tool and full_message.strip():
-            # Quick check for image generation keywords before calling LLM
-            img_keywords = ["gerar imagem", "crie uma imagem", "criar imagem", "gere uma imagem", "gerar uma imagem", 
-                           "fazer uma imagem", "faça uma imagem", "desenhe", "crie um logo", "gerar logo",
-                           "generate image", "create image", "draw", "make an image", "crie uma arte", "gerar arte"]
+            import re
             msg_lower = full_message.lower()
             # Remove internal transcription marker for detection
             clean_for_detection = msg_lower.replace("[transcrição interna do áudio]:", "").strip()
-            if any(kw in clean_for_detection for kw in img_keywords):
+            # Remove routing context
+            if "[contexto:" in clean_for_detection:
+                clean_for_detection = clean_for_detection.split("]\n\n", 1)[-1] if "]\n\n" in clean_for_detection else clean_for_detection
+            
+            # Regex patterns for image generation requests
+            img_patterns = [
+                r'ger[ea]\s+\d*\s*imagen[s]?',       # gere/gera 3 imagens, gere imagens
+                r'cri[ea]\s+\d*\s*imagen[s]?',        # crie/cria 3 imagens
+                r'fa[çz][ao]\s+\d*\s*imagen[s]?',     # faça 3 imagens
+                r'ger[ea]r?\s+\d*\s*imagen[s]?',      # gerar imagens
+                r'ger[ea]r?\s+\d*\s*foto[s]?',        # gerar fotos
+                r'cri[ea]r?\s+\d*\s*foto[s]?',        # criar fotos
+                r'ger[ea]r?\s+(uma?\s+)?imagem',       # gerar uma imagem
+                r'cri[ea]r?\s+(uma?\s+)?imagem',       # criar uma imagem
+                r'fa[çz][ao]\s+(uma?\s+)?imagem',      # faça uma imagem
+                r'ger[ea]r?\s+(um\s+)?logo',           # gerar logo
+                r'cri[ea]r?\s+(uma?\s+)?arte',         # criar arte
+                r'desenh[ea]r?\s',                     # desenhe/desenhar
+                r'generate\s+\d*\s*image',             # generate image
+                r'create\s+\d*\s*image',               # create image
+                r'make\s+\d*\s*image',                 # make image
+                r'draw\s',                             # draw
+                r'ilustr[ea]r?\s',                     # ilustrar/ilustre
+                r'ger[ea]r?\s+\d*\s*ilustra',          # gerar ilustração
+            ]
+            if any(re.search(p, clean_for_detection) for p in img_patterns):
                 effective_tool = "createImage"
-                print(f"[chat] Auto-detected image generation request from text")
+                print(f"[chat] Auto-detected image generation request: {clean_for_detection[:60]}")
 
         if effective_tool == "searchWeb":
             tool_prompt = get_sys_prompt("tool_search_web")
@@ -282,46 +315,61 @@ Possíveis agentes e temas:
                 from google.genai import types
                 import uuid
                 
-                # LLM determines the perfect image generation prompt based on conversation context
+                import re as re_mod
+                
                 # Clean internal markers from the message for cleaner prompt
                 clean_msg = full_message.replace("[Transcrição Interna do Áudio]:", "").strip()
                 if "[CONTEXTO:" in clean_msg:
                     clean_msg = clean_msg.split("]\n\n", 1)[-1] if "]\n\n" in clean_msg else clean_msg
-                img_prompt_generator = f"Você é um engenheiro de prompts de imagem. O usuário quer uma imagem. Resumo do pedido: '{clean_msg}'. Escreva um prompt EXTREMAMENTE detalhado em INGLÊS para o Imagen 3 gerar essa imagem. Responda APENAS com o texto em inglês do prompt."
+                
+                # Detect how many images requested (default 1, max 4)
+                num_match = re_mod.search(r'(\d+)\s*imagen[s]?', clean_msg.lower())
+                num_images = min(int(num_match.group(1)), 4) if num_match else 1
+                
+                img_prompt_generator = f"Você é um engenheiro de prompts de imagem. O usuário quer {num_images} imagem(ns). Resumo do pedido: '{clean_msg}'. Escreva um prompt EXTREMAMENTE detalhado em INGLÊS para o Imagen 3 gerar essa imagem. Responda APENAS com o texto em inglês do prompt."
                 img_req_prompt = get_llm_response(system_prompt, img_prompt_generator, req.history[-3:])
                 
                 try:
                     client = genai.Client(api_key=gemini_key)
-                    image_resp = client.models.generate_images(
-                        model='imagen-3.0-generate-002',
-                        prompt=img_req_prompt[:1000],
-                        config=types.GenerateImagesConfig(
-                            number_of_images=1,
-                            output_mime_type="image/jpeg",
-                            aspect_ratio="1:1"
+                    generated_urls = []
+                    
+                    for i in range(num_images):
+                        image_resp = client.models.generate_images(
+                            model='imagen-3.0-generate-002',
+                            prompt=img_req_prompt[:1000],
+                            config=types.GenerateImagesConfig(
+                                number_of_images=1,
+                                output_mime_type="image/jpeg",
+                                aspect_ratio="1:1"
+                            )
                         )
+                        if image_resp.generated_images:
+                            img_bytes = image_resp.generated_images[0].image.image_bytes
+                            file_name = f"generated/{uuid.uuid4()}.jpg"
+                            supabase.storage.from_("images").upload(file_name, img_bytes, {"content-type": "image/jpeg"})
+                            img_url = supabase.storage.from_("images").get_public_url(file_name)
+                            generated_urls.append(img_url)
+                    
+                    if not generated_urls:
+                        raise ValueError("Nenhuma imagem gerada.")
+                    
+                    images_md = "\n".join([f"![Imagem {i+1}]({url})" for i, url in enumerate(generated_urls)])
+                    count_word = f"{len(generated_urls)} imagens" if len(generated_urls) > 1 else "a imagem"
+                    msg_surround = get_llm_response(
+                        system_prompt,
+                        f"Você acabou de gerar {count_word} com sucesso para o usuário. "
+                        f"Dê uma resposta muito breve e amigável apresentando. "
+                        f"NUNCA mencione nomes técnicos de ferramentas ou IDs internos. O pedido original foi: {clean_msg}"
                     )
-                    
-                    if not image_resp.generated_images:
-                        raise ValueError("Nenhuma imagem gerada pelo Gemini.")
-                        
-                    img_bytes = image_resp.generated_images[0].image.image_bytes
-                    file_name = f"generated/{uuid.uuid4()}.jpg"
-                    
-                    supabase.storage.from_("images").upload(file_name, img_bytes, {"content-type": "image/jpeg"})
-                    img_url = supabase.storage.from_("images").get_public_url(file_name)
-                    
-                    # Call LLM just to write the message surrounding the image
-                    msg_surround = get_llm_response(system_prompt, f"A imagem pedida acaba de ser gerada com sucesso via Google Imagen 3. Dê uma resposta muito breve confirmando amigavelmente e introduzindo a imagem. O usuário falou: {full_message}")
                     return {
                         "agent_id": req.agent_id,
-                        "content": f"{msg_surround}\n\n![Imagem Gerada]({img_url})",
+                        "content": f"{msg_surround}\n\n{images_md}",
                         "status": "success"
                     }
                 except Exception as e:
                     return {
                         "agent_id": req.agent_id,
-                        "content": f"Ocorreu um erro ao gerar a imagem no Google Imagen 3: {str(e)}",
+                        "content": f"Não foi possível gerar a imagem neste momento. Erro: {str(e)}",
                         "status": "error"
                     }
             else:
