@@ -51,7 +51,7 @@ def get_llm_response(system_prompt: str, user_prompt: str, history: list = None)
         
         response = client.messages.create(
             model="claude-3-5-sonnet-20241022",
-            max_tokens=8192,
+            max_tokens=12288,
             system=system_prompt,
             messages=msgs
         )
@@ -644,25 +644,79 @@ Regra: Se a mensagem mencionar "gerar imagem" ou "crie uma foto/ilustração", m
                         client_spec = Anthropic(api_key=spec_key)
                         
                         spec_prompt = f"""Você é o Especialista em Engenharia de Código e Design do Squad DMZ.
-Sua tarefa é RECREAR ou REFINAR o artefato técnico (HTML/CSS/DOC) contido ou sugerido na mensagem abaixo para garantir nível PREMIUM (Awwwards).
+Sua tarefa é RECREAR ou REFINAR o artefato técnico (HTML/CSS/DOC) contido ou sugerido na mensagem abaixo para garantir nível PREMIUM (Awwwards-quality).
 
 Mensagem original:
 ---
 {response_text}
 ---
 
-INSTRUÇÕES:
-1. Extraia a intenção do arquivo e crie o código INTEGRAL.
-2. Use Tailwind CDN, Google Fonts (Luxury/Premium) e Lucide Icons.
-3. Se for um contrato/proposta, use layout de papel A4 elegante com bordas e tipografia serifada.
-4. Se for UI, adicione animações CSS de entrada (fade-in-up) e interatividade.
-5. Retorne APENAS o texto da mensagem original, mas substitua ou adicione as tags <dmz_artifact type="..." filename="..." title="...">[CÓDIGO REFINADO]</dmz_artifact> com o código que você gerou.
-6. Mantenha o tom da mensagem original, apenas 'turbine' a parte técnica.
+INSTRUÇÕES DE QUALIDADE:
+1. Extraia a intenção do arquivo e crie o código INTEGRAL, completo, extenso e de alta qualidade.
+2. O HTML gerado roda dentro de um iframe isolado. Carregue TUDO via CDN — sem bundler, sem imports de módulo.
+3. NÃO entregue esqueletos ou placeholders. Gere seções COMPLETAS com conteúdo real e visual rico.
+
+DESIGN SYSTEM OBRIGATÓRIO (carregar via CDN no <head>):
+
+TIPOGRAFIA (SEMPRE incluir):
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+
+CSS UTILITÁRIOS (SEMPRE incluir):
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {{{{
+    theme: {{{{ extend: {{{{
+      fontFamily: {{{{
+        display: ['Syne', 'sans-serif'],
+        sans: ['DM Sans', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      }}}}
+    }}}}}}}}
+  }}}}
+</script>
+
+ANIMAÇÕES (incluir quando houver scroll ou transições visuais):
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+Use GSAP para scroll reveal: gsap.registerPlugin(ScrollTrigger); e aplique em elementos com classe .reveal
+
+ÍCONES (incluir quando houver ícones):
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script>lucide.createIcons();</script>
+Use: <i data-lucide="nome-do-icone"></i> — NUNCA use emojis como ícones funcionais.
+
+INTERATIVIDADE (incluir para tabs, modais, dropdowns, toggles):
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+REGRAS DE DESIGN:
+- Use gradientes sutis, glassmorphism (backdrop-blur), sombras premium (shadow-2xl)
+- Micro-animações em hover (scale, translate, glow)
+- Tipografia hierárquica: font-display para títulos grandes, font-sans para corpo
+- Paleta de cores harmoniosa — NUNCA use cores genéricas puras (red, blue, green)
+- Espaçamento generoso (py-20, py-32) entre seções
+- Mobile-first responsive design com breakpoints Tailwind (sm:, md:, lg:, xl:)
+- Backgrounds texturizados ou com gradientes — NUNCA deixe fundo branco liso genérico
+- Mínimo 5-7 seções completas para landing pages (hero, features, about, testimonials, CTA, footer, etc)
+- Conteúdo textual realista e profissional — NUNCA use "Lorem ipsum"
+- Se for um contrato/proposta, use layout de papel A4 elegante com bordas e tipografia serifada.
+
+ESTRUTURA OBRIGATÓRIA DO HTML:
+- Comece com <!DOCTYPE html> completo
+- Inclua <meta charset="utf-8"> e <meta name="viewport">
+- Carregue CDNs no <head> na ordem: fonts → tailwind → gsap → lucide → alpine
+- Chame lucide.createIcons() e gsap no final do <body>
+
+RETORNO:
+5. Retorne APENAS o texto da mensagem original, mas substitua ou adicione as tags <dmz_artifact type="..." filename="..." title="...">CÓDIGO HTML COMPLETO E REFINADO</dmz_artifact> com o código premium.
+6. Mantenha o tom da mensagem original, apenas turbine ao máximo a parte técnica e visual.
+7. Gere código EXTENSO e COMPLETO — páginas profissionais têm 300-800 linhas de código.
 """
                         
                         response_spec = client_spec.messages.create(
                             model=spec_config.get("model_id", "claude-3-5-sonnet-20241022"),
-                            max_tokens=8192,
+                            max_tokens=16384,
                             messages=[{"role": "user", "content": spec_prompt}]
                         )
                         if response_spec.content and len(response_spec.content[0].text) > 100:
