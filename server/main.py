@@ -348,7 +348,7 @@ Possíveis agentes e temas:
                 num_images = min(int(num_match.group(1)), 4) if num_match else 1
                 
                 # Get model from admin (default: gemini-3-pro-image-preview)
-                image_model = get_model("image_generation", "gemini-2.0-flash-preview-image-generation")
+                image_model = get_model("image_generation", "gemini-3-pro-image-preview")
                 print(f"[chat] Using image model: {image_model}, generating {num_images} image(s)")
                 
                 try:

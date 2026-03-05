@@ -899,8 +899,8 @@ export default function ChatPage() {
                     >
                         <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
                             <Link href="/app" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                                <div className="w-8 h-8 bg-white border border-neutral-100 rounded-lg flex items-center justify-center p-1.5 shadow-sm">
-                                    <img src="/logo.svg" alt="Logo" className="w-full h-full" />
+                                <div className="w-8 h-8 bg-white border border-neutral-100 rounded-lg flex items-center justify-center p-1.5">
+                                    <Bot size={18} className="text-neutral-500" />
                                 </div>
                                 <span className="font-extrabold text-[#D8663E] text-sm tracking-tight">DMZ – OS Agents</span>
                             </Link>
@@ -924,8 +924,8 @@ export default function ChatPage() {
                                     key={s.session_id}
                                     onClick={() => setCurrentSessionId(s.session_id)}
                                     className={`w-full p-4 rounded-2xl text-left border transition-all group relative cursor-pointer ${s.session_id === currentSessionId
-                                        ? "bg-white border-dmz-accent/20 shadow-sm"
-                                        : "bg-transparent border-transparent hover:bg-neutral-50"
+                                        ? "bg-white border-dmz-accent/20"
+                                        : "bg-neutral-50 border-transparent group-hover:bg-white group-hover:border-neutral-200"
                                         }`}
                                 >
                                     <div className="flex justify-between items-start mb-1">
@@ -975,8 +975,8 @@ export default function ChatPage() {
                         {userProfile && (
                             <div className="p-6 border-t border-neutral-100">
                                 <Link href="/app/profile" className="flex items-center gap-3 group">
-                                    <div className="w-10 h-10 rounded-2xl overflow-hidden bg-neutral-100 flex items-center justify-center border-2 border-white shadow-sm shrink-0">
-                                        {userProfile.avatar_url ? (
+                                    <div className="w-10 h-10 rounded-2xl overflow-hidden bg-neutral-100 flex items-center justify-center border border-neutral-200 shrink-0">
+                                        {userProfile?.avatar_url ? (
                                             <img src={userProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                                         ) : (
                                             <span className="text-xs font-bold text-neutral-400">{getUserInitials()}</span>
@@ -1097,9 +1097,9 @@ export default function ChatPage() {
                     </div>
                     <div className="flex items-center gap-3">
                         {userProfile && (
-                            <Link href="/app/profile" className="md:hidden flex items-center justify-center w-8 h-8 rounded-full overflow-hidden bg-neutral-100 border-2 border-white shadow-sm shrink-0">
-                                {userProfile.avatar_url ? (
-                                    <img src={userProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                            <Link href="/app/profile" className="md:hidden flex items-center justify-center w-8 h-8 rounded-full overflow-hidden bg-neutral-100 border border-neutral-200 shrink-0">
+                                {userProfile?.avatar_url ? (
+                                    <img src={userProfile.avatar_url} className="w-full h-full object-cover" />
                                 ) : (
                                     <span className="text-[10px] font-bold text-neutral-400">{getUserInitials()}</span>
                                 )}
@@ -1119,35 +1119,43 @@ export default function ChatPage() {
                                     animate={{ opacity: 1, y: 0 }}
                                     className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                                 >
-                                    <div className={`max-w-[85%] flex gap-4 group ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                                        {/* Avatar */}
-                                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border-2 border-white ${msg.role === "user"
-                                            ? "bg-neutral-900 text-white overflow-hidden"
-                                            : "bg-white border-neutral-100"
-                                            }`}>
-                                            {msg.role === "user" ? (
-                                                userProfile?.avatar_url ? (
-                                                    <img src={userProfile.avatar_url} className="w-full h-full object-cover" />
+                                    <div className={`w-full md:max-w-[85%] flex flex-col gap-1.5 group ${msg.role === "user" ? "items-end" : "items-start"}`}>
+                                        {/* Avatar & Info Row */}
+                                        <div className={`flex items-center gap-2 px-1 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border border-neutral-200 ${msg.role === "user"
+                                                ? "bg-neutral-900 text-white overflow-hidden"
+                                                : "bg-[#F3F4F6]"
+                                                }`}>
+                                                {msg.role === "user" ? (
+                                                    userProfile?.avatar_url ? (
+                                                        <img src={userProfile.avatar_url} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <span className="text-[9px] font-bold">{getUserInitials()}</span>
+                                                    )
                                                 ) : (
-                                                    <span className="text-xs font-bold">{getUserInitials()}</span>
-                                                )
-                                            ) : (
-                                                <Bot size={20} style={{ color: msg.agent?.color }} />
-                                            )}
-                                        </div>
+                                                    <Bot size={13} style={{ color: msg.agent?.color }} />
+                                                )}
+                                            </div>
 
-                                        {/* Content */}
-                                        <div className="space-y-1.5 flex flex-col min-w-0">
-                                            {msg.agent && (
-                                                <div className="flex items-center gap-2 px-1">
+                                            {/* Info */}
+                                            {msg.agent && msg.role !== "user" ? (
+                                                <div className="flex items-center gap-1.5">
                                                     <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: msg.agent.color }}>
                                                         {msg.agent.name}
                                                     </span>
-                                                    <span className="text-[10px] text-neutral-300 font-bold uppercase tracking-widest">
+                                                    <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">
                                                         @{msg.agent.handle}
                                                     </span>
                                                 </div>
-                                            )}
+                                            ) : msg.role === "user" ? (
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                                                    Você
+                                                </span>
+                                            ) : null}
+                                        </div>
+
+                                        {/* Content */}
+                                        <div className={`space-y-1.5 flex flex-col min-w-0 max-w-full ${msg.role === "user" ? "items-end" : "items-start"}`}>
                                             {/* File attachment indicator — outside bubble */}
                                             {msg.file_url && !msg.file_type?.startsWith("image/") && (
                                                 <a
@@ -1163,7 +1171,7 @@ export default function ChatPage() {
                                                     </span>
                                                 </a>
                                             )}
-                                            <div className={`py-4 px-6 rounded-[28px] text-[15px] leading-relaxed transition-all min-w-0 max-w-full ${msg.role === "user"
+                                            <div className={`py-4 px-6 rounded-[28px] text-[15px] leading-relaxed transition-all min-w-0 w-max max-w-full ${msg.role === "user"
                                                 ? "bg-neutral-900 text-white rounded-tr-none border border-neutral-800"
                                                 : "bg-[#F3F4F6] border border-neutral-100 text-neutral-800 rounded-tl-none"
                                                 }`}>
@@ -1275,11 +1283,16 @@ export default function ChatPage() {
                                     animate={{ opacity: 1, y: 0 }}
                                     className="flex justify-start"
                                 >
-                                    <div className="flex gap-4 items-center">
-                                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border shadow-sm self-start bg-white border-neutral-200">
-                                            <Bot size={20} className="opacity-50 grayscale animate-pulse" />
+                                    <div className="flex flex-col gap-1.5 items-start">
+                                        <div className="flex items-center gap-2 px-1">
+                                            <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 border border-neutral-200 bg-[#F3F4F6]">
+                                                <Bot size={13} className="text-neutral-400 animate-pulse" />
+                                            </div>
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                                                Sistema
+                                            </span>
                                         </div>
-                                        <div className="bg-white border border-neutral-100 p-3 px-4 rounded-2xl rounded-tl-none">
+                                        <div className="bg-white border border-neutral-100 p-3 px-4 rounded-2xl rounded-tl-none w-max">
                                             <ThinkingDots />
                                         </div>
                                     </div>
