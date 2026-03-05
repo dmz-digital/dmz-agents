@@ -246,11 +246,16 @@ function formatMessageBlocks(text: string): ContentBlock[] {
         blocks.push({ type: 'text', text: cleanAfter });
     }
 
-    // Append images at end
+    // REORDER: Artifacts and Images go to the absolute end of the bubble
+    const normalContent = blocks.filter(b => b.type !== 'artifact' && b.type !== 'image');
+    const specialContent: ContentBlock[] = blocks.filter(b => b.type === 'artifact');
+
+    // Add images (from markdown parsing)
     for (const img of images) {
-        blocks.push({ type: 'image', url: img.url, alt: img.alt });
+        specialContent.push({ type: 'image', url: img.url, alt: img.alt });
     }
-    return blocks;
+
+    return [...normalContent, ...specialContent];
 }
 
 function formatMessage(text: string): string[] {
@@ -394,6 +399,7 @@ export default function ChatPage() {
     const [editingTitle, setEditingTitle] = useState("");
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+    const [previewMode, setPreviewMode] = useState<'visual' | 'code'>('visual');
 
     useEffect(() => {
         const timer = setTimeout(async () => {
@@ -486,7 +492,7 @@ export default function ChatPage() {
                     };
                 }
             });
-            setSessions(Object.values(grouped));
+            setSessions(Object.values(grouped).sort((a, b) => b.created_at.getTime() - a.created_at.getTime()));
         }
     };
 
@@ -1023,7 +1029,7 @@ export default function ChatPage() {
                                     </div>
                                     <div className="flex items-center gap-2 text-[9px] text-neutral-400 font-medium">
                                         <Clock size={10} />
-                                        {new Date(s.created_at).toLocaleDateString()}
+                                        {new Date(s.created_at).toLocaleDateString()} • {new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </div>
                                 </div>
                             ))}
@@ -1265,7 +1271,10 @@ export default function ChatPage() {
                                                                             <div className="flex gap-2">
                                                                                 {block.language === "html" && (
                                                                                     <button
-                                                                                        onClick={() => setPreviewHtml(block.code)}
+                                                                                        onClick={() => {
+                                                                                            setPreviewHtml(block.code);
+                                                                                            setPreviewMode('visual');
+                                                                                        }}
                                                                                         className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold text-white/50 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
                                                                                     >
                                                                                         <Maximize size={12} /> Visualizar
@@ -1298,6 +1307,7 @@ export default function ChatPage() {
                                                                     <div key={i} className="my-2 border border-neutral-100 rounded-xl overflow-hidden bg-white hover:border-dmz-accent/30 transition-colors shadow-sm cursor-pointer group" onClick={() => {
                                                                         if (['html', 'jsx', 'svg', 'code'].includes(block.artifactType)) {
                                                                             setPreviewHtml(block.content);
+                                                                            setPreviewMode('visual');
                                                                         } else if (block.artifactType === 'document_url' && block.url) {
                                                                             window.open(block.url, '_blank');
                                                                         } else {
@@ -1427,21 +1437,43 @@ export default function ChatPage() {
                         className="fixed md:relative top-0 right-0 h-full bg-white md:border-l border-neutral-200 shadow-2xl z-50 flex flex-col"
                     >
                         <div className="flex items-center justify-between p-4 px-6 border-b border-neutral-100 bg-[#F9FAFB]">
-                            <div className="flex items-center gap-3 text-neutral-800">
-                                <Code2 size={18} className="text-neutral-500" />
-                                <span className="font-bold text-[15px]">Visualização</span>
+                            <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-3 text-neutral-800 mr-4">
+                                    <Code2 size={18} className="text-neutral-500" />
+                                    <span className="font-bold text-[15px]">Visualização</span>
+                                </div>
+                                <div className="flex p-1 bg-neutral-200/50 rounded-xl">
+                                    <button
+                                        onClick={() => setPreviewMode('visual')}
+                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${previewMode === 'visual' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+                                    >
+                                        👀 Preview
+                                    </button>
+                                    <button
+                                        onClick={() => setPreviewMode('code')}
+                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${previewMode === 'code' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+                                    >
+                                        {`</>`} Código
+                                    </button>
+                                </div>
                             </div>
                             <button onClick={() => setPreviewHtml(null)} className="p-2 hover:bg-neutral-200 transition-colors rounded-xl text-neutral-500 hover:text-neutral-800">
                                 <X size={18} />
                             </button>
                         </div>
                         <div className="flex-1 w-full relative bg-white overflow-hidden">
-                            <iframe
-                                srcDoc={`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{margin:0;font-family:sans-serif;}</style></head><body>${previewHtml}</body></html>`}
-                                className="w-full h-full border-none"
-                                sandbox="allow-scripts allow-same-origin allow-popups"
-                                title="HTML Preview"
-                            />
+                            {previewMode === 'visual' ? (
+                                <iframe
+                                    srcDoc={`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{margin:0;font-family:sans-serif;}</style></head><body>${previewHtml}</body></html>`}
+                                    className="w-full h-full border-none"
+                                    sandbox="allow-scripts allow-same-origin allow-popups"
+                                    title="HTML Preview"
+                                />
+                            ) : (
+                                <pre className="w-full h-full p-6 m-0 bg-neutral-900 text-[#cdd6f4] text-xs font-mono overflow-auto selection:bg-dmz-accent/30 custom-scrollbar">
+                                    <code>{previewHtml}</code>
+                                </pre>
+                            )}
                         </div>
                     </motion.div>
                 )}
