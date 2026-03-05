@@ -626,9 +626,48 @@ Regra: Se a mensagem mencionar "gerar imagem" ou "crie uma foto/ilustração", m
         elif req.file_url and not is_image:
             full_message += f"\n\n[Arquivo anexado: {req.file_url} — Tipo: {req.file_type}]"
 
-        # Call LLM (text mode)
-        response_text = get_llm_response(system_prompt, full_message, req.history)
-        
+        # --- ARTIFACT SPECIALIST PASS (Claude for Quality) ---
+        # If the response mentions creating a file, artifact or layout, we can trigger a specialist pass
+        # for maximum quality in HTML/PDF/JSX using the dedicated Claude key
+        if any(keyword in response_text.lower() for keyword in ["<dmz_artifact", "html", "contrato", "proposta", "site", "landing page"]):
+            try:
+                # Fetch artifact specialist config
+                res_spec = supabase.table("admin_system_models").select("*").eq("purpose", "artifact_generation").eq("active", true).limit(1).execute()
+                if res_spec.data:
+                    spec_config = res_spec.data[0]
+                    spec_key = spec_config.get("config", {}).get("api_key")
+                    if spec_key:
+                        from anthropic import Anthropic
+                        client_spec = Anthropic(api_key=spec_key)
+                        
+                        spec_prompt = f"""Você é o Especialista em Engenharia de Código e Design do Squad DMZ.
+Sua tarefa é RECREAR ou REFINAR o artefato técnico (HTML/CSS/DOC) contido ou sugerido na mensagem abaixo para garantir nível PREMIUM (Awwwards).
+
+Mensagem original:
+---
+{response_text}
+---
+
+INSTRUÇÕES:
+1. Extraia a intenção do arquivo e crie o código INTEGRAL.
+2. Use Tailwind CDN, Google Fonts (Luxury/Premium) e Lucide Icons.
+3. Se for um contrato/proposta, use layout de papel A4 elegante com bordas e tipografia serifada.
+4. Se for UI, adicione animações CSS de entrada (fade-in-up) e interatividade.
+5. Retorne APENAS o texto da mensagem original, mas substitua ou adicione as tags <dmz_artifact type="..." filename="..." title="...">[CÓDIGO REFINADO]</dmz_artifact> com o código que você gerou.
+6. Mantenha o tom da mensagem original, apenas 'turbine' a parte técnica.
+"""
+                        
+                        response_spec = client_spec.messages.create(
+                            model=spec_config.get("model_id", "claude-3-5-sonnet-20241022"),
+                            max_tokens=8192,
+                            messages=[{"role": "user", "content": spec_prompt}]
+                        )
+                        if response_spec.content and len(response_spec.content[0].text) > 100:
+                            response_text = response_spec.content[0].text
+                            print("[artifacts] Enhanced with Claude Specialist Pass")
+            except Exception as e:
+                print(f"[artifacts] Specialist pass failed: {e}")
+
         # Post-process generated artifacts to native formats (Docx, etc)
         response_text = process_artifacts(response_text)
 
