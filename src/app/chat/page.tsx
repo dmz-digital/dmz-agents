@@ -1097,11 +1097,11 @@ export default function ChatPage() {
                                                 )}
                                             </div>
                                             <div className={`px-2 flex items-center gap-1 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                                                <span className="text-[9px] font-medium text-neutral-300 uppercase tracking-tighter">
+                                                <span className="text-[9px] font-medium text-neutral-400 uppercase tracking-tighter">
                                                     {msg.created_at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                                 {msg.role === "assistant" && msg.id !== "welcome" && (
-                                                    <div className="flex items-center gap-0.5 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="flex items-center gap-0.5 ml-2">
                                                         <button
                                                             onClick={() => toggleFeedback(msg)}
                                                             className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
@@ -1109,7 +1109,7 @@ export default function ChatPage() {
                                                         >
                                                             <Heart
                                                                 size={12}
-                                                                className={msg.feedback === 'like' ? "text-red-500" : "text-neutral-300 hover:text-red-400"}
+                                                                className={msg.feedback === 'like' ? "text-red-500" : "text-neutral-400 hover:text-red-400"}
                                                                 fill={msg.feedback === 'like' ? "currentColor" : "none"}
                                                             />
                                                         </button>
@@ -1121,7 +1121,7 @@ export default function ChatPage() {
                                                             {copiedId === msg.id ? (
                                                                 <Check size={12} className="text-green-500" />
                                                             ) : (
-                                                                <Copy size={12} className="text-neutral-300 hover:text-neutral-500" />
+                                                                <Copy size={12} className="text-neutral-400 hover:text-neutral-600" />
                                                             )}
                                                         </button>
                                                         <button
@@ -1129,7 +1129,7 @@ export default function ChatPage() {
                                                             className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
                                                             title="Responder"
                                                         >
-                                                            <Reply size={12} className="text-neutral-300 hover:text-neutral-500" />
+                                                            <Reply size={12} className="text-neutral-400 hover:text-neutral-600" />
                                                         </button>
                                                     </div>
                                                 )}
