@@ -1137,7 +1137,7 @@ export default function ChatPage() {
                                         </div>
 
                                         {/* Content */}
-                                        <div className="space-y-1.5 flex flex-col">
+                                        <div className="space-y-1.5 flex flex-col min-w-0">
                                             {msg.agent && (
                                                 <div className="flex items-center gap-2 px-1">
                                                     <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: msg.agent.color }}>
@@ -1163,7 +1163,7 @@ export default function ChatPage() {
                                                     </span>
                                                 </a>
                                             )}
-                                            <div className={`py-4 px-6 rounded-[28px] text-[15px] leading-relaxed transition-all ${msg.role === "user"
+                                            <div className={`py-4 px-6 rounded-[28px] text-[15px] leading-relaxed transition-all min-w-0 max-w-full ${msg.role === "user"
                                                 ? "bg-neutral-900 text-white rounded-tr-none border border-neutral-800"
                                                 : "bg-[#F3F4F6] border border-neutral-100 text-neutral-800 rounded-tl-none"
                                                 }`}>
@@ -1173,9 +1173,9 @@ export default function ChatPage() {
                                                         {msg.content && !msg.content.includes("[Transcrição Interna do Áudio]:") && <p className={`pt-2 border-t italic ${msg.role === 'user' ? 'border-white/10 text-white/70' : 'border-neutral-100 text-neutral-500'}`}>{msg.content}</p>}
                                                     </div>
                                                 ) : msg.file_url && msg.file_type?.startsWith("image/") ? (
-                                                    <div className="flex flex-col gap-3">
+                                                    <div className="flex flex-col gap-3 min-w-0">
                                                         <img src={msg.file_url} className="rounded-xl max-w-[250px] max-h-[300px] object-cover shadow-sm" alt="Anexo" />
-                                                        {msg.content && <p>{msg.content}</p>}
+                                                        {msg.content && <p className="break-words">{msg.content}</p>}
                                                     </div>
                                                 ) : msg.role === "assistant" && msg.isTyping ? (
                                                     <TypingMessage
@@ -1187,14 +1187,14 @@ export default function ChatPage() {
                                                         }}
                                                     />
                                                 ) : (
-                                                    <div className="space-y-3">
+                                                    <div className="space-y-3 min-w-0 max-w-full">
                                                         {formatMessageBlocks(msg.content).map((block, i) => {
                                                             if (block.type === 'image') {
                                                                 return <img key={i} src={block.url} alt={block.alt} className="rounded-xl max-w-full max-h-[400px] object-cover shadow-sm" />;
                                                             }
                                                             if (block.type === 'code') {
                                                                 return (
-                                                                    <div key={i} className="relative rounded-xl overflow-hidden my-2">
+                                                                    <div key={i} className="relative rounded-xl overflow-hidden my-2 max-w-full">
                                                                         <div className="flex items-center justify-between px-4 py-2 bg-[#1e1e2e] border-b border-white/5">
                                                                             <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">{block.language}</span>
                                                                             <button
@@ -1220,7 +1220,7 @@ export default function ChatPage() {
                                                             }
                                                             // text block
                                                             return block.text.split('\n').map((line: string, j: number) => (
-                                                                <p key={`${i}-${j}`} className="leading-relaxed">{line}</p>
+                                                                <p key={`${i}-${j}`} className="leading-relaxed break-words whitespace-pre-wrap">{line}</p>
                                                             ));
                                                         })}
                                                     </div>
