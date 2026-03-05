@@ -8,7 +8,8 @@ import {
     Volume2, StopCircle, Play, Pause, Loader2,
     MessageSquare, Plus, Search, ChevronRight,
     Clock, Trash2, Menu, Heart, Copy, Reply,
-    Check, Pencil, BookOpen, Target, Brain, Scale, Activity
+    Check, Pencil, BookOpen, Target, Brain, Scale, Activity,
+    CloudUpload
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -23,6 +24,7 @@ interface Message {
     audio_url?: string;
     file_url?: string;
     file_type?: string;
+    file_name?: string;
     agent_id?: string;
     agent?: {
         handle: string;
@@ -122,17 +124,49 @@ function extractImages(text: string): { url: string; alt: string }[] {
     return imgs;
 }
 
-type ContentBlock = { type: 'text'; text: string } | { type: 'image'; url: string; alt: string };
+type ContentBlock =
+    | { type: 'text'; text: string }
+    | { type: 'image'; url: string; alt: string }
+    | { type: 'code'; language: string; code: string };
 
 function formatMessageBlocks(text: string): ContentBlock[] {
     const blocks: ContentBlock[] = [];
     const images = extractImages(text);
-    // Remove image markdown from text
-    const cleaned = stripMarkdown(text);
-    const lines = cleaned.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    if (lines.length > 0) {
-        blocks.push({ type: 'text', text: lines.join('\n') });
+
+    // Remove image markdown from text before processing
+    let remaining = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '');
+
+    // Split by code blocks (```language\n...\n```)
+    const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = codeBlockRegex.exec(remaining)) !== null) {
+        // Text before code block
+        const before = remaining.slice(lastIndex, match.index);
+        const cleanBefore = stripMarkdown(before).trim();
+        if (cleanBefore) {
+            blocks.push({ type: 'text', text: cleanBefore });
+        }
+
+        // Code block itself
+        const language = match[1] || 'text';
+        const code = match[2].trim();
+        if (code) {
+            blocks.push({ type: 'code', language, code });
+        }
+
+        lastIndex = match.index + match[0].length;
     }
+
+    // Remaining text after last code block
+    const after = remaining.slice(lastIndex);
+    const cleanAfter = stripMarkdown(after).trim();
+    if (cleanAfter) {
+        blocks.push({ type: 'text', text: cleanAfter });
+    }
+
+    // Append images at end
     for (const img of images) {
         blocks.push({ type: 'image', url: img.url, alt: img.alt });
     }
@@ -365,6 +399,7 @@ export default function ChatPage() {
                 audio_url: m.audio_url || undefined,
                 file_url: m.file_url || undefined,
                 file_type: m.file_type || undefined,
+                file_name: m.file_url ? decodeURIComponent((m.file_url as string).split('/').pop()?.replace(/^[a-f0-9-]+_/, '') || 'arquivo') : undefined,
                 agent_id: m.agent_id,
                 agent: m.agent_id ? {
                     handle: m.agent_id === "orchestrator" ? "orch" : (AGENT_MAP[m.agent_id]?.handle || m.agent_id),
@@ -525,11 +560,12 @@ export default function ChatPage() {
         return { url: publicUrl, type: effectiveMime, isAudio, isImage };
     };
 
-    const handleSend = async (payload?: string | { text: string, audioUrl?: string, fileUrl?: string, fileType?: string, toolId?: string | null }) => {
+    const handleSend = async (payload?: string | { text: string, audioUrl?: string, fileUrl?: string, fileType?: string, fileName?: string, toolId?: string | null }) => {
         let text = "";
         let audioUrl = "";
         let fileUrl = "";
         let fileType = "";
+        let fileName = "";
         let toolId = null;
 
         if (typeof payload === 'string') {
@@ -539,6 +575,7 @@ export default function ChatPage() {
             audioUrl = payload.audioUrl || "";
             fileUrl = payload.fileUrl || "";
             fileType = payload.fileType || "";
+            fileName = payload.fileName || "";
             toolId = payload.toolId || null;
         }
 
@@ -551,6 +588,7 @@ export default function ChatPage() {
             audio_url: audioUrl,
             file_url: fileUrl,
             file_type: fileType,
+            file_name: fileName,
             created_at: new Date()
         };
 
@@ -715,7 +753,7 @@ export default function ChatPage() {
             } else {
                 // Non-audio file: send directly
                 setIsThinking(false);
-                await handleSend({ text, fileUrl: uploadResult.url, fileType: uploadResult.type, toolId });
+                await handleSend({ text, fileUrl: uploadResult.url, fileType: uploadResult.type, fileName: file.name, toolId });
             }
         } else {
             await handleSend({ text, toolId });
@@ -1051,6 +1089,21 @@ export default function ChatPage() {
                                                     </span>
                                                 </div>
                                             )}
+                                            {/* File attachment indicator — outside bubble */}
+                                            {msg.file_url && !msg.file_type?.startsWith("image/") && (
+                                                <a
+                                                    href={msg.file_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:opacity-80 no-underline ${msg.role === "user" ? "self-end" : "self-start"
+                                                        }`}
+                                                >
+                                                    <CloudUpload size={16} className="text-[#E85D2F]" />
+                                                    <span className={msg.role === "user" ? "text-neutral-500" : "text-neutral-500"}>
+                                                        {msg.file_name || msg.file_url.split('/').pop()?.replace(/^[a-f0-9-]+_/, '') || 'arquivo'}
+                                                    </span>
+                                                </a>
+                                            )}
                                             <div className={`py-4 px-6 rounded-[28px] text-[15px] leading-relaxed transition-all ${msg.role === "user"
                                                 ? "bg-neutral-900 text-white rounded-tr-none border border-neutral-800"
                                                 : "bg-[#F3F4F6] border border-neutral-100 text-neutral-800 rounded-tl-none"
@@ -1059,19 +1112,11 @@ export default function ChatPage() {
                                                     <div className="flex flex-col gap-3">
                                                         <AudioPlayer url={msg.audio_url} isUser={msg.role === "user"} />
                                                         {msg.content && !msg.content.includes("[Transcrição Interna do Áudio]:") && <p className={`pt-2 border-t italic ${msg.role === 'user' ? 'border-white/10 text-white/70' : 'border-neutral-100 text-neutral-500'}`}>{msg.content}</p>}
-                                                        {/* Item 7: Never show internal transcription line */}
                                                     </div>
-                                                ) : msg.file_url ? (
+                                                ) : msg.file_url && msg.file_type?.startsWith("image/") ? (
                                                     <div className="flex flex-col gap-3">
-                                                        {msg.file_type?.startsWith("image/") ? (
-                                                            <img src={msg.file_url} className="rounded-xl max-w-[250px] max-h-[300px] object-cover shadow-sm" alt="Anexo" />
-                                                        ) : (
-                                                            <a href={msg.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-neutral-100 p-3 rounded-xl hover:bg-neutral-200 transition-colors text-neutral-700 font-bold decoration-none">
-                                                                <Paperclip size={16} />
-                                                                Ver anexo: {msg.file_type?.split('/')[1]?.toUpperCase() || 'Arquivo'}
-                                                            </a>
-                                                        )}
-                                                        {msg.content && <p className="pt-2">{msg.content}</p>}
+                                                        <img src={msg.file_url} className="rounded-xl max-w-[250px] max-h-[300px] object-cover shadow-sm" alt="Anexo" />
+                                                        {msg.content && <p>{msg.content}</p>}
                                                     </div>
                                                 ) : msg.role === "assistant" && msg.isTyping ? (
                                                     <TypingMessage
@@ -1084,15 +1129,41 @@ export default function ChatPage() {
                                                     />
                                                 ) : (
                                                     <div className="space-y-3">
-                                                        {formatMessageBlocks(msg.content).map((block, i) =>
-                                                            block.type === 'image' ? (
-                                                                <img key={i} src={block.url} alt={block.alt} className="rounded-xl max-w-full max-h-[400px] object-cover shadow-sm" />
-                                                            ) : (
-                                                                block.text.split('\n').map((line, j) => (
-                                                                    <p key={`${i}-${j}`} className="leading-relaxed">{line}</p>
-                                                                ))
-                                                            )
-                                                        )}
+                                                        {formatMessageBlocks(msg.content).map((block, i) => {
+                                                            if (block.type === 'image') {
+                                                                return <img key={i} src={block.url} alt={block.alt} className="rounded-xl max-w-full max-h-[400px] object-cover shadow-sm" />;
+                                                            }
+                                                            if (block.type === 'code') {
+                                                                return (
+                                                                    <div key={i} className="relative rounded-xl overflow-hidden my-2">
+                                                                        <div className="flex items-center justify-between px-4 py-2 bg-[#1e1e2e] border-b border-white/5">
+                                                                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">{block.language}</span>
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    navigator.clipboard.writeText(block.code);
+                                                                                    setCopiedId(`code-${msg.id}-${i}`);
+                                                                                    setTimeout(() => setCopiedId(null), 2000);
+                                                                                }}
+                                                                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold text-white/50 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                                                                            >
+                                                                                {copiedId === `code-${msg.id}-${i}` ? (
+                                                                                    <><Check size={12} className="text-green-400" /> Copiado</>
+                                                                                ) : (
+                                                                                    <><Copy size={12} /> Copiar</>
+                                                                                )}
+                                                                            </button>
+                                                                        </div>
+                                                                        <pre className="bg-[#1e1e2e] text-[#cdd6f4] text-[13px] leading-relaxed p-4 overflow-x-auto font-mono">
+                                                                            <code>{block.code}</code>
+                                                                        </pre>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            // text block
+                                                            return block.text.split('\n').map((line: string, j: number) => (
+                                                                <p key={`${i}-${j}`} className="leading-relaxed">{line}</p>
+                                                            ));
+                                                        })}
                                                     </div>
                                                 )}
                                             </div>
