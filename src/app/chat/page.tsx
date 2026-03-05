@@ -13,6 +13,56 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+
+function splitIntoParagraphMessages(content: string): string[] {
+    const parts: string[] = [];
+    let currentPart = "";
+    let inCodeBlock = false;
+    let inList = false;
+
+    const lines = content.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        if (line.trim().startsWith("```")) {
+            inCodeBlock = !inCodeBlock;
+        }
+
+        const isListItem = /^[-*o•\d+]\s+(.*)/.test(line.trim());
+        if (isListItem) inList = true;
+        if (line.trim() === "") inList = false;
+
+        currentPart += line + '\n';
+
+        // Break at empty lines if outside code block/list
+        if (line.trim() === "" && !inCodeBlock && !inList) {
+            if (currentPart.trim()) {
+                parts.push(currentPart.trim());
+                currentPart = "";
+            }
+        }
+    }
+    if (currentPart.trim()) {
+        parts.push(currentPart.trim());
+    }
+
+    // Group short parts for pacing
+    const groupedParts: string[] = [];
+    let currentGroup = "";
+    for (const part of parts) {
+        if (!currentGroup) {
+            currentGroup = part;
+        } else if (currentGroup.length + part.length < 400 && !part.includes("```")) {
+            currentGroup += "\n\n" + part;
+        } else {
+            groupedParts.push(currentGroup);
+            currentGroup = part;
+        }
+    }
+    if (currentGroup) groupedParts.push(currentGroup);
+
+    return groupedParts.length > 0 ? groupedParts : [content];
+}
 import { supabase } from "@/lib/supabase";
 import { v4 as uuidv4 } from 'uuid';
 import { PromptBox } from "@/components/ui/chatgpt-prompt-input";
@@ -621,23 +671,32 @@ export default function ChatPage() {
 
             const responseAgentID = AGENT_HANDLE_TO_ID[responseAgent] || "orchestrator";
 
-            const aiMsg: Message = {
-                id: (Date.now() + 1).toString(),
-                role: "assistant",
-                content: responseContent,
-                agent_id: responseAgentID,
-                agent: {
-                    handle: responseAgent,
-                    name: AGENT_MAP[responseAgentID]?.name || responseAgent.toUpperCase(),
-                    color: AGENT_MAP[responseAgentID]?.color || "#6B7280"
-                },
-                created_at: new Date(),
-                isTyping: true
-            };
-
+            const paragraphParts = splitIntoParagraphMessages(responseContent);
             setIsThinking(false);
-            setMessages(prev => [...prev, aiMsg]);
-            await saveMessage(aiMsg);
+
+            for (let i = 0; i < paragraphParts.length; i++) {
+                const aiMsg: Message = {
+                    id: (Date.now() + i).toString(),
+                    role: "assistant",
+                    content: paragraphParts[i],
+                    agent_id: responseAgentID,
+                    agent: {
+                        handle: responseAgent,
+                        name: AGENT_MAP[responseAgentID]?.name || responseAgent.toUpperCase(),
+                        color: AGENT_MAP[responseAgentID]?.color || "#6B7280"
+                    },
+                    created_at: new Date(),
+                    isTyping: true // Effect handles typing display
+                };
+
+                setMessages(prev => [...prev, aiMsg]);
+                await saveMessage(aiMsg);
+
+                // Small delay between simulated message sends for pacing
+                if (i < paragraphParts.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
         } catch (err) {
             setIsThinking(false);
             const errorMsg: Message = {

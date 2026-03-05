@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import AppHeader from "@/components/AppHeader";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 
 // ── Icon map ────────────────────────────────────────────────────────────────
 const AGENT_ICONS: Record<string, any> = {
@@ -724,17 +725,12 @@ function WorkHistory({ onBack }: { onBack: () => void }) {
                     <p style={{ fontSize: "13px", color: "#9CA3AF" }}>Acompanhe o progresso das tarefas dos agentes</p>
                 </div>
                 {projects.length > 1 && (
-                    <select
+                    <CustomSelect
                         value={selectedProject?.id || ""}
-                        onChange={e => setSelectedProject(projects.find(p => p.id === e.target.value))}
-                        style={{
-                            background: "#FFFFFF", border: "1.5px solid #F0F0F0",
-                            borderRadius: "9px", padding: "8px 12px",
-                            fontSize: "12px", color: "#374151", outline: "none"
-                        }}
-                    >
-                        {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
+                        onChange={val => setSelectedProject(projects.find(p => p.id === val))}
+                        options={projects.map(p => ({ value: p.id, label: p.name }))}
+                        style={{ width: "200px" }}
+                    />
                 )}
             </div>
 

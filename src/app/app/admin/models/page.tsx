@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import AppHeader from "@/components/AppHeader";
 import Link from "next/link";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 
 interface AIModel {
     id: string;
@@ -159,8 +160,8 @@ export default function AdminModelsPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: idx * 0.05 }}
                                 className={`bg-white border rounded-2xl p-6 transition-all ${isEditing ? "border-emerald-300 shadow-lg shadow-emerald-500/5" :
-                                        isSaved ? "border-green-300" :
-                                            "border-neutral-100 hover:border-neutral-200"
+                                    isSaved ? "border-green-300" :
+                                        "border-neutral-100 hover:border-neutral-200"
                                     } ${!model.active ? "opacity-50" : ""}`}
                             >
                                 <div className="flex items-start gap-4">
@@ -194,15 +195,16 @@ export default function AdminModelsPage() {
                                                     </div>
                                                     <div>
                                                         <label className="text-[10px] font-black text-neutral-400 uppercase tracking-wider mb-1 block">Provider</label>
-                                                        <select
+                                                        <CustomSelect
                                                             value={editValues.provider || "google"}
-                                                            onChange={(e) => setEditValues({ ...editValues, provider: e.target.value })}
-                                                            className="w-full px-3 py-2 text-sm font-bold border border-neutral-200 rounded-xl focus:outline-none focus:border-emerald-400 bg-neutral-50"
-                                                        >
-                                                            <option value="google">Google (Gemini)</option>
-                                                            <option value="anthropic">Anthropic (Claude)</option>
-                                                            <option value="openai">OpenAI (GPT)</option>
-                                                        </select>
+                                                            onChange={(val) => setEditValues({ ...editValues, provider: val })}
+                                                            options={[
+                                                                { value: "google", label: "Google (Gemini)" },
+                                                                { value: "anthropic", label: "Anthropic (Claude)" },
+                                                                { value: "openai", label: "OpenAI (GPT)" }
+                                                            ]}
+                                                            style={{ width: "100%", height: "38px" }}
+                                                        />
                                                     </div>
                                                 </div>
                                                 <div>

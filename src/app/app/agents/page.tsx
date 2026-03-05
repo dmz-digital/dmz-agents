@@ -16,6 +16,7 @@ import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AppHeader from "@/components/AppHeader";
 import { Suspense } from "react";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 
 // ── Icons maps ────────────────────────────────────────────────────────────────
 const AGENT_ICONS: Record<string, any> = {
@@ -461,17 +462,12 @@ function AgentsContent() {
                         }}
                     />
                 </div>
-                <select
+                <CustomSelect
                     value={catFilter}
-                    onChange={e => setCatFilter(e.target.value)}
-                    style={{
-                        background: "#FFFFFF", border: "1.5px solid #F0F0F0",
-                        borderRadius: "9px", padding: "8px 12px",
-                        fontSize: "12px", color: "#374151", cursor: "pointer", outline: "none"
-                    }}
-                >
-                    {cats.map(c => <option key={c}>{c}</option>)}
-                </select>
+                    onChange={setCatFilter}
+                    options={cats.map(c => ({ value: c, label: c }))}
+                    style={{ width: "150px" }}
+                />
                 <div style={{ display: "flex", background: "#F3F4F6", borderRadius: "9px", padding: "3px", gap: "2px" }}>
                     {["All", "Active", "Inactive"].map(f => (
                         <button

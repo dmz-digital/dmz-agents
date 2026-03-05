@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 
 // ── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -297,16 +298,12 @@ export default function SignUpPage() {
                                         <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest px-1">Telefone / WhatsApp</label>
                                         <div className="flex gap-2">
                                             <div className="relative w-32 shrink-0">
-                                                <select
+                                                <CustomSelect
                                                     value={formData.ddi}
-                                                    onChange={(e) => setFormData({ ...formData, ddi: e.target.value })}
-                                                    className="w-full bg-neutral-50 border-none rounded-2xl py-4 pl-4 pr-8 text-sm outline-none appearance-none cursor-pointer focus:ring-2 focus:ring-dmz-accent/20 transition-all"
-                                                >
-                                                    {COUNTRIES.map(c => (
-                                                        <option key={c.name} value={c.ddi}>{c.flag} {c.ddi}</option>
-                                                    ))}
-                                                </select>
-                                                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+                                                    onChange={(val) => setFormData({ ...formData, ddi: val })}
+                                                    options={COUNTRIES.map(c => ({ value: c.ddi, label: `${c.flag} ${c.ddi}` }))}
+                                                    style={{ width: "100%", height: "48px" }}
+                                                />
                                             </div>
                                             <input
                                                 type="tel"
@@ -324,16 +321,12 @@ export default function SignUpPage() {
                                         <div className="space-y-2">
                                             <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest px-1">País</label>
                                             <div className="relative">
-                                                <select
+                                                <CustomSelect
                                                     value={formData.country}
-                                                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                                                    className="w-full bg-neutral-50 border-none rounded-2xl py-4 pl-4 pr-10 text-sm outline-none appearance-none cursor-pointer focus:ring-2 focus:ring-dmz-accent/20 transition-all"
-                                                >
-                                                    {COUNTRIES.map(c => (
-                                                        <option key={c.name} value={c.name}>{c.name}</option>
-                                                    ))}
-                                                </select>
-                                                <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+                                                    onChange={(val) => setFormData({ ...formData, country: val })}
+                                                    options={COUNTRIES.map(c => ({ value: c.name, label: c.name }))}
+                                                    style={{ width: "100%", height: "48px" }}
+                                                />
                                             </div>
                                         </div>
                                         <div className="space-y-2">

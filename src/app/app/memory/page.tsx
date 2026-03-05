@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import AppHeader from "@/components/AppHeader";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 
 // ── Primitives ──────────────────────────────────────────────────────────────
 function Tag({ children, color }: { children: React.ReactNode; color: string }) {
@@ -40,12 +41,29 @@ export default function MemoryPage() {
 
     useEffect(() => {
         async function load() {
-            const [{ data: memData }, { data: projData }, { data: agentData }] = await Promise.all([
+            const [{ data: memData }, { data: projData }, { data: agentData }, { data: chatData }] = await Promise.all([
                 supabase.from("dmz_agents_memory").select("*").order("created_at", { ascending: false }).limit(100),
                 supabase.from("dmz_agents_projects").select("id, name"),
                 supabase.from("dmz_agents_definitions").select("id, handle, name"),
+                supabase.from("dmz_agents_chat").select("*").neq("project_id", "default").not("project_id", "is", null).order("created_at", { ascending: false }).limit(100)
             ]);
-            setMemories(memData || []);
+
+            const formattedChat = (chatData || []).map(c => ({
+                id: `chat-${c.id}`,
+                memory_type: "chat_log",
+                key: `Mensagem de Chat (Projeto)`,
+                project_id: c.project_id,
+                agent_id: c.agent_id || (c.role === "user" ? "user" : null),
+                content: c.content || c.file_name || c.file_url || "Anexo",
+                tags: [c.role, c.session_id ? `session:${c.session_id.substring(0, 6)}` : ""].filter(Boolean),
+                created_at: c.created_at
+            }));
+
+            const combined = [...(memData || []), ...formattedChat]
+                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                .slice(0, 150); // Mantenha um limite razoável para a UI
+
+            setMemories(combined);
             setProjects(projData || []);
             setAgents(agentData || []);
             setLoading(false);
@@ -131,32 +149,33 @@ export default function MemoryPage() {
                         }}
                     />
                 </div>
-                <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} style={{
-                    background: "#FFFFFF", border: "1.5px solid #F0F0F0",
-                    borderRadius: "9px", padding: "8px 12px",
-                    fontSize: "12px", color: "#374151", cursor: "pointer", outline: "none"
-                }}>
-                    {memTypes.map(t => <option key={t} value={t}>{t === "All" ? "All Types" : t}</option>)}
-                </select>
+                <CustomSelect
+                    value={typeFilter}
+                    onChange={setTypeFilter}
+                    options={memTypes.map(t => ({ value: t as string, label: t === "All" ? "All Types" : t as string }))}
+                    style={{ width: "160px" }}
+                />
                 {projects.length > 0 && (
-                    <select value={projectFilter} onChange={e => setProjectFilter(e.target.value)} style={{
-                        background: "#FFFFFF", border: "1.5px solid #F0F0F0",
-                        borderRadius: "9px", padding: "8px 12px",
-                        fontSize: "12px", color: "#374151", cursor: "pointer", outline: "none"
-                    }}>
-                        <option value="All">All Projects</option>
-                        {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
+                    <CustomSelect
+                        value={projectFilter}
+                        onChange={setProjectFilter}
+                        options={[
+                            { value: "All", label: "All Projects" },
+                            ...projects.map(p => ({ value: p.id, label: p.name }))
+                        ]}
+                        style={{ width: "200px" }}
+                    />
                 )}
                 {agents.length > 0 && (
-                    <select value={agentFilter} onChange={e => setAgentFilter(e.target.value)} style={{
-                        background: "#FFFFFF", border: "1.5px solid #F0F0F0",
-                        borderRadius: "9px", padding: "8px 12px",
-                        fontSize: "12px", color: "#374151", cursor: "pointer", outline: "none"
-                    }}>
-                        <option value="All">All Agents</option>
-                        {agents.map(a => <option key={a.id} value={a.id}>@{a.handle} — {a.name}</option>)}
-                    </select>
+                    <CustomSelect
+                        value={agentFilter}
+                        onChange={setAgentFilter}
+                        options={[
+                            { value: "All", label: "All Agents" },
+                            ...agents.map(a => ({ value: a.id, label: `@${a.handle} — ${a.name}` }))
+                        ]}
+                        style={{ width: "220px" }}
+                    />
                 )}
             </div>
 
