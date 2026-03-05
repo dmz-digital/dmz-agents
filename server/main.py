@@ -152,6 +152,55 @@ def get_model(purpose: str, default: str = "gemini-2.0-flash") -> str:
     return default
 
 
+def process_artifacts(response_text: str) -> str:
+    """Parses <dmz_artifact type="document">, generates binary docx, uploads, and injects url."""
+    import re
+    import tempfile
+    import uuid
+    import os
+
+    # Look for document artifacts
+    pattern = r'<dmz_artifact\s+type="document"\s+filename="([^"]+)"\s+title="([^"]+)">([\s\S]*?)<\/dmz_artifact>'
+    
+    def replacer(match):
+        filename = match.group(1)
+        title = match.group(2)
+        content = match.group(3).strip()
+        
+        try:
+            from docx import Document
+            doc = Document()
+            for line in content.split('\n'):
+                l = line.strip()
+                if l.startswith('# '): doc.add_heading(l[2:], level=1)
+                elif l.startswith('## '): doc.add_heading(l[3:], level=2)
+                elif l.startswith('### '): doc.add_heading(l[4:], level=3)
+                elif l.startswith('- ') or l.startswith('* '): doc.add_paragraph(l[2:], style='List Bullet')
+                elif l: doc.add_paragraph(l)
+
+            # Save temporarily
+            fd, tmp_path = tempfile.mkstemp(suffix=".docx")
+            os.close(fd)
+            doc.save(tmp_path)
+            
+            # Upload to Supabase dmz-chat-files
+            bucket_name = "dmz-chat-files"
+            file_key = f"artifacts/{uuid.uuid4().hex}_{filename}"
+            with open(tmp_path, "rb") as f:
+                supabase.storage.from_(bucket_name).upload(file_key, f)
+            os.remove(tmp_path)
+            
+            # Retrieve public URL
+            res_url = supabase.storage.from_(bucket_name).get_public_url(file_key)
+            # Reconstruct tag substituting content with URL and changing type to docx_url
+            return f'<dmz_artifact type="document_url" filename="{filename}" title="{title}" url="{res_url}"></dmz_artifact>'
+        except Exception as e:
+            print(f"[WARN] Failed to process document artifact: {e}")
+            return match.group(0) # fallback to original
+
+    return re.sub(pattern, replacer, response_text)
+
+
 # ─── Routes ──────────────────────────────────────────────────────────────────
 
 @app.get("/")
@@ -540,6 +589,9 @@ Possíveis agentes e temas:
 
         # Call LLM (text mode)
         response_text = get_llm_response(system_prompt, full_message, req.history)
+        
+        # Post-process generated artifacts to native formats (Docx, etc)
+        response_text = process_artifacts(response_text)
 
         return {
             "agent_id": req.agent_id,

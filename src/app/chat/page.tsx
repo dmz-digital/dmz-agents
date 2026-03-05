@@ -11,6 +11,7 @@ import {
     Check, Pencil, BookOpen, Target, Brain, Scale, Activity,
     CloudUpload, Maximize, X, FileCode
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
 function splitIntoParagraphMessages(content: string): string[] {
@@ -177,7 +178,7 @@ type ContentBlock =
     | { type: 'text'; text: string }
     | { type: 'image'; url: string; alt: string }
     | { type: 'code'; language: string; code: string }
-    | { type: 'artifact'; artifactType: string; filename: string; title: string; content: string };
+    | { type: 'artifact'; artifactType: string; filename: string; title: string; content: string; url?: string };
 
 function formatMessageBlocks(text: string): ContentBlock[] {
     const blocks: ContentBlock[] = [];
@@ -187,7 +188,7 @@ function formatMessageBlocks(text: string): ContentBlock[] {
     let remaining = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '');
 
     // Match either <dmz_artifact ...>...</dmz_artifact> OR ```...```
-    const blockRegex = /(<dmz_artifact\s+type="([^"]+)"\s+filename="([^"]+)"\s+title="([^"]+)">([\s\S]*?)<\/dmz_artifact>)|(```(\w*)\n?([\s\S]*?)```)/g;
+    const blockRegex = /(<dmz_artifact\s+type="([^"]+)"\s+filename="([^"]+)"\s+title="([^"]+)"(?:.*?url="([^"]+)")?>([\s\S]*?)<\/dmz_artifact>)|(```(\w*)\n?([\s\S]*?)```)/g;
     let lastIndex = 0;
     let match;
 
@@ -206,7 +207,8 @@ function formatMessageBlocks(text: string): ContentBlock[] {
                 artifactType: match[2],
                 filename: match[3],
                 title: match[4],
-                content: match[5].trim()
+                url: match[5],
+                content: match[6].trim()
             });
         } else if (match[6]) {
             // It's a code block
@@ -1279,6 +1281,8 @@ export default function ChatPage() {
                                                                     <div key={i} className="my-2 border border-neutral-100 rounded-xl overflow-hidden bg-white hover:border-dmz-accent/30 transition-colors shadow-sm cursor-pointer group" onClick={() => {
                                                                         if (['html', 'jsx', 'svg', 'code'].includes(block.artifactType)) {
                                                                             setPreviewHtml(block.content);
+                                                                        } else if (block.artifactType === 'document_url' && block.url) {
+                                                                            window.open(block.url, '_blank');
                                                                         } else {
                                                                             const blob = new Blob([block.content], { type: 'text/plain' });
                                                                             const url = URL.createObjectURL(blob);
