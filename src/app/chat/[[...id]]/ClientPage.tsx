@@ -978,7 +978,7 @@ export default function ChatPage() {
                     {/* Messages Container */}
                     <div
                         ref={scrollRef}
-                        className="flex-1 overflow-y-auto px-6 py-8 pb-32 custom-scrollbar scroll-smooth"
+                        className="flex-1 overflow-y-auto px-3 sm:px-6 py-8 pb-32 custom-scrollbar scroll-smooth"
                     >
                         <div className="max-w-3xl mx-auto space-y-12">
                             {messages.map((msg, i) => {
@@ -992,7 +992,7 @@ export default function ChatPage() {
                                         key={msg.id}
                                         className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
                                     >
-                                        <div className={`flex gap-4 max-w-[85%] ${isUser ? "flex-row-reverse" : "flex-row"}`}>
+                                        <div className={`flex gap-3 sm:gap-4 max-w-[92%] sm:max-w-[85%] ${isUser ? "flex-row-reverse" : "flex-row"}`}>
                                             <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center border shadow-sm ${isUser ? "bg-neutral-900 border-neutral-800" : "bg-white border-neutral-100"}`}>
                                                 {isUser ? <User size={16} className="text-white" /> : <Bot size={16} style={{ color: agent?.color || '#D8663E' }} />}
                                             </div>
