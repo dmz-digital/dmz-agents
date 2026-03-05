@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 function splitIntoParagraphMessages(content: string): string[] {
     const parts: string[] = [];
@@ -379,21 +379,14 @@ function AudioPlayer({ url, isUser = false }: { url: string, isUser?: boolean })
 }
 
 export default function ChatPage() {
+    const params = useParams();
     const router = useRouter();
+    const sessionIdFromUrl = params?.id as string;
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [sessions, setSessions] = useState<ChatSession[]>([]);
     const [loading, setLoading] = useState(true);
-    const [currentSessionId, setCurrentSessionId] = useState<string>(() => {
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('dmz_chat_session');
-            if (saved) return saved;
-            const newId = uuidv4();
-            localStorage.setItem('dmz_chat_session', newId);
-            return newId;
-        }
-        return uuidv4();
-    });
+    const [currentSessionId, setCurrentSessionId] = useState<string>(sessionIdFromUrl || uuidv4());
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -449,23 +442,16 @@ export default function ChatPage() {
 
     useEffect(() => {
         document.title = "Chat de Projetos | DMZ - OS Agents";
-
-        // Redirection logic to dynamic route
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('dmz_chat_session');
-            if (saved) {
-                router.replace(`/chat/${saved}`);
-            } else {
-                const newId = uuidv4();
-                localStorage.setItem('dmz_chat_session', newId);
-                router.replace(`/chat/${newId}`);
-            }
-        }
-
         loadInitialData();
         // Auto-focus textarea on mount
         setTimeout(() => inputRef.current?.focus(), 100);
-    }, [router]);
+    }, []);
+
+    useEffect(() => {
+        if (sessionIdFromUrl && sessionIdFromUrl !== currentSessionId) {
+            setCurrentSessionId(sessionIdFromUrl);
+        }
+    }, [sessionIdFromUrl]);
 
     useEffect(() => {
         loadHistory(currentSessionId);
@@ -557,8 +543,7 @@ export default function ChatPage() {
 
     const createNewSession = () => {
         const newId = uuidv4();
-        localStorage.setItem('dmz_chat_session', newId);
-        setCurrentSessionId(newId);
+        router.push(`/chat/${newId}`);
     };
 
     // Like / Feedback toggle
@@ -1001,7 +986,7 @@ export default function ChatPage() {
                             {sessions.map((s) => (
                                 <div
                                     key={s.session_id}
-                                    onClick={() => setCurrentSessionId(s.session_id)}
+                                    onClick={() => router.push(`/chat/${s.session_id}`)}
                                     className={`w-full p-4 rounded-2xl text-left border transition-all group relative cursor-pointer ${s.session_id === currentSessionId
                                         ? "bg-white border-dmz-accent/20"
                                         : "bg-neutral-50 border-transparent group-hover:bg-white group-hover:border-neutral-200"
