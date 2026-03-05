@@ -135,35 +135,33 @@ const AGENT_HANDLE_TO_ID: Record<string, string> = {
 // Strips ALL markdown markers and renders as clean text
 function stripMarkdown(text: string): string {
     if (!text) return "";
-    return text
-        // Remove headers: # ## ### etc.
-        .replace(/^#{1,6}\s+/gm, '')
-        // Remove horizontal rules: --- or ***
-        .replace(/^[-*_]{3,}$/gm, '')
-        // Remove bold+italic: ***text*** or ___text___
-        .replace(/\*{3}(.+?)\*{3}/g, '$1')
-        .replace(/_{3}(.+?)_{3}/g, '$1')
-        // Remove bold: **text** or __text__
-        .replace(/\*{2}(.+?)\*{2}/g, '$1')
-        .replace(/_{2}(.+?)_{2}/g, '$1')
-        // Remove italic: *text* or _text_
-        .replace(/(?<!\w)\*([^*]+?)\*(?!\w)/g, '$1')
-        .replace(/(?<!\w)_([^_]+?)_(?!\w)/g, '$1')
-        // Remove inline code: `text`
-        .replace(/`([^`]+?)`/g, '$1')
+    let res = text
+        // Remove artifacts first
+        .replace(/<dmz_artifact[\s\S]*?(?:<\/dmz_artifact>|$)/gi, '')
+        // Remove code blocks
+        .replace(/```[\s\S]*?```/g, '')
+        // Remove images: ![alt](url) -> "" 
+        .replace(/!\[([^\]]*)\]\(([^)]+?)\)/g, '')
         // Remove links: [text](url) → text
         .replace(/\[([^\]]+?)\]\(([^)]+?)\)/g, '$1')
-        // Remove images: ![alt](url) -> "" (keep it clean)
-        .replace(/!\[([^\]]*)\]\(([^)]+?)\)/g, '')
-        // Remove blockquotes: > text
-        .replace(/^>\s?/gm, '')
-        // Remove numbered list prefixes: "1. "
+        // Remove headers: # ## ### etc.
+        .replace(/^#{1,6}\s+/gm, '')
+        // Remove bold+italic: ***text***
+        .replace(/\*{3}(.+?)\*{3}/g, '$1')
+        // Remove bold: **text**
+        .replace(/\*{2}(.+?)\*{2}/g, '$1')
+        // Remove italic: *text*
+        .replace(/(?<!\w)\*([^*]+?)\*(?!\w)/g, '$1')
+        .replace(/(?<!\w)_([^_]+?)_(?!\w)/g, '$1')
+        // Remove horizontal rules
+        .replace(/^[-*_]{3,}$/gm, '')
+        // Remove list markers
         .replace(/^\d+\.\s+/gm, '')
-        // Remove bullet prefixes: "- ", "* ", "• "
         .replace(/^[-*•]\s+/gm, '')
-        // Clean up extra whitespace
-        .replace(/\n{3,}/g, '\n\n')
+        // Clean up
+        .replace(/\s+/g, ' ')
         .trim();
+    return res;
 }
 
 type ContentBlock =
@@ -174,16 +172,17 @@ type ContentBlock =
 
 function formatMessageBlocks(text: string): ContentBlock[] {
     const blocks: ContentBlock[] = [];
-    const supabaseUrl = "https://mqqiyyxcoutbmuszwejz.supabase.co"; // Base URL for relative paths
+    // Use environment variable if available, otherwise fallback to known ref
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://mqqiyyxcoutbmuszwejz.supabase.co";
 
     // Pre-process: if an artifact is wrapped in ```html ... ```, unwrap it
     let processedText = text.replace(/```[a-z]*\s*\n*(<dmz_artifact[\s\S]*?(?:<\/dmz_artifact>|$))\n*\s*(?:```|$)/g, '$1');
 
     // Regex elements to capture sequentially
     // 1: Artifact
-    // 6: Image Markdown
-    // 9: Code Block
-    const blockRegex = /(<dmz_artifact\s+type="([^"]+)"\s+filename="([^"]+)"\s+title="([^"]+)"(?:.*?url="([^"]+)")?>([\s\S]*?)(?:<\/dmz_artifact>|$))|(!\[([^\]]*)\]\(([^)]+)\))|(```(\w*)\n?([\s\S]*?)(?:```|$))/g;
+    // 7: Image Markdown (supports ![alt](url) or [alt](url) if it looks like image file)
+    // 10: Code Block
+    const blockRegex = /(<dmz_artifact\s+type="([^"]+)"\s+filename="([^"]+)"\s+title="([^"]+)"(?:.*?url="([^"]+)")?>([\s\S]*?)(?:<\/dmz_artifact>|$))|((?:!)?\[([^\]]*)\]\(([^)]+?\.(?:png|jpg|jpeg|gif|webp|svg|heic)(?:\?[^)]+)?)\))|(```(\w*)\n?([\s\S]*?)(?:```|$))/gi;
 
     let lastIndex = 0;
     let match;
@@ -214,21 +213,19 @@ function formatMessageBlocks(text: string): ContentBlock[] {
                 content: innerContent
             });
         } else if (match[7]) {
-            // Image Markdown matched: ![alt](url)
+            // Image Markdown matched: [!][alt](url.ext)
             const alt = match[8] || "Imagem";
             let url = (match[9] || "").trim();
 
-            // Handle relative Supabase paths
+            // Handle relative paths
             if (url && !url.startsWith("http") && !url.startsWith("data:")) {
                 if (url.startsWith("/")) url = url.slice(1);
                 // Prepend Supabase Storage public URL if it looks like a bucket path
                 if (url.includes("storage/v1/object/public/")) {
                     url = `${supabaseUrl}/${url}`;
                 } else if (!url.includes("/")) {
-                    // Fallback to images bucket if it's just a filename
                     url = `${supabaseUrl}/storage/v1/object/public/images/${url}`;
                 } else {
-                    // Generic prepend if it has a slash but no storage prefix
                     url = `${supabaseUrl}/storage/v1/object/public/${url}`;
                 }
             }
@@ -374,7 +371,21 @@ export default function ChatPage() {
         } else if (sessionIdFromUrl !== currentSessionId) {
             setCurrentSessionId(sessionIdFromUrl);
         }
-    }, [sessionIdFromUrl, router]);
+    }, [sessionIdFromUrl, router, currentSessionId]);
+
+    // Force URL synchronization for masked domains/iframes
+    useEffect(() => {
+        if (currentSessionId) {
+            const expectedPath = `/chat/${currentSessionId}`;
+            if (window.location.pathname !== expectedPath) {
+                try {
+                    window.history.replaceState(null, '', expectedPath);
+                } catch (e) {
+                    console.warn("Failed to update history state:", e);
+                }
+            }
+        }
+    }, [currentSessionId]);
 
     // Effect to load history when session changes
     useEffect(() => {
@@ -440,9 +451,10 @@ export default function ChatPage() {
             data.forEach(m => {
                 if (!grouped[m.session_id]) {
                     const content = m.content || "Áudio enviado";
+                    const cleanTitle = stripMarkdown(content);
                     grouped[m.session_id] = {
                         session_id: m.session_id,
-                        title: content.length > 40 ? content.substring(0, 40) + "..." : content,
+                        title: cleanTitle.length > 50 ? cleanTitle.substring(0, 50) + "..." : (cleanTitle || "Nova Conversa"),
                         last_message: content,
                         created_at: new Date(m.created_at)
                     };
@@ -926,7 +938,13 @@ export default function ChatPage() {
                                                                 if (block.type === 'image') {
                                                                     return (
                                                                         <div key={bi} className="my-4 rounded-2xl overflow-hidden border border-neutral-100 group relative">
-                                                                            <img src={block.url} alt={block.alt} className="w-full h-auto max-h-[400px] object-contain bg-neutral-50" />
+                                                                            <img src={block.url} alt={block.alt} title={block.url} className="w-full h-auto max-h-[400px] object-contain bg-neutral-50" />
+                                                                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                                                                                <a href={block.url} target="_blank" rel="noreferrer" className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-neutral-500 hover:text-dmz-accent shadow-xl flex items-center gap-1.5 transition-all active:scale-95 border border-neutral-100">
+                                                                                    <Maximize size={10} />
+                                                                                    Ver original
+                                                                                </a>
+                                                                            </div>
                                                                         </div>
                                                                     );
                                                                 }

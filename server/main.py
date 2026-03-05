@@ -259,42 +259,59 @@ async def chat_interaction(req: ChatRequest):
         full_message = req.message or ""
 
         # --- ROUTING LOGIC ---
-        # If talking to orch, check if user explicitly requested another agent
+        # If talking to orch, check if message relates to a specific specialty
         if agent_db_id == "orchestrator" and full_message.strip():
-            route_prompt = f"""O usuário está enviando uma mensagem para o Orchestrator do Squad. 
+            route_prompt = f"""Analise a mensagem do usuário e decida se ela deve ser respondida pelo Orchestrator (geral) ou por um especialista do Squad DMZ.
 A mensagem: '{full_message}'
-O usuário pediu explicitamente para falar com alguém de Design, UX, Backend, Jurídico ou outro especialista na equipe?
-Responda APENAS com o handle do agente desejado se sim, ou "NOPE" se não pediu para mudar. 
-Possíveis agentes e temas:
-- aurora (Design: imagens, visual, design de interface)
-- victoria (UX: fluxo, wireframes, usabilidade)
-- ryan (Developer: backend, infra, código)
-- theron (Legal: contratos, análise jurídica)
-- cassandra (Copy: textos, marketing)
-- lucas (PO: produto, requisitos)
-- sofia (Banco de Dados)"""
+
+Responda APENAS com o handle do agente se o tema for da alçada dele, ou "NOPE" para manter com o Orchestrator.
+Especialistas e seus Domínios:
+- aurora (Design: geração de imagens, logos, UI/UX visual, cores, branding, "gere uma imagem", "crie um logo", "estilo visual")
+- victoria (UX: fluxo de usuário, wireframes, arquitetura de informação, usabilidade)
+- ryan (Developer: backend, infra, código, APIs, bugs técnicos, "escreva um script", "como fazer tal função")
+- theron (Legal: contratos, análise jurídica, LGPD, termos de uso)
+- cassandra (Copy: textos persuasivos, marketing, legendas, roteiros, emails frios)
+- lucas (PO: produto, estratégia, roadmap, requisitos de negócio)
+- sofia (DB: bancos de dados, queries, arquitetura de dados)
+
+Regra: Se a mensagem mencionar "gerar imagem" ou "crie uma foto/ilustração", mande obrigatoriamente para @aurora."""
             
             try:
-                # Fast classification
-                route_decision = get_llm_response("Você é um roteador rígido. Responda apenas com a palavra pedida.", route_prompt).strip().lower()
+                # Fast classification (use a smaller model if needed, but here we reuse the response engine)
+                route_decision = get_llm_response("Você é um roteador de squad. Responda apenas com o handle ou NOPE.", route_prompt).strip().lower()
                 valid_handles = ["aurora", "victoria", "ryan", "theron", "cassandra", "lucas", "sofia"]
+                
+                # Force aurora for image-like requests if the LLM is being lazy
+                if not any(h in route_decision for h in valid_handles):
+                    img_triggers = ["imagem", "foto", "ilustra", "logo", "desenho", "image", "picture", "create image"]
+                    if any(t in full_message.lower() for t in img_triggers):
+                        route_decision = "aurora"
+
                 if any(h in route_decision for h in valid_handles):
                     for h in valid_handles:
                         if h in route_decision:
-                            agent_db_id = "design_chief" if h == "aurora" else ("developer" if h == "ryan" else ("legal_chief" if h == "theron" else ("copy_chief" if h == "cassandra" else h)))
-                            if h == "victoria": agent_db_id = "ux"
-                            if h == "sofia": agent_db_id = "db_sage"
-                            if h == "lucas": agent_db_id = "po"
-                            # Update the returned agent_id!
+                            # Map handle to DB ID
+                            mapping = {
+                                "aurora": "design_chief",
+                                "victoria": "ux",
+                                "ryan": "developer",
+                                "theron": "legal_chief",
+                                "cassandra": "copy_chief",
+                                "lucas": "po",
+                                "sofia": "db_sage"
+                            }
+                            agent_db_id = mapping.get(h, agent_db_id)
+                            # Update parameters so the frontend sees the change
                             req.agent_id = h
-                            # Add context so the specialist responds directly
-                            full_message = f"[CONTEXTO: Você foi chamado pelo Orchestrator para responder diretamente ao usuário. Responda como se estivesse falando diretamente com ele, sem mencionar que foi 'chamado' ou que precisa 'aguardar'. Vá direto ao assunto.]\n\n{full_message}"
-                            # Clear history from orch context to avoid confusion
-                            req.history = req.history[-2:] if len(req.history) > 2 else req.history
+                            # Add routing context for the specialist
+                            full_message = f"[CONTEXTO: Especialista {h} chamado. Execute a tarefa agora de forma direta. Se houver comandos de ferramentas (como gerar imagem ou código), execute-os imediatamente.]\n\n{full_message}"
+                            # Clear irrelevant history to focus the specialist
+                            req.history = req.history[-4:] if len(req.history) > 4 else req.history
+                            print(f"[routing] Rerouted to specialist: {h}")
                             break
-            except Exception:
+            except Exception as e:
+                print(f"[routing] Error: {e}")
                 pass
-
 
         # Build system prompt from DB
         system_prompt = get_agent_prompt(agent_db_id)
@@ -304,15 +321,13 @@ Possíveis agentes e temas:
         if formatting:
             system_prompt += "\n" + formatting
 
-        # CRITICAL: Never expose internal names, always execute tasks
+        # CRITICAL: Behavior rules
         system_prompt += (
-            "\n\nREGRAS ABSOLUTAS DE COMPORTAMENTO (NUNCA VIOLAR):"
-            "\n- NUNCA mencione nomes internos de ferramentas, IDs, ou handles técnicos na resposta ao usuário."
-            "\n- NUNCA escreva coisas como ('image_generator'), ('tool_name'), agent_id, etc."
-            "\n- Se o usuário pedir para gerar imagens, GERE as imagens. Não diga que vai 'acionar um especialista'."
-            "\n- Se o usuário pedir para pesquisar, PESQUISE. Não diga que vai 'chamar alguém'."
-            "\n- Responda DIRETO ao pedido do usuário com a ação executada."
-            "\n- Ao mencionar colegas da equipe, use apenas o @nome (ex: @aurora, @cassandra)."
+            "\n\nREGRAS ABSOLUTAS (NUNCA VIOLAR):"
+            "\n- NUNCA mencione que foi 'acionado', 'chamado' ou que é uma ferramenta. Aja como o profissional especializado."
+            "\n- Execute as tarefas imediatamente. Se pedirem imagem, use comandos de imagem (implícitos no sistema)."
+            "\n- Ao citar colegas, use @nome (ex: @aurora, @lucas)."
+            "\n- Responda de forma executiva, direta e focada em resultados de alto nível."
         )
 
         # Artifacts Rendering Rules
