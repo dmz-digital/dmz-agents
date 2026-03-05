@@ -1,9 +1,9 @@
 import ClientPage from './ClientPage';
 
 export function generateStaticParams() {
-  return [{ id: [] }];
+    return [{ id: [] }];
 }
 
 export default function Page() {
-  return <ClientPage />;
+    return <ClientPage />;
 }

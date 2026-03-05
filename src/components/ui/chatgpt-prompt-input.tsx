@@ -36,7 +36,7 @@ const toolsList = [
 ];
 
 interface PromptBoxProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-    onSend?: (text: string, file?: File, toolId?: string | null) => void;
+    onSend?: (text: string, files?: File[], toolId?: string | null) => void;
     onStartRecording?: () => void;
     onStopRecording?: () => void;
     isRecording?: boolean;
@@ -51,7 +51,7 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
         const localAudioChunksRef = React.useRef<Blob[]>([]);
 
         const [value, setValue] = React.useState("");
-        const [attachedFile, setAttachedFile] = React.useState<File | null>(null);
+        const [attachedFiles, setAttachedFiles] = React.useState<File[]>([]);
         const [selectedTool, setSelectedTool] = React.useState<string | null>(null);
         const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
         const [isDragging, setIsDragging] = React.useState(false);
@@ -147,20 +147,27 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
         ];
 
         const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-            const file = event.target.files?.[0];
-            if (file) {
-                const ext = file.name.split('.').pop()?.toLowerCase() || '';
-                if (ACCEPTED_EXTENSIONS.includes(ext) || file.type.startsWith('audio/') || file.type.startsWith('image/') || file.type.startsWith('video/')) {
-                    setAttachedFile(file);
+            const files = event.target.files;
+            if (files && files.length > 0) {
+                const validFiles: File[] = [];
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+                    if (ACCEPTED_EXTENSIONS.includes(ext) || file.type.startsWith('audio/') || file.type.startsWith('image/') || file.type.startsWith('video/')) {
+                        validFiles.push(file);
+                    }
+                }
+                if (validFiles.length > 0) {
+                    setAttachedFiles(prev => [...prev, ...validFiles]);
                     setIsUploadModalOpen(false);
                 }
             }
             event.target.value = "";
         };
 
-        const handleRemoveFile = (e: React.MouseEvent<HTMLButtonElement>) => {
+        const handleRemoveFile = (e: React.MouseEvent<HTMLButtonElement>, index: number) => {
             e.stopPropagation();
-            setAttachedFile(null);
+            setAttachedFiles(prev => prev.filter((_, i) => i !== index));
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
             }
@@ -168,16 +175,15 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
 
         const handleSubmit = () => {
             if (recordedBlob) {
-                // Convert blob to a File so it goes through the upload flow
                 const audioFile = new File([recordedBlob], `audio-${Date.now()}.webm`, { type: 'audio/webm' });
-                onSend?.(value, audioFile, selectedTool);
+                onSend?.(value, [audioFile], selectedTool);
                 setValue("");
                 discardRecording();
                 return;
             }
-            onSend?.(value, attachedFile || undefined, selectedTool);
+            onSend?.(value, attachedFiles.length > 0 ? attachedFiles : undefined, selectedTool);
             setValue("");
-            setAttachedFile(null);
+            setAttachedFiles([]);
         };
 
         const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -199,14 +205,20 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
         const handleDrop = (e: React.DragEvent) => {
             e.preventDefault();
             setIsDragging(false);
-            const file = e.dataTransfer.files?.[0];
-            if (file) {
-                const ext = file.name.split('.').pop()?.toLowerCase() || '';
-                if (ACCEPTED_EXTENSIONS.includes(ext) || file.type.startsWith('audio/') || file.type.startsWith('image/') || file.type.startsWith('video/')) {
-                    setAttachedFile(file);
+            const files = e.dataTransfer.files;
+            if (files && files.length > 0) {
+                const validFiles: File[] = [];
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+                    if (ACCEPTED_EXTENSIONS.includes(ext) || file.type.startsWith('audio/') || file.type.startsWith('image/') || file.type.startsWith('video/')) {
+                        validFiles.push(file);
+                    }
+                }
+                if (validFiles.length > 0) {
+                    setAttachedFiles(prev => [...prev, ...validFiles]);
                     setIsUploadModalOpen(false);
                 } else {
-                    // Open modal so user can pick a valid file
                     setIsUploadModalOpen(true);
                 }
             }
@@ -216,11 +228,18 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
             e.preventDefault();
             e.stopPropagation();
             setModalDragging(false);
-            const file = e.dataTransfer.files?.[0];
-            if (file) {
-                const ext = file.name.split('.').pop()?.toLowerCase() || '';
-                if (ACCEPTED_EXTENSIONS.includes(ext) || file.type.startsWith('audio/') || file.type.startsWith('image/') || file.type.startsWith('video/')) {
-                    setAttachedFile(file);
+            const files = e.dataTransfer.files;
+            if (files && files.length > 0) {
+                const validFiles: File[] = [];
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+                    if (ACCEPTED_EXTENSIONS.includes(ext) || file.type.startsWith('audio/') || file.type.startsWith('image/') || file.type.startsWith('video/')) {
+                        validFiles.push(file);
+                    }
+                }
+                if (validFiles.length > 0) {
+                    setAttachedFiles(prev => [...prev, ...validFiles]);
                     setIsUploadModalOpen(false);
                 }
             }
@@ -233,7 +252,7 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
             return <FileText size={20} className="text-dmz-accent" />;
         };
 
-        const hasValue = value.trim().length > 0 || !!attachedFile || !!recordedBlob;
+        const hasValue = value.trim().length > 0 || attachedFiles.length > 0 || !!recordedBlob;
         const hasAnything = hasValue;
         const canSend = hasAnything && !isLocalRecording;
         const activeTool = selectedTool ? toolsList.find(t => t.id === selectedTool) : null;
@@ -255,6 +274,7 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
                     ref={fileInputRef}
                     onChange={handleFileChange}
                     className="hidden"
+                    multiple
                     accept="audio/*,image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.md,.rtf,.ppt,.pptx,.m4a,.ogg,.opus,.flac,.3gp,.amr,.caf,.heic,.heif,.avif,.mkv"
                 />
 
@@ -290,15 +310,19 @@ export const PromptBox = React.forwardRef<HTMLTextAreaElement, PromptBoxProps>(
                     </div>
                 )}
 
-                {/* Regular file attachment */}
-                {attachedFile && (
-                    <div className="flex items-center gap-3 bg-neutral-50 p-2 px-4 rounded-2xl mb-2 w-fit group">
-                        <CloudUpload size={18} className="text-dmz-accent" />
-                        <span className="text-xs font-bold text-neutral-600 truncate max-w-[180px]">{attachedFile.name}</span>
-                        <span className="text-[9px] text-neutral-400 font-medium">{(attachedFile.size / 1024).toFixed(0)} KB</span>
-                        <button onClick={handleRemoveFile} className="p-1 hover:bg-neutral-200 rounded-full transition-all">
-                            <X size={14} className="text-neutral-400" />
-                        </button>
+                {/* File attachments */}
+                {attachedFiles.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2 px-1">
+                        {attachedFiles.map((file, idx) => (
+                            <div key={`${file.name}-${idx}`} className="flex items-center gap-2 bg-neutral-50 p-2 px-3 rounded-2xl group">
+                                <CloudUpload size={15} className="text-dmz-accent shrink-0" />
+                                <span className="text-xs font-bold text-neutral-600 truncate max-w-[140px]">{file.name}</span>
+                                <span className="text-[9px] text-neutral-400 font-medium shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
+                                <button onClick={(e) => handleRemoveFile(e, idx)} className="p-0.5 hover:bg-neutral-200 rounded-full transition-all shrink-0">
+                                    <X size={12} className="text-neutral-400" />
+                                </button>
+                            </div>
+                        ))}
                     </div>
                 )}
 

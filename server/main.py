@@ -244,6 +244,8 @@ class ChatRequest(BaseModel):
     tool: str | None = None
     file_url: str | None = None
     file_type: str | None = None
+    file_name: str | None = None
+    files: list = []
     history: list = []
 
 
@@ -536,30 +538,43 @@ Regra: Se a mensagem mencionar "gerar imagem" ou "crie uma foto/ilustração", m
             if code_prompt:
                 system_prompt += "\n" + code_prompt
 
-        # Detect attachment type
-        att_type = (req.file_type or "").lower()
-        file_ext = (req.file_url or "").split(".")[-1].lower() if req.file_url else ""
-        is_image = "image" in att_type or file_ext in ["jpg", "jpeg", "png", "gif", "webp", "heic", "avif"]
-        is_audio = "audio" in att_type or file_ext in ["mp3", "wav", "m4a", "ogg", "opus", "flac", "aac"]
-        is_pdf = "pdf" in att_type or file_ext == "pdf"
-
-        # Apply attachment-specific system prompts
+        # Process all files
+        all_files = list(req.files) if req.files else []
         if req.file_url:
-            if is_image:
-                img_prompt = get_sys_prompt("attachment_image")
-                if img_prompt:
-                    system_prompt += "\n" + img_prompt
-            elif is_audio:
-                audio_prompt = get_sys_prompt("attachment_audio")
-                if audio_prompt:
-                    system_prompt += "\n" + audio_prompt
-            elif is_pdf:
-                pdf_prompt = get_sys_prompt("attachment_pdf")
-                if pdf_prompt:
-                    system_prompt += "\n" + pdf_prompt
+            all_files.append({"url": req.file_url, "type": req.file_type or "", "name": req.file_name or ""})
 
-        # For image attachments: use multimodal LLM if possible
-        if req.file_url and is_image:
+        has_image = any("image" in f.get("type", "").lower() or (f.get("url", "").split(".")[-1].lower() in ["jpg", "jpeg", "png", "gif", "webp", "heic", "avif"]) for f in all_files)
+        has_audio = any("audio" in f.get("type", "").lower() or (f.get("url", "").split(".")[-1].lower() in ["mp3", "wav", "ogg", "m4a", "aac"]) for f in all_files)
+        has_pdf = any("pdf" in f.get("type", "").lower() or (f.get("url", "").split(".")[-1].lower() == "pdf") for f in all_files)
+
+        if has_image:
+            img_prompt = get_sys_prompt("attachment_image")
+            if img_prompt: system_prompt += "\n" + img_prompt
+        if has_audio:
+            audio_prompt = get_sys_prompt("attachment_audio")
+            if audio_prompt: system_prompt += "\n" + audio_prompt
+        if has_pdf:
+            pdf_prompt = get_sys_prompt("attachment_pdf")
+            if pdf_prompt: system_prompt += "\n" + pdf_prompt
+
+        image_files = []
+        file_contexts = []
+        for f in all_files:
+            ftype = f.get("type", "").lower()
+            fext = f.get("url", "").split(".")[-1].lower() if f.get("url") else ""
+            fname = f.get("name", "")
+            if "image" in ftype or fext in ["jpg", "jpeg", "png", "gif", "webp", "heic", "avif"]:
+                image_files.append(f)
+            elif "audio" in ftype or fext in ["mp3", "wav", "ogg", "m4a", "aac"]:
+                file_contexts.append(f"[Áudio recebido ({fname}): {f.get('url')}]")
+            else:
+                file_contexts.append(f"[Arquivo recebido ({fname}): {f.get('url')} - Tipo: {f.get('type')}]")
+
+        if file_contexts:
+            full_message += "\n\n" + "\n".join(file_contexts)
+
+        # For multiple image attachments: use multimodal LLM
+        if len(image_files) > 0:
             gemini_key = os.getenv("GEMINI_API_KEY")
             anthropic_key = os.getenv("ANTHROPIC_API_KEY")
 
@@ -570,11 +585,14 @@ Regra: Se a mensagem mencionar "gerar imagem" ou "crie uma foto/ilustração", m
                 
                 client = genai.Client(api_key=gemini_key)
 
-                # Fetch the image to bytes since Gemini API requires direct bytes or gs:// URI
-                img_resp = req_lib.get(req.file_url, timeout=10)
-                img_part = types.Part.from_bytes(data=img_resp.content, mime_type=req.file_type or "image/jpeg")
+                img_parts = []
+                for img in image_files:
+                    try:
+                        img_resp = req_lib.get(img.get("url"), timeout=10)
+                        img_parts.append(types.Part.from_bytes(data=img_resp.content, mime_type=img.get("type") or "image/jpeg"))
+                    except Exception as e:
+                        print(f"Failed to fetch image {img.get('url')}: {e}")
 
-                # Build conversation history for memory
                 contents = []
                 for h in req.history:
                     role_h = "user" if h.get("role") == "user" else "model"
@@ -582,11 +600,9 @@ Regra: Se a mensagem mencionar "gerar imagem" ou "crie uma foto/ilustração", m
                     if content_h.strip():
                         contents.append(types.Content(role=role_h, parts=[types.Part.from_text(text=content_h)]))
                 
-                # Current message prompt
-                prompt_parts = [img_part]
+                prompt_parts = img_parts.copy()
                 if full_message:
                     prompt_parts.append(types.Part.from_text(text=full_message))
-                
                 contents.append(types.Content(role="user", parts=prompt_parts))
 
                 try:
@@ -597,18 +613,13 @@ Regra: Se a mensagem mencionar "gerar imagem" ou "crie uma foto/ilustração", m
                     )
                     return {"agent_id": req.agent_id, "content": response.text, "status": "success"}
                 except Exception as e:
-                    return {"agent_id": req.agent_id, "content": f"Erro na análise de imagem com Gemini: {str(e)}", "status": "error"}
+                    return {"agent_id": req.agent_id, "content": f"Erro na análise das imagens com Gemini: {str(e)}", "status": "error"}
 
             elif anthropic_key:
-                # Anthropic: fetch image and send as base64
                 import base64, requests as req_lib
-                img_resp = req_lib.get(req.file_url, timeout=10)
-                img_b64 = base64.standard_b64encode(img_resp.content).decode("utf-8")
-                media_type = req.file_type or "image/jpeg"
-
                 from anthropic import Anthropic
-                client = Anthropic(api_key=anthropic_key)
                 
+                client = Anthropic(api_key=anthropic_key)
                 msgs = []
                 for h in req.history:
                     role_h = "user" if h.get("role") == "user" else "assistant"
@@ -616,13 +627,21 @@ Regra: Se a mensagem mencionar "gerar imagem" ou "crie uma foto/ilustração", m
                     if content_h.strip():
                         msgs.append({"role": role_h, "content": content_h})
                 
-                msgs.append({
-                    "role": "user",
-                    "content": [
-                        {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": img_b64}},
-                        {"type": "text", "text": full_message or "Analise esta imagem."}
-                    ]
-                })
+                content_block = []
+                for img in image_files:
+                    try:
+                        img_resp = req_lib.get(img.get("url"), timeout=10)
+                        img_b64 = base64.standard_b64encode(img_resp.content).decode("utf-8")
+                        content_block.append({
+                            "type": "image", 
+                            "source": {"type": "base64", "media_type": img.get("type") or "image/jpeg", "data": img_b64}
+                        })
+                    except Exception as e:
+                        print(f"Failed to fetch image {img.get('url')}: {e}")
+                
+                if full_message:
+                    content_block.append({"type": "text", "text": full_message})
+                msgs.append({"role": "user", "content": content_block})
 
                 response = client.messages.create(
                     model="claude-3-5-sonnet-20241022",
@@ -631,18 +650,6 @@ Regra: Se a mensagem mencionar "gerar imagem" ou "crie uma foto/ilustração", m
                     messages=msgs
                 )
                 return {"agent_id": req.agent_id, "content": response.content[0].text, "status": "success"}
-
-        # For audio with transcription: include the full transcription as context
-        if req.file_url and is_audio:
-            if full_message.strip():
-                # The message IS the transcription or user added text alongside audio
-                pass
-            else:
-                full_message = "[O usuário enviou um arquivo de áudio. URL: " + req.file_url + "]"
-
-        # For non-image, non-audio or fallback: append context to message text
-        elif req.file_url and not is_image:
-            full_message += f"\n\n[Arquivo anexado: {req.file_url} — Tipo: {req.file_type}]"
 
         # Call LLM (standard response)
         response_text = get_llm_response(system_prompt, full_message, req.history)

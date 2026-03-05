@@ -109,6 +109,7 @@ interface Message {
     file_url?: string;
     file_type?: string;
     file_name?: string;
+    files?: { url: string, type: string, name: string }[];
     agent_id?: string;
     agent?: {
         handle: string;
@@ -526,24 +527,34 @@ export default function ChatPage() {
             .order('created_at', { ascending: true });
 
         if (data && data.length > 0) {
-            const formatted = data.map((m: any) => ({
-                id: m.id,
-                role: m.role,
-                content: m.content || "",
-                audio_url: m.audio_url || undefined,
-                file_url: m.file_url || undefined,
-                file_type: m.file_type || undefined,
-                file_name: m.file_url ? decodeURIComponent((m.file_url as string).split('/').pop()?.replace(/^[a-f0-9-]+_/, '') || 'arquivo') : undefined,
-                agent_id: m.agent_id,
-                agent: m.agent_id ? {
-                    handle: m.agent_id === "orchestrator" ? "orch" : (AGENT_MAP[m.agent_id]?.handle || m.agent_id),
-                    name: AGENT_MAP[m.agent_id]?.name || m.agent_id.toUpperCase(),
-                    color: AGENT_MAP[m.agent_id]?.color || "#6B7280"
-                } : undefined,
-                feedback: m.feedback || null,
-                db_id: m.id,
-                created_at: new Date(m.created_at)
-            }));
+            const formatted = data.map((m: any) => {
+                let parsedFiles = undefined;
+                if (typeof m.file_url === 'string' && m.file_url.startsWith('[')) {
+                    try {
+                        parsedFiles = JSON.parse(m.file_url);
+                    } catch (e) { }
+                }
+
+                return {
+                    id: m.id,
+                    role: m.role,
+                    content: m.content || "",
+                    audio_url: m.audio_url || undefined,
+                    file_url: (parsedFiles && parsedFiles.length > 0) ? parsedFiles[0].url : m.file_url || undefined,
+                    file_type: m.file_type || undefined,
+                    file_name: (parsedFiles && parsedFiles.length > 0) ? parsedFiles[0].name : (m.file_url ? decodeURIComponent((m.file_url as string).split('/').pop()?.replace(/^[a-f0-9-]+_/, '') || 'arquivo') : undefined),
+                    files: parsedFiles || (m.file_url ? [{ url: m.file_url, type: m.file_type || '', name: m.file_url.split('/').pop() || 'arquivo' }] : undefined),
+                    agent_id: m.agent_id,
+                    agent: m.agent_id ? {
+                        handle: m.agent_id === "orchestrator" ? "orch" : (AGENT_MAP[m.agent_id]?.handle || m.agent_id),
+                        name: AGENT_MAP[m.agent_id]?.name || m.agent_id.toUpperCase(),
+                        color: AGENT_MAP[m.agent_id]?.color || "#6B7280"
+                    } : undefined,
+                    feedback: m.feedback || null,
+                    db_id: m.id,
+                    created_at: new Date(m.created_at)
+                };
+            });
             setMessages(formatted);
         } else {
             setMessages([
@@ -615,6 +626,8 @@ export default function ChatPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user || !currentSessionId) return;
 
+        const dbFileUrl = (msg.files && msg.files.length > 0) ? JSON.stringify(msg.files) : msg.file_url;
+
         const { data } = await supabase
             .from('dmz_agents_chat')
             .insert({
@@ -623,7 +636,7 @@ export default function ChatPage() {
                 role: msg.role,
                 content: msg.content,
                 audio_url: msg.audio_url,
-                file_url: msg.file_url,
+                file_url: dbFileUrl,
                 file_type: msg.file_type,
                 agent_id: msg.agent_id,
                 created_at: msg.created_at?.toISOString()
@@ -670,12 +683,10 @@ export default function ChatPage() {
         return { url: publicUrl, type: effectiveMime, isAudio, isImage };
     };
 
-    const handleSend = async (payload?: string | { text: string, audioUrl?: string, fileUrl?: string, fileType?: string, fileName?: string, toolId?: string | null }) => {
+    const handleSend = async (payload?: string | { text: string, files?: { url: string, type: string, name: string }[], audioUrl?: string, toolId?: string | null }) => {
         let text = "";
+        let filesData: { url: string, type: string, name: string }[] = [];
         let audioUrl = "";
-        let fileUrl = "";
-        let fileType = "";
-        let fileName = "";
         let toolId = null;
 
         if (typeof payload === 'string') {
@@ -683,22 +694,25 @@ export default function ChatPage() {
         } else if (payload && typeof payload === 'object') {
             text = payload.text;
             audioUrl = payload.audioUrl || "";
-            fileUrl = payload.fileUrl || "";
-            fileType = payload.fileType || "";
-            fileName = payload.fileName || "";
+            filesData = payload.files || [];
             toolId = payload.toolId || null;
         }
 
-        if (!text.trim() && !audioUrl && !fileUrl) return;
+        if (!text.trim() && !audioUrl && filesData.length === 0) return;
+
+        let primaryFileUrl = filesData.length > 0 ? filesData[0].url : "";
+        let primaryFileType = filesData.length > 0 ? filesData[0].type : "";
+        let primaryFileName = filesData.length > 0 ? filesData[0].name : "";
 
         const userMsg: Message = {
             id: Date.now().toString(),
             role: "user",
             content: text,
             audio_url: audioUrl,
-            file_url: fileUrl,
-            file_type: fileType,
-            file_name: fileName,
+            file_url: primaryFileUrl,
+            file_type: primaryFileType,
+            file_name: primaryFileName,
+            files: filesData.length > 0 ? filesData : undefined,
             created_at: new Date()
         };
 
@@ -717,8 +731,10 @@ export default function ChatPage() {
                     message: text,
                     project_id: "default",
                     tool: toolId,
-                    file_url: fileUrl || audioUrl,
-                    file_type: fileType || (audioUrl ? "audio/webm" : ""),
+                    file_url: primaryFileUrl || audioUrl,
+                    file_type: primaryFileType || (audioUrl ? "audio/webm" : ""),
+                    file_name: primaryFileName,
+                    files: filesData,
                     history: newMessages.map(m => ({ role: m.role, content: m.content }))
                 }),
             });
@@ -768,36 +784,50 @@ export default function ChatPage() {
         }
     };
 
-    const handlePromptSend = async (text: string, file?: File, toolId?: string | null) => {
-        if (!text.trim() && !file) return;
+    const handlePromptSend = async (text: string, files?: File[], toolId?: string | null) => {
+        if (!text.trim() && (!files || files.length === 0)) return;
 
-        if (file) {
-            const ext = file.name.split('.').pop()?.toLowerCase() || '';
-            const audioExts = ['mp3', 'wav', 'ogg', 'oga', 'opus', 'm4a', 'aac', 'flac', 'wma', '3gp', '3gpp', 'amr', 'caf', 'webm'];
-            const isAudioFile = file.type.startsWith("audio/") || audioExts.includes(ext);
-
+        if (files && files.length > 0) {
+            // Pick primary extension just for fast checking if everything is audio vs mix
             const tempMsg: Message = {
                 id: `temp-${Date.now()}`,
                 role: "user",
-                content: text || (isAudioFile ? "" : `📎 ${file.name}`),
+                content: text || (files.length === 1 && files[0].type.startsWith("audio/") ? "" : `📎 ${files.length} arquivo(s) anexado(s)`),
                 created_at: new Date()
             };
-            if (!isAudioFile || text) {
-                setMessages(prev => [...prev, tempMsg]);
-            }
+            setMessages(prev => [...prev, tempMsg]);
             setIsThinking(true);
 
-            const uploadResult = await uploadFile(file);
-            if (!uploadResult) {
+            const uploadPromises = files.map(f => uploadFile(f));
+            const results = await Promise.all(uploadPromises);
+
+            // Filter out failed uploads
+            const validResults = results.filter(r => r !== null) as { url: string, type: string, isAudio: boolean, isImage: boolean }[];
+
+            if (validResults.length === 0) {
                 setIsThinking(false);
                 return;
             }
 
+            const filesData = validResults.map((r, i) => ({
+                url: r.url,
+                type: r.type,
+                name: files[i].name
+            }));
+
+            // If we have just 1 file and it's audio, pass to audioUrl path
+            if (validResults.length === 1 && validResults[0].isAudio && !text) {
+                handleSend({
+                    text: "",
+                    audioUrl: validResults[0].url,
+                    toolId
+                });
+                return;
+            }
+
             handleSend({
-                text: text || (uploadResult.isAudio ? "" : `📎 ${file.name}`),
-                fileUrl: uploadResult.url,
-                fileType: uploadResult.type,
-                fileName: file.name,
+                text: text || (validResults.every(r => r.isAudio) ? "" : `📎 anexou ${files.length} arquivo(s)`),
+                files: filesData,
                 toolId
             });
         } else {
@@ -1023,8 +1053,20 @@ export default function ChatPage() {
                                                 </div>
 
                                                 {/* File attachment indicator */}
-                                                {isUser && msg.file_url && (
-                                                    <div className={`flex items-center gap-2 px-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
+                                                {isUser && msg.files && msg.files.length > 0 && (
+                                                    <div className={`flex flex-wrap items-center gap-2 px-1 mb-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
+                                                        {msg.files.map((f, fIdx) => (
+                                                            <div key={fIdx} className="flex items-center gap-1.5 bg-dmz-accent/10 border border-dmz-accent/20 rounded-xl px-3 py-1.5">
+                                                                <CloudUpload size={13} className="text-dmz-accent" />
+                                                                <span className="text-[11px] font-bold text-dmz-accent truncate max-w-[200px] sm:max-w-[300px]">
+                                                                    {f.name || 'arquivo anexado'}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {isUser && !msg.files && msg.file_url && (
+                                                    <div className={`flex items-center gap-2 px-1 mb-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
                                                         <div className="flex items-center gap-1.5 bg-dmz-accent/10 border border-dmz-accent/20 rounded-xl px-3 py-1.5">
                                                             <CloudUpload size={13} className="text-dmz-accent" />
                                                             <span className="text-[11px] font-bold text-dmz-accent truncate max-w-[200px] sm:max-w-[300px]">
