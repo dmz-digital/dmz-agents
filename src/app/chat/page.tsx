@@ -1212,7 +1212,7 @@ export default function ChatPage() {
                                                                                 )}
                                                                             </button>
                                                                         </div>
-                                                                        <pre className="bg-[#1e1e2e] text-[#cdd6f4] text-[13px] leading-relaxed p-4 overflow-x-auto font-mono">
+                                                                        <pre className="bg-[#1e1e2e] text-[#cdd6f4] text-[13px] leading-relaxed p-4 pb-4 overflow-x-auto font-mono code-scrollbar">
                                                                             <code>{block.code}</code>
                                                                         </pre>
                                                                     </div>
