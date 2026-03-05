@@ -1022,6 +1022,18 @@ export default function ChatPage() {
                                                     </span>
                                                 </div>
 
+                                                {/* File attachment indicator */}
+                                                {isUser && msg.file_url && (
+                                                    <div className={`flex items-center gap-2 px-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
+                                                        <div className="flex items-center gap-1.5 bg-dmz-accent/10 border border-dmz-accent/20 rounded-xl px-3 py-1.5">
+                                                            <CloudUpload size={13} className="text-dmz-accent" />
+                                                            <span className="text-[11px] font-bold text-dmz-accent truncate max-w-[200px] sm:max-w-[300px]">
+                                                                {msg.file_name || 'arquivo anexado'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 <div className={`relative px-5 py-4 rounded-[24px] ${isUser ? "bg-neutral-900 text-white shadow-lg shadow-neutral-900/10" : "bg-white border border-neutral-100 text-neutral-800"}`}>
                                                     <div className="space-y-4">
                                                         {!isUser && msg.isTyping && i === messages.length - 1 ? (
