@@ -1,2 +1,0 @@
-[console_scripts]
-dmz-os = dmz_os.main:app
