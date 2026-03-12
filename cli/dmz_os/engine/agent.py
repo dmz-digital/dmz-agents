@@ -32,11 +32,13 @@ class AgentContext:
 
     def save_memory(self, content: str, task_context: str = "general"):
         """Persiste um output no banco como memória deste agente."""
+        import uuid
         self.db.table("dmz_agents_memory").insert({
             "project_id": self.project_id,
             "agent_id": self.agent_id,
             "content": content,
-            "context": task_context
+            "memory_type": "task",
+            "key": f"orch-task-{uuid.uuid4().hex[:8]}"
         }).execute()
 
     def build_system_prompt(self, project_context: str = "") -> str:
