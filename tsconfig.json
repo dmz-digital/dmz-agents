@@ -38,6 +38,9 @@
   ],
   "exclude": [
     "node_modules",
-    "supabase"
+    "supabase",
+    "_dmz-agents-backup",
+    "cli",
+    "server"
   ]
 }

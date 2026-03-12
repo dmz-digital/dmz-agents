@@ -3,8 +3,18 @@
   publish = "out"
 
 [[redirects]]
+  from = "/app/projects/*"
+  to = "/app/projects.html"
+  status = 200
+
+[[redirects]]
   from = "/chat/*"
   to = "/chat.html"
+  status = 200
+
+[[redirects]]
+  from = "/app/*"
+  to = "/app.html"
   status = 200
 
 [[redirects]]

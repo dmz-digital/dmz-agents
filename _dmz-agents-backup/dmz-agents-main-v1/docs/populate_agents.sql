@@ -1,0 +1,66 @@
+-- INSERT ALL AGENTS FROM DOCUMENTATION
+INSERT INTO dmz_agents_definitions (id, handle, name, full_name, category, color, icon, active)
+VALUES
+  ('pm', 'jose', 'Jose', 'Project Manager', 'Product', '#2563EB', 'ClipboardList', true),
+  ('po', 'lucas', 'Lucas', 'Product Owner', 'Product', '#2563EB', 'Target', true),
+  ('qa', 'emma', 'Emma', 'QA Engineer', 'Product', '#059669', 'CheckSquare', true),
+  ('sm', 'david', 'David', 'Scrum Master', 'Product', '#2563EB', 'Zap', false),
+  ('devops', 'oliver', 'Oliver', 'DevOps Engineer', 'Development', '#0891B2', 'Rocket', true),
+  ('architect', 'alex', 'Alex', 'Tech Architect', 'Development', '#0891B2', 'Building2', false),
+  ('cyber_chief', 'constantine', 'Constantine', 'Cyber Chief', 'Security', '#DC2626', 'ShieldAlert', true),
+  ('legal_chief', 'theron', 'Theron', 'Legal Chief', 'Security', '#DC2626', 'Scale', false),
+  ('analyst', 'kanya', 'Kanya', 'Strategy Analyst', 'Strategy', '#D97706', 'Search', true),
+  ('design_chief', 'aurora', 'Aurora', 'Design Chief', 'Design', '#DB2777', 'Sparkles', true),
+  ('ux', 'victoria', 'Victoria', 'UX Designer', 'Design', '#DB2777', 'Paintbrush', true),
+  ('copy_chief', 'cassandra', 'Cassandra', 'Copy Chief', 'Copy', '#7C3AED', 'PenLine', false),
+  ('sop_extractor', 'martin', 'Martin', 'SOP Extractor', 'Frameworks', '#475569', 'BookOpen', true),
+  ('db_sage', 'sofia', 'Sofia', 'DB Sage', 'Data', '#0369A1', 'Brain', false),
+  ('tools_orchestrator', 'quantum', 'Quantum', 'Tools Orchestrator', 'Frameworks', '#475569', 'FlaskConical', false),
+  ('closer', 'closer', 'Closer', 'Deal Closer Agent', 'Sales', '#10B981', 'Briefcase', true),
+  ('cra', 'cra', 'Cra', 'Chief Revenue Agent', 'Sales', '#10B981', 'Briefcase', true),
+  ('deck', 'deck', 'Deck', 'Deck Architect', 'Sales', '#10B981', 'Briefcase', true),
+  ('draft_chief', 'draft_chief', 'Draft', 'Proposal Drafter', 'Sales', '#10B981', 'Briefcase', true),
+  ('ecvc', 'ecvc', 'Ecvc', 'Ecvc', 'Sales', '#10B981', 'Briefcase', true),
+  ('emailcopy', 'emailcopy', 'Emailcopy', 'Email Copywriter', 'Sales', '#10B981', 'Briefcase', true),
+  ('finmodel', 'finmodel', 'Finmodel', 'Financial Modeler', 'Sales', '#10B981', 'Briefcase', true),
+  ('hunter', 'hunter', 'Hunter', 'Outbound Hunter Agent', 'Sales', '#10B981', 'Briefcase', true),
+  ('intel', 'intel', 'Intel', 'Market Intel Agent', 'Sales', '#10B981', 'Briefcase', true),
+  ('ir', 'ir', 'Ir', 'Investor Relations Agent', 'Sales', '#10B981', 'Briefcase', true),
+  ('lens', 'lens', 'Lens', 'Social Lens Agent', 'Sales', '#10B981', 'Briefcase', true),
+  ('mapper', 'mapper', 'Mapper', 'Account Mapper', 'Sales', '#10B981', 'Briefcase', true),
+  ('nurture', 'nurture', 'Nurture', 'Nurture Agent', 'Sales', '#10B981', 'Briefcase', true),
+  ('oracle', 'oracle', 'Oracle', 'Oracle Agent', 'Sales', '#10B981', 'Briefcase', true),
+  ('osint', 'osint', 'Osint', 'Osint Scout', 'Sales', '#10B981', 'Briefcase', true),
+  ('persona', 'persona', 'Persona', 'Persona Builder', 'Sales', '#10B981', 'Briefcase', true),
+  ('pitch', 'pitch', 'Pitch', 'Pitch Master Agent', 'Sales', '#10B981', 'Briefcase', true),
+  ('push', 'push', 'Push', 'Push Agent', 'Sales', '#10B981', 'Briefcase', true),
+  ('qualifier', 'qualifier', 'Qualifier', 'Lead Qualifier', 'Sales', '#10B981', 'Briefcase', true),
+  ('radar', 'radar', 'Radar', 'Trigger Radar Agent', 'Sales', '#10B981', 'Briefcase', true),
+  ('rebound', 'rebound', 'Rebound', 'Rebound Agent', 'Sales', '#10B981', 'Briefcase', true),
+  ('revops', 'revops', 'Revops', 'Revenue Ops Agent', 'Sales', '#10B981', 'Briefcase', true),
+  ('scheduler', 'scheduler', 'Scheduler', 'Meeting Scheduler', 'Sales', '#10B981', 'Briefcase', true),
+  ('social', 'social', 'Social', 'Social Selling Agent', 'Sales', '#10B981', 'Briefcase', true),
+  ('story', 'story', 'Story', 'Storyteller Agent', 'Sales', '#10B981', 'Briefcase', true),
+  ('vault', 'vault', 'Vault', 'Content Vault Agent', 'Sales', '#10B981', 'Briefcase', true)
+ON CONFLICT (id) DO UPDATE SET
+  handle = EXCLUDED.handle,
+  name = EXCLUDED.name,
+  full_name = EXCLUDED.full_name,
+  category = EXCLUDED.category,
+  color = EXCLUDED.color,
+  icon = EXCLUDED.icon,
+  active = EXCLUDED.active;
+
+-- INSERT SKILLS FOR KEY AGENTS
+INSERT INTO dmz_agents_skills (agent_id, name, category, level)
+VALUES
+  ('orchestrator', 'Task Decomposition', 'skill', 'expert'),
+  ('orchestrator', 'Agent Selection', 'skill', 'expert'),
+  ('developer', 'Full-stack Dev', 'skill', 'expert'),
+  ('developer', 'React Patterns', 'skill', 'expert'),
+  ('developer', 'shadcn/ui', 'ui-stack', 'expert'),
+  ('design_chief', 'Design Systems', 'skill', 'expert'),
+  ('design_chief', 'Figma Tokens', 'skill', 'senior'),
+  ('ux', 'User Research', 'skill', 'expert'),
+  ('ux', 'Wireframing', 'skill', 'expert')
+ON CONFLICT DO NOTHING;
