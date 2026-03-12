@@ -196,7 +196,7 @@ export default function ProjectsListView() {
                         return (
                             <div
                                 key={project.id}
-                                onClick={() => router.push(`/app/projects/${project.slug || project.id}`)}
+                                onClick={() => router.push(`/app/projects?id=${project.slug || project.id}`)}
                                 style={{
                                     background: "#FFFFFF",
                                     border: "1.5px solid #F0F0F0",

@@ -209,7 +209,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                         </div>
                     </div>
                     <div style={{ display: "flex", gap: "8px" }}>
-                        <button onClick={() => router.push(`/app/projects/${slug}?view=memory`)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
+                        <button onClick={() => router.push(`/app/projects?id=${slug}&view=memory`)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
                             <Brain size={14} /> Memória
                         </button>
                         <button onClick={() => setShowSettings(!showSettings)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>

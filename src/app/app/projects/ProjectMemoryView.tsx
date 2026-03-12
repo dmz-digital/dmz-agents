@@ -93,7 +93,7 @@ export default function ProjectMemoryView({ slug }: { slug: string }) {
     return (
         <div className="max-w-7xl mx-auto px-6 pt-12 pb-24">
             <AppHeader />
-            <button onClick={() => router.push(`/app/projects/${slug}`)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", color: "#9CA3AF", fontSize: "13px", fontWeight: 500, marginBottom: "16px" }}>
+            <button onClick={() => router.push(`/app/projects?id=${slug}`)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", color: "#9CA3AF", fontSize: "13px", fontWeight: 500, marginBottom: "16px" }}>
                 <ArrowLeft size={14} /> Board — {project?.name}
             </button>
 
