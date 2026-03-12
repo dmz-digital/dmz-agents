@@ -67,7 +67,7 @@ def tasks_command(project: str | None, tab: str):
                 table.add_row(status_str, agent, title)
 
             console.print(table)
-            console.print(f"\n[dim]{len(tasks)} tarefa(s) · painel → [cyan]https://dmz-os.netlify.app/projects[/cyan][/]")
+            console.print(f"\n[dim]{len(tasks)} tarefa(s) · painel → [cyan]https://agents.dmzdigital.com.br/projects[/cyan][/]")
 
     except Exception as e:
         console.print(f"[yellow]⚠ Não foi possível conectar ao Supabase: {e}[/]")

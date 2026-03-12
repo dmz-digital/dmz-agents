@@ -30,14 +30,14 @@ from rich import print as rprint
 console = Console()
 
 ORCH_LOGO = """
-     ██████╗ ██████╗  ██████╗██╗  ██╗
-     ██╔══██╗██╔══██╗██╔════╝██║  ██║
-     ██████╔╝██████╔╝██║     ███████║
-     ██╔══██╗██╔══██╗██║     ██╔══██║
-     ██████╔╝██║  ██║╚██████╗██║  ██║
-     ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
+    ██████╗ ███╗   ███╗███████╗     ██████╗ ███████╗
+    ██╔══██╗████╗ ████║╚══███╔╝    ██╔═══██╗██╔════╝
+    ██║  ██║██╔████╔██║  ███╔╝     ██║   ██║███████╗
+    ██║  ██║██║╚██╔╝██║ ███╔╝      ██║   ██║╚════██║
+    ██████╔╝██║ ╚═╝ ██║███████╗    ╚██████╔╝███████║
+    ╚═════╝ ╚═╝     ╚═╝╚══════╝     ╚═════╝ ╚══════╝
 
-           Agent Squad Platform
+                  Agent Squad Platform
 """
 
 ORCH_WELCOME = """
@@ -55,7 +55,7 @@ Agora que o squad está instalado, aqui está como funcionamos:
      [dim]→ @oliver cuida do deploy[/]
 
   [bold]3. Tudo fica rastreável[/] no painel em tempo real
-     → [cyan]https://dmz-os.netlify.app/projects[/]
+     → [cyan]https://agents.dmzdigital.com.br/projects[/]
 
   [bold]4. A memória do time persiste[/] entre sessões
      → Cada agente sabe o que os outros já fizeram
@@ -155,7 +155,7 @@ def _collect_credentials() -> dict:
     # Slug do projeto
     console.print()
     console.print(
-        "[dim]Crie seu projeto em → [cyan]https://dmz-os.netlify.app/projects[/cyan] e copie o slug[/]"
+        "[dim]Crie seu projeto em → [cyan]https://agents.dmzdigital.com.br/projects[/cyan] e copie o slug[/]"
     )
     creds["DMZ_PROJECT_SLUG"] = Prompt.ask("[cyan]Slug do projeto[/]", default="meu-projeto")
 
@@ -258,8 +258,8 @@ def _orch_welcome(project_slug: str):
     console.print()
     console.print(Panel(
         f"[bold]Projeto conectado:[/] [cyan]{project_slug}[/]\n\n"
-        "→ Painel:  [cyan]https://dmz-os.netlify.app/projects[/]\n"
-        "→ Agentes: [cyan]https://dmz-os.netlify.app/agents[/]\n"
+        "→ Painel:  [cyan]https://agents.dmzdigital.com.br/projects[/]\n"
+        "→ Agentes: [cyan]https://agents.dmzdigital.com.br/agents[/]\n"
         "→ Docs:    [cyan]https://bit.ly/dmz-os-docs[/]",
         border_style="green",
         title="[bold green]✓ Squad pronto[/]",

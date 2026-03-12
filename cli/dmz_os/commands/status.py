@@ -50,5 +50,5 @@ def status_command():
     console.print(table)
     console.print()
     active = sum(1 for _, _, s in AGENTS if s == "active")
-    console.print(f"[dim]{active} ativos · {len(AGENTS) - active} standby · painel → [cyan]https://dmz-os.netlify.app[/cyan][/]")
+    console.print(f"[dim]{active} ativos · {len(AGENTS) - active} standby · painel → [cyan]https://agents.dmzdigital.com.br[/cyan][/]")
     console.print()

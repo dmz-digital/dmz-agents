@@ -48,7 +48,7 @@ def start_command(project: str | None):
     console.print(Panel(
         f"[bold green]Squad ativo e rodando![/]\n\n"
         f"Projeto: [cyan]{slug}[/]\n"
-        f"Painel:  [cyan]https://dmz-os.netlify.app/projects[/]\n\n"
+        f"Painel:  [cyan]https://agents.dmzdigital.com.br/projects[/]\n\n"
         "[dim]Envie demandas para o @orch via painel (ou via API/Supabase)![/]",
         border_style="green",
         padding=(1, 3),

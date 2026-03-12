@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://dmz-os.netlify.app/favicon.ico" width="64" alt="DMZ Agents" />
+<img src="https://agents.dmzdigital.com.br/favicon.ico" width="64" alt="DMZ Agents" />
 
 # DMZ Agents
 
@@ -8,7 +8,7 @@
 
 Hierárquicos. Rastreáveis. Colaborativos. Construídos para times de produto.
 
-[![Painel Live](https://img.shields.io/badge/Painel-dmz--os.netlify.app-E85D2F?style=for-the-badge&logo=netlify&logoColor=white)](https://dmz-os.netlify.app)
+[![Painel Live](https://img.shields.io/badge/Painel-dmz--os.netlify.app-E85D2F?style=for-the-badge&logo=netlify&logoColor=white)](https://agents.dmzdigital.com.br)
 [![API Railway](https://img.shields.io/badge/API-Railway-000000?style=for-the-badge&logo=railway&logoColor=white)](https://dmz-agents-production.up.railway.app)
 [![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
 [![License MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](./LICENSE)
@@ -54,7 +54,7 @@ cp .env.dmz.example .env.dmz
 #    → edite .env.dmz com SUPABASE_URL, service key e API key do LLM
 
 # 4. Crie seu projeto no painel
-#    → https://dmz-os.netlify.app/projects
+#    → https://agents.dmzdigital.com.br/projects
 #    → Selecione os agentes e copie o slug do projeto
 
 # 5. Conecte e inicie
@@ -81,7 +81,7 @@ cp .agents/.env.dmz.example .env.dmz
 #    → edite .env.dmz (não interfere com o seu .env existente)
 
 # 4. Crie seu projeto no painel
-#    → https://dmz-os.netlify.app/projects → Selecionar Agentes
+#    → https://agents.dmzdigital.com.br/projects → Selecionar Agentes
 
 # 5. Conecte, sincronize e inicie
 python -m dmz_agents connect --project meu-projeto
@@ -215,14 +215,14 @@ O arquivo `.env.dmz` é separado do seu `.env` existente — não conflita.
 
 ## Painel de Gestão
 
-O painel em [dmz-os.netlify.app](https://dmz-os.netlify.app) permite:
+O painel em [dmz-os.netlify.app](https://agents.dmzdigital.com.br) permite:
 
 | Seção | O que você faz |
 |---|---|
-| [/agents](https://dmz-os.netlify.app/agents) | Ver todos os 18 agentes, seus prompts, skills e tools |
-| [/projects](https://dmz-os.netlify.app/projects) | Criar projetos, selecionar agentes, guia de instalação, histórico |
-| [/memory](https://dmz-os.netlify.app/memory) | Memória de trabalho dos agentes por projeto |
-| [/tools](https://dmz-os.netlify.app/tools) | Registry global de tools disponíveis |
+| [/agents](https://agents.dmzdigital.com.br/agents) | Ver todos os 18 agentes, seus prompts, skills e tools |
+| [/projects](https://agents.dmzdigital.com.br/projects) | Criar projetos, selecionar agentes, guia de instalação, histórico |
+| [/memory](https://agents.dmzdigital.com.br/memory) | Memória de trabalho dos agentes por projeto |
+| [/tools](https://agents.dmzdigital.com.br/tools) | Registry global de tools disponíveis |
 
 ---
 
@@ -271,7 +271,7 @@ dmz-agents/
 O próprio projeto DMZ OS é gerenciado com o squad DMZ Agents. Os agentes constroem a plataforma que permite criar outros squads.
 
 Você pode ver o histórico de trabalho em tempo real em:
-[dmz-os.netlify.app/projects](https://dmz-os.netlify.app/projects) → **Histórico de Trabalho** → **DMZ OS — Agent Squad Platform**
+[dmz-os.netlify.app/projects](https://agents.dmzdigital.com.br/projects) → **Histórico de Trabalho** → **DMZ OS — Agent Squad Platform**
 
 ---
 
@@ -331,6 +331,6 @@ MIT © DMZ Labs
 
 <div align="center">
 
-**Feito com o squad DMZ Agents · [dmz-os.netlify.app](https://dmz-os.netlify.app)**
+**Feito com o squad DMZ Agents · [dmz-os.netlify.app](https://agents.dmzdigital.com.br)**
 
 </div>
