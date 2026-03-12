@@ -7,7 +7,7 @@ import os
 import time
 from rich.console import Console
 from rich.panel import Panel
-from supabase import create_client, Client
+from supabase import create_client, Client, ClientOptions
 
 from dmz_os.engine.llm import get_llm_response
 from dmz_os.engine.agent import AgentContext
@@ -18,12 +18,23 @@ class OrchestratorEngine:
     def __init__(self, project_id: str):
         self.project_id = project_id
         
-        # Conecta no Supabase
-        url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-        if not url or not key:
-            raise ValueError("SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY ausente")
-        self.db: Client = create_client(url, key)
+        # Conecta no Supabase localizando as credenciais corretas
+        url = os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+        # Usa anon key e injeta a API Key do projeto no header para o RLS
+        anon_key = os.getenv("SUPABASE_ANON_KEY") or os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+        api_key = os.getenv("DMZ_API_KEY")
+        
+        if not url or not (anon_key or os.getenv("SUPABASE_SERVICE_ROLE_KEY")):
+            raise ValueError("Credenciais base do Supabase (URL e KEY) ausentes. Verifique seu arquivo env.")
+        
+        if not api_key:
+            console.print("[yellow]Aviso: DMZ_API_KEY não localizada. O acesso ao projeto pode falhar dependendo do RLS.[/]")
+
+        # Supabase config com options pra injetar header customizado do dmz-os
+        opts = ClientOptions(headers={"x-dmz-api-key": api_key}) if api_key else ClientOptions()
+        
+        # Constrói o client
+        self.db: Client = create_client(url, anon_key or os.getenv("SUPABASE_SERVICE_ROLE_KEY"), options=opts)
         
         # O @orch como Agente com carregamento do prompt dele do DMZ OS Online
         self.orch_agent = AgentContext(self.db, project_id, "orchestrator")
@@ -31,18 +42,18 @@ class OrchestratorEngine:
 
     def run_loop(self):
         """O Loop eterno do orchestrator. Procura demanda, delega, verifica status, dorme."""
-        console.print("[cyan]@orch despertou e está vigiando as tarefas...[/]")
+        console.print("[bold cyan]@orch despertou![/] Vigiando a esteira Master Plan...")
         
         while True:
             try:
                 self._check_for_new_demands()
-                time.sleep(5) # loop a cada 5 segundos
+                time.sleep(3) # Polling de alta responsividade (3 segundos)
             except KeyboardInterrupt:
                 console.print("\n[yellow]Encerrando o loop do Orchestrator...[/]")
                 break
             except Exception as e:
-                console.print(f"[bold red]Erro no loop:[/] {e}")
-                time.sleep(30) # Se der erro cai pra 30 segs de backoff
+                console.print(f"[bold red]Erro de conexão no loop:[/] {e}")
+                time.sleep(10) # Se der erro (ex: internet cair) cai pra 10 segs de backoff
 
     def _check_for_new_demands(self):
         """Busca tasks 'pending' destinadas ao @orch."""
