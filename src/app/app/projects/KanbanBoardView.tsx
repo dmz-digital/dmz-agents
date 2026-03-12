@@ -86,7 +86,14 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
         return () => { supabase.removeChannel(ch); };
     }, [project, loadData]);
 
-    function getAgent(agentId: string | null) { return agentId ? agents.find(a => a.id === agentId) : null; }
+    function getAgent(agentId: string | null) {
+        if (!agentId) return null;
+        const agent = agents.find(a => a.id === agentId); 
+        if (!agent && agentId === 'orchestrator') {
+            return { id: 'orchestrator', handle: 'orch', name: 'DMZ Orchestrator', color: '#E85D2F' };
+        }
+        return agent;
+    }
     function getTasksByColumn(type: TaskType) { return tasks.filter(t => t.type === type); }
 
     async function moveTask(taskId: string, newType: TaskType, targetTaskId?: string, position?: "top" | "bottom") {
@@ -151,6 +158,11 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     async function deleteTask(taskId: string) {
         await supabase.from("dmz_agents_tasks").delete().eq("id", taskId);
         setTasks(prev => prev.filter(t => t.id !== taskId));
+    }
+
+    async function updateTaskContent(taskId: string, title: string, description: string, agentId: string | null) {
+        await supabase.from("dmz_agents_tasks").update({ title, description: description || null, agent_id: agentId }).eq("id", taskId);
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, title, description: description || null, agent_id: agentId } : t));
     }
 
     if (loading) return (
@@ -347,7 +359,14 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
 
             {/* Task Detail Modal */}
             {selectedTask && (
-                <TaskDetailModal task={selectedTask} agent={getAgent(selectedTask.agent_id)} onClose={() => setSelectedTask(null)} />
+                <TaskDetailModal
+                    task={selectedTask}
+                    agent={getAgent(selectedTask.agent_id)}
+                    projectAgents={agents.filter(a => projectAgents.some(pa => pa.agent_id === a.id))}
+                    onDelete={() => { deleteTask(selectedTask.id); setSelectedTask(null); }}
+                    onUpdate={(t, d, a) => updateTaskContent(selectedTask.id, t, d, a)}
+                    onClose={() => setSelectedTask(null)}
+                />
             )}
 
             {/* Add Task Modal */}
@@ -362,8 +381,20 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     );
 }
 
-function TaskDetailModal({ task, agent, onClose }: { task: Task; agent: any; onClose: () => void }) {
+import { Trash, Edit2, Save } from "lucide-react";
+
+function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClose }: { task: Task; agent: any; projectAgents: any[]; onDelete: () => void; onUpdate: (t: string, d: string, a: string | null) => void; onClose: () => void }) {
     const col = COLUMNS.find(c => c.id === task.type)!;
+    const [isEditing, setIsEditing] = useState(false);
+    const [title, setTitle] = useState(task.title);
+    const [description, setDescription] = useState(task.description || "");
+    const [agentId, setAgentId] = useState<string | null>(task.agent_id);
+
+    function handleSave() {
+        onUpdate(title, description, agentId);
+        setIsEditing(false);
+    }
+
     return (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)", padding: "24px" }} onClick={onClose}>
             <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: "24px", padding: "32px", width: "100%", maxWidth: 600, boxShadow: "0 20px 80px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", gap: "24px", maxHeight: "90vh", overflowY: "auto" }}>
@@ -377,49 +408,86 @@ function TaskDetailModal({ task, agent, onClose }: { task: Task; agent: any; onC
                             {task.completed_at && <span style={{ marginLeft: "8px" }}><Tag color="#10B981">Concluída</Tag></span>}
                         </div>
                     </div>
-                    <button onClick={onClose} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#6B7280" }}><X size={16} /></button>
-                </div>
-
-                <div>
-                    <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#111827", marginBottom: "16px", lineHeight: 1.3 }}>
-                        {task.title}
-                    </h2>
-                    {task.description ? (
-                        <p style={{ fontSize: "15px", color: "#4B5563", lineHeight: 1.6, whiteSpace: "pre-wrap", margin: 0 }}>
-                            {task.description}
-                        </p>
-                    ) : (
-                        <p style={{ fontSize: "14px", color: "#9CA3AF", fontStyle: "italic", margin: 0 }}>Sem descrição detalhada.</p>
-                    )}
-                </div>
-
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", background: "#F9FAFB", padding: "20px", borderRadius: "16px", border: "1px solid #F0F0F0" }}>
-                    <div style={{ flex: 1, minWidth: "200px" }}>
-                        <div style={{ fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", marginBottom: "8px" }}>Agente Responsável</div>
-                        {agent ? (
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                <div style={{ width: 28, height: 28, borderRadius: "8px", background: (agent.color || "#6B7280") + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 800, color: agent.color || "#6B7280" }}>{agent.handle?.charAt(0).toUpperCase()}</div>
-                                <div>
-                                    <div style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>{agent.name}</div>
-                                    <div style={{ fontSize: "12px", fontWeight: 600, color: agent.color || "#6B7280", fontFamily: "monospace" }}>@{agent.handle}</div>
-                                </div>
-                            </div>
-                        ) : (
-                            <span style={{ fontSize: "14px", color: "#9CA3AF" }}>Não atribuído</span>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        {!isEditing && (
+                            <button onClick={() => setIsEditing(true)} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#6B7280" }} title="Editar">
+                                <Edit2 size={14} />
+                            </button>
                         )}
+                        <button onClick={() => { if(window.confirm("Você tem certeza que deseja excluir esta task?")) onDelete(); }} style={{ background: "#FEE2E2", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#EF4444" }} title="Excluir">
+                            <Trash size={14} />
+                        </button>
+                        <button onClick={onClose} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#6B7280" }}><X size={16} /></button>
                     </div>
-                    <div style={{ flex: 1, minWidth: "150px" }}>
-                        <div style={{ fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", marginBottom: "8px" }}>Criado em</div>
-                        <div style={{ fontSize: "14px", color: "#111827", fontWeight: 500 }}>{new Date(task.created_at).toLocaleString("pt-BR")}</div>
-                    </div>
-                    {task.completed_at && (
-                        <div style={{ flex: 1, minWidth: "150px" }}>
-                            <div style={{ fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", marginBottom: "8px" }}>Concluído em</div>
-                            <div style={{ fontSize: "14px", color: "#10B981", fontWeight: 600 }}>{new Date(task.completed_at).toLocaleString("pt-BR")}</div>
-                        </div>
-                    )}
                 </div>
 
+                {isEditing ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                        <div>
+                            <label style={{ fontSize: "12px", fontWeight: 600, color: "#374151", marginBottom: "6px", display: "block" }}>Título</label>
+                            <input value={title} onChange={e => setTitle(e.target.value)} autoFocus style={{ width: "100%", background: "#F9FAFB", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 14px", fontSize: "16px", fontWeight: 700, color: "#111827", outline: "none" }} />
+                        </div>
+                        <div>
+                            <label style={{ fontSize: "12px", fontWeight: 600, color: "#374151", marginBottom: "6px", display: "block" }}>Descrição</label>
+                            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={4} style={{ width: "100%", background: "#F9FAFB", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 14px", fontSize: "14px", color: "#4B5563", outline: "none", resize: "vertical" }} />
+                        </div>
+                        <div>
+                            <label style={{ fontSize: "12px", fontWeight: 600, color: "#374151", marginBottom: "6px", display: "block" }}>Responsável</label>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                                <button onClick={() => setAgentId("orchestrator")} style={{ background: agentId === "orchestrator" ? "#E85D2F10" : "#F9FAFB", border: agentId === "orchestrator" ? "1.5px solid #E85D2F" : "1.5px solid #F0F0F0", borderRadius: "8px", padding: "6px 12px", fontSize: "11px", fontWeight: 600, color: agentId === "orchestrator" ? "#E85D2F" : "#9CA3AF", cursor: "pointer" }}>@orch (auto)</button>
+                                {projectAgents.map(a => (
+                                    <button key={a.id} onClick={() => setAgentId(a.id)} style={{ background: agentId === a.id ? (a.color || "#6B7280") + "10" : "#F9FAFB", border: agentId === a.id ? `1.5px solid ${a.color || "#6B7280"}` : "1.5px solid #F0F0F0", borderRadius: "8px", padding: "6px 12px", fontSize: "11px", fontWeight: 600, color: agentId === a.id ? (a.color || "#6B7280") : "#9CA3AF", cursor: "pointer", fontFamily: "monospace" }}>@{a.handle}</button>
+                                ))}
+                                <button onClick={() => setAgentId(null)} style={{ background: !agentId ? "#F3F4F6" : "#FFFFFF", border: !agentId ? "1.5px solid #D1D5DB" : "1.5px solid #F0F0F0", borderRadius: "8px", padding: "6px 12px", fontSize: "11px", fontWeight: 600, color: !agentId ? "#4B5563" : "#9CA3AF", cursor: "pointer" }}>Limpar</button>
+                            </div>
+                        </div>
+                        <button onClick={handleSave} disabled={!title.trim()} style={{ width: "100%", marginTop: "10px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", background: title.trim() ? `linear-gradient(135deg, ${col.color}, ${col.color}CC)` : "#F3F4F6", color: title.trim() ? "#FFFFFF" : "#9CA3AF", border: "none", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: 700, cursor: title.trim() ? "pointer" : "default" }}>
+                            <Save size={16} /> Salvar Alterações
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        <div>
+                            <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#111827", marginBottom: "16px", lineHeight: 1.3 }}>
+                                {task.title}
+                            </h2>
+                            {task.description ? (
+                                <p style={{ fontSize: "15px", color: "#4B5563", lineHeight: 1.6, whiteSpace: "pre-wrap", margin: 0 }}>
+                                    {task.description}
+                                </p>
+                            ) : (
+                                <p style={{ fontSize: "14px", color: "#9CA3AF", fontStyle: "italic", margin: 0 }}>Sem descrição detalhada.</p>
+                            )}
+                        </div>
+
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", background: "#F9FAFB", padding: "20px", borderRadius: "16px", border: "1px solid #F0F0F0" }}>
+                            <div style={{ flex: 1, minWidth: "200px" }}>
+                                <div style={{ fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", marginBottom: "8px" }}>Agente Responsável</div>
+                                {agent ? (
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <div style={{ width: 28, height: 28, borderRadius: "8px", background: (agent.color || "#6B7280") + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 800, color: agent.color || "#6B7280" }}>{agent.handle?.charAt(0).toUpperCase()}</div>
+                                        <div>
+                                            <div style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>{agent.name}</div>
+                                            <div style={{ fontSize: "12px", fontWeight: 600, color: agent.color || "#6B7280", fontFamily: "monospace" }}>@{agent.handle}</div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <span style={{ fontSize: "14px", color: "#9CA3AF" }}>Não atribuído</span>
+                                )}
+                            </div>
+                            <div style={{ flex: 1, minWidth: "150px" }}>
+                                <div style={{ fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", marginBottom: "8px" }}>Criado em</div>
+                                <div style={{ fontSize: "14px", color: "#111827", fontWeight: 500 }}>{new Date(task.created_at).toLocaleString("pt-BR")}</div>
+                            </div>
+                            {task.completed_at && (
+                                <div style={{ flex: 1, minWidth: "150px" }}>
+                                    <div style={{ fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", marginBottom: "8px" }}>Concluído em</div>
+                                    <div style={{ fontSize: "14px", color: "#10B981", fontWeight: 600 }}>{new Date(task.completed_at).toLocaleString("pt-BR")}</div>
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
@@ -428,7 +496,7 @@ function TaskDetailModal({ task, agent, onClose }: { task: Task; agent: any; onC
 function AddTaskModal({ column, agents, onSave, onClose }: { column: TaskType; agents: any[]; onSave: (t: string, d: string, a: string | null) => void; onClose: () => void }) {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
-    const [agentId, setAgentId] = useState<string | null>(null);
+    const [agentId, setAgentId] = useState<string | null>("orchestrator");
     const col = COLUMNS.find(c => c.id === column)!;
 
     return (
