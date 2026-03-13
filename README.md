@@ -122,7 +122,7 @@ graph TD
 
 ## 💻 Tech Stack de Elite
 
-- **Frontend:** Next.js 15, Tailwind CSS, Framer Motion, Lucide Icons.
+- **Frontend:** Next.js 15, Tailwind CSS, Shadcn UI, Framer Motion, Lucide Icons.
 - **CLI Engine:** Python 3.12, Typer, Rich (UI de Terminal Premium).
 - **Inteligência:** Claude 3.7 Sonnet (Reasoning), GPT-4o, Gemini 2.5 Pro.
 - **Backend:** Supabase (Real-time DB, Auth, Storage), FastAPI (Railway).
