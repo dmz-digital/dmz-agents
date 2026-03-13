@@ -1,5 +1,6 @@
 [build]
 builder = "nixpacks"
+buildCommand = "npm run build && pip install -r server/requirements.txt"
 
 [build.setup]
 providers = ["python", "node"]
