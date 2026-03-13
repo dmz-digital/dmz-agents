@@ -221,9 +221,9 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
             else if (newType === "on_going" || newType === "rework") { updateData.status = "in_progress"; updateData.completed_at = null; }
             else { updateData.status = "pending"; updateData.completed_at = null; }
 
-            // Audio notification
-            if (newType === "done") new Audio('/assets/done.mp3').play().catch(() => {});
-            else if (newType === "on_going") new Audio('/assets/ongoing.mp3').play().catch(() => {});
+            // Audio notification (uses pre-loaded refs to bypass autoplay)
+            if (newType === "done" && audioDoneRef.current) { audioDoneRef.current.currentTime = 0; audioDoneRef.current.play().catch(() => {}); }
+            else if (newType === "on_going" && audioOngoingRef.current) { audioOngoingRef.current.currentTime = 0; audioOngoingRef.current.play().catch(() => {}); }
         }
         await supabase.from("dmz_agents_tasks").update(updateData).eq("id", taskId);
         
