@@ -22,7 +22,7 @@ type Task = {
 };
 
 const COLUMNS: { id: TaskType; label: string; color: string; icon: any; description: string }[] = [
-    { id: "master_plan", label: "Master Plan", color: "#2563EB", icon: BookOpen, description: "Backlog estratégico — definido pelo @orch" },
+    { id: "master_plan", label: "Master Plan", color: "#2563EB", icon: BookOpen, description: "Backlog estratégico (placeholder/objetivos) — deletar após decompor" },
     { id: "to_do", label: "To Do", color: "#64748B", icon: Clock, description: "Tarefas aguardando execução" },
     { id: "on_going", label: "Ongoing", color: "#D97706", icon: Activity, description: "Em execução pelos agentes" },
     { id: "done", label: "Done", color: "#10B981", icon: CheckCircle2, description: "Concluído e aguardando validação" },
@@ -547,6 +547,20 @@ function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClo
                                         <RotateCcw size={16} /> Enviar p/ Rework
                                     </button>
                                 </div>
+                            </div>
+                        )}
+
+                        {task.type === "master_plan" && (
+                            <div style={{ marginTop: "32px", paddingTop: "24px", borderTop: "1.5px solid #F3F4F6", textAlign: "center" }}>
+                                <p style={{ fontSize: "12px", color: "#9CA3AF", marginBottom: "16px" }}>Objetivo distribuído em tasks individuais?</p>
+                                <button
+                                    onClick={() => { if(window.confirm("Isso excluirá o placeholder do Master Plan para focar apenas nas tasks individuais do squad. Deseja prosseguir?")) onDelete(); }}
+                                    style={{ background: "#F3F4F6", border: "none", borderRadius: "10px", padding: "10px 20px", fontSize: "13px", fontWeight: 700, color: "#6B7280", cursor: "pointer", transition: "all 0.2s" }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = "#E5E7EB")}
+                                    onMouseLeave={e => (e.currentTarget.style.background = "#F3F4F6")}
+                                >
+                                    Finalizar Planejamento e Excluir
+                                </button>
                             </div>
                         )}
                     </>
