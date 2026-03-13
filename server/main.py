@@ -1048,21 +1048,31 @@ async def explain_daily_report(req: DailyReportExplainRequest, authorization: st
 
     first_name_only = req.user_first_name.split()[0].title()
 
-    # 2. Fetch Config from DB
+    # 2. Format Date for Narration (PT-BR)
+    try:
+        from datetime import datetime
+        dt = datetime.strptime(req.date_str, "%Y-%m-%d")
+        weekdays = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"]
+        months = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
+        date_full = f"{weekdays[dt.weekday()]}, {dt.day} de {months[dt.month-1]} de {dt.year}"
+    except:
+        date_full = req.date_str
+
+    # 3. Fetch Config from DB
     try:
         config_res = supabase.table("dmz_agents_config").select("value").eq("key", "reports_config").execute()
         if config_res.data:
             reports_config = config_res.data[0]["value"]
             system_prompt_template = reports_config.get("system_prompt", "")
-            system_prompt = system_prompt_template.replace("{user_first_name}", first_name_only).replace("{date_str}", req.date_str)
+            system_prompt = system_prompt_template.replace("{user_first_name}", first_name_only).replace("{date_str}", req.date_str).replace("{date_full}", date_full)
         else:
             raise Exception("Config not found")
     except Exception as e:
         print(f"Error fetching report config: {e}. Using fallback prompt.")
         system_prompt = (
             f"Você é a inteligência e analista (copywriter) do DMZ OS. O seu objetivo é construir uma narrativa em formato de relatório de "
-            f"atividades. O gestor, {first_name_only}, pediu um resumo das tarefas do dia ({req.date_str}). "
-            f"Fale no plural em nome do 'squad DMZ' (nossa equipe). Comece EXATAMENTE com: 'Oi {first_name_only}, hoje o time trabalhou bastante, vou te contar o que rolou em nosso squad...' ou algo similar, amigável. "
+            f"atividades. O gestor, {first_name_only}, pediu um resumo das tarefas do dia ({date_full}). "
+            f"Fale no plural em nome do 'squad DMZ' (nossa equipe). Comece EXATAMENTE com: 'Oi {first_name_only}, hoje o time trabalhou bastante, vou te contar o que rolou em nosso squad nesta {date_full.split(',')[0]}...' ou algo similar, amigável. "
             f"Crie uma história fluida do que foi feito, falando de forma natural e amigável, não parecendo um robô. "
             f"Não liste itens mecanicamente (com bullets). Conecte as tarefas executadas pelos agentes (fale os nomes deles: syd, orch, oliver, etc, mas SEMPRE sem o caractere @ para o áudio ficar perfeito). "
             f"Exemplo: 'Hoje o Oliver corrigiu X, já a Sofia adicionou Y, e isso vai gerar mais estrutura'. "
