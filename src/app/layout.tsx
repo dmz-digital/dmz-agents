@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans, Geist } from "next/font/google";
 import "./globals.css";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import { Suspense } from "react";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -51,7 +54,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" className={cn("font-sans", geist.variable)}>
       <body className={`${jakarta.variable} font-jakarta antialiased bg-dmz-bg text-dmz-text`}>
         <Suspense fallback={null}>
           <GoogleAnalytics gaId="G-587SEN9VDC" />
