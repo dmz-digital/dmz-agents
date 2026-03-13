@@ -192,6 +192,13 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
         setTasks(prev => prev.filter(t => t.id !== taskId));
     }
 
+    async function deleteProject() {
+        if (!window.confirm("ATENÇÃO: Você tem certeza que deseja excluir DEFINITIVAMENTE este projeto? Todas as tarefas e configurações serão perdidas.")) return;
+        
+        await supabase.from("dmz_agents_projects").delete().eq("id", project.id);
+        router.push("/app/projects");
+    }
+
     async function updateTaskContent(taskId: string, title: string, description: string, agentId: string | null, feedback: string | null, newType?: TaskType) {
         let updateData: any = { title, description: description || null, agent_id: agentId, feedback: feedback || null };
         if (newType) {
@@ -299,6 +306,20 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                         <div>
                             <div style={{ fontSize: "10px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", marginBottom: "6px" }}>.env.dmz</div>
                             <CopyBtn text={`DMZ_PROJECT_SLUG=${project.slug}\nDMZ_API_KEY=${project.api_key}`} />
+                        </div>
+                        <div style={{ display: "flex", alignItems: "flex-end", marginLeft: "auto" }}>
+                            <button
+                                onClick={deleteProject}
+                                style={{
+                                    display: "flex", alignItems: "center", gap: "6px",
+                                    background: "#FEF2F2", border: "1.5px solid #FEE2E2", borderRadius: "10px",
+                                    padding: "10px 16px", fontSize: "12px", fontWeight: 700, color: "#EF4444", cursor: "pointer", transition: "all 0.15s"
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = "#FEE2E2"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = "#FEF2F2"; }}
+                            >
+                                <AlertTriangle size={14} /> Excluir Projeto
+                            </button>
                         </div>
                     </div>
                 </div>
