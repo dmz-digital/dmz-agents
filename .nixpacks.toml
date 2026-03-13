@@ -1,2 +1,5 @@
 [phases.setup]
 nixPkgs = ["python311", "nodejs_20"]
+
+[variables]
+NIXPACKS_NODE_VERSION = "20"
