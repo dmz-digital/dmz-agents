@@ -326,13 +326,13 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                                 onClick={deleteProject}
                                 style={{
                                     display: "flex", alignItems: "center", gap: "6px",
-                                    background: "#FEF2F2", border: "1.5px solid #FEE2E2", borderRadius: "10px",
-                                    padding: "10px 16px", fontSize: "12px", fontWeight: 700, color: "#EF4444", cursor: "pointer", transition: "all 0.15s"
+                                    background: "#F9FAFB", border: "1.5px solid #F0F0F0", borderRadius: "10px",
+                                    padding: "10px 16px", fontSize: "12px", fontWeight: 700, color: "#6B7280", cursor: "pointer", transition: "all 0.15s"
                                 }}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = "#FEE2E2"; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = "#FEF2F2"; }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#EF4444"; e.currentTarget.style.borderColor = "#FEE2E2"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = "#F9FAFB"; e.currentTarget.style.color = "#6B7280"; e.currentTarget.style.borderColor = "#F0F0F0"; }}
                             >
-                                <AlertTriangle size={14} /> Excluir Projeto
+                                <Trash size={14} /> Excluir Projeto
                             </button>
                         </div>
                     </div>
