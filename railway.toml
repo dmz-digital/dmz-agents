@@ -1,12 +1,15 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm run build && pip install -r server/requirements.txt"
+buildCommand = "npm run build && python3 -m pip install -r server/requirements.txt"
 
 [build.setup]
 providers = ["python", "node"]
 
+[build.env]
+NIXPACKS_PYTHON_VERSION = "3.11"
+
 [deploy]
-startCommand = "cd server && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+startCommand = "cd server && python3 -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
 healthcheckPath = "/"
 restartPolicyType = "ON_FAILURE"
 maxRestartCount = 10
