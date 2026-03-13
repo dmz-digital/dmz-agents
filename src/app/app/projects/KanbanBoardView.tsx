@@ -6,7 +6,7 @@ import {
     ArrowLeft, Plus, Bot, Clock, CheckCircle2, AlertTriangle,
     RotateCcw, BookOpen, Activity, GripVertical,
     Brain, Key, Copy, Check, Settings, Terminal,
-    Users, X, FolderOpen, BadgeCheck, ListTodo
+    Users, X, FolderOpen, BadgeCheck, ListTodo, FileText, Play, Volume2, Square
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import AppHeader from "@/components/AppHeader";
@@ -81,6 +81,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     const [dragOverTask, setDragOverTask] = useState<string | null>(null);
     const [dragOverPosition, setDragOverPosition] = useState<"top" | "bottom" | null>(null);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    const [showReports, setShowReports] = useState(false);
 
     type ConfirmAction = { title: string; message: string; isDanger?: boolean; confirmText?: string; cancelText?: string; onConfirm: () => void; onCancel: () => void; };
     const [confirmData, setConfirmData] = useState<ConfirmAction | null>(null);
@@ -329,6 +330,9 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                         </div>
                     </div>
                     <div style={{ display: "flex", gap: "8px" }}>
+                        <button onClick={() => setShowReports(true)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#4F46E5", cursor: "pointer" }}>
+                            <FileText size={14} /> Relatórios
+                        </button>
                         <button onClick={() => alert("A gestão do squad do projeto será liberada em breve...")} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
                             <Bot size={14} /> Adicionar Agentes
                         </button>
@@ -578,6 +582,10 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                 </div>
             )}
 
+            {showReports && (
+                <ReportsModal tasks={tasks} project={project} agents={agents} onClose={() => setShowReports(false)} />
+            )}
+
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
     );
@@ -816,5 +824,153 @@ function AddTaskModal({ column, agents, onSave, onClose }: { column: TaskType; a
                 </div>
             </div>
         </div>
+    );
+}
+
+// ── Reports Modal ─────────────────────────────────────────────────────────────
+function ReportsModal({ tasks, project, agents, onClose }: { tasks: Task[]; project: any; agents: any[]; onClose: () => void }) {
+    const [audioUrl, setAudioUrl] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    // Filter today's tasks
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "long", year: "numeric" });
+    const todayStr = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+    
+    const todaysTasks = tasks.filter(t => {
+        const tDate = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t.updated_at || t.created_at));
+        return tDate === todayStr;
+    });
+
+    const handlePlay = async () => {
+        if (audioUrl) {
+            if (audioRef.current) {
+                if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); }
+                else { audioRef.current.play(); setIsPlaying(true); }
+            }
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            const userName = session?.user?.user_metadata?.first_name || session?.user?.email?.split('@')[0] || "Líder";
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+            
+            const res = await fetch(`${apiUrl}/api/reports/daily/explain`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                body: JSON.stringify({
+                    project_id: project.id,
+                    user_first_name: userName,
+                    tasks: todaysTasks.map(t => {
+                        const agent = agents.find(a => a.id === t.agent_id);
+                        return { title: t.title, type: t.type, agent_handle: agent?.handle || "squad" };
+                    })
+                })
+            });
+
+            const data = await res.json();
+            if (data.audio_base64) {
+                const url = `data:audio/mp3;base64,${data.audio_base64}`;
+                setAudioUrl(url);
+                setTimeout(() => {
+                    if (audioRef.current) {
+                        audioRef.current.play();
+                        setIsPlaying(true);
+                    }
+                }, 100);
+            } else {
+                alert("Erro ao gerar áudio: " + (data.error || "Desconhecido"));
+            }
+        } catch (e: any) {
+            alert("Erro: " + e.message);
+        }
+        setLoading(false);
+    };
+
+    return (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)", padding: "24px" }} onClick={onClose}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: "24px", padding: "32px", width: "100%", maxWidth: 600, boxShadow: "0 20px 80px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", gap: "24px", maxHeight: "90vh", overflowY: "auto" }}>
+                
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                        <div style={{ width: 44, height: 44, borderRadius: "12px", background: "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <FileText size={22} color="#4F46E5" />
+                        </div>
+                        <div>
+                            <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#111827", margin: 0, letterSpacing: "-0.02em" }}>Relatório do Projeto</h2>
+                            <span style={{ fontSize: "12px", color: "#6B7280" }}>{formatter.format(now)}</span>
+                        </div>
+                    </div>
+                    <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", padding: "4px" }}><X size={18} /></button>
+                </div>
+
+                {audioUrl && (
+                    <audio ref={audioRef} src={audioUrl} onEnded={() => setIsPlaying(false)} />
+                )}
+
+                <div style={{ background: "#FAFAFA", border: "1.5px solid #F0F0F0", borderRadius: "16px", padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#374151" }}>Resumo Diário</h3>
+                        <button onClick={handlePlay} disabled={loading || todaysTasks.length === 0} style={{ 
+                            display: "flex", alignItems: "center", gap: "8px", background: "linear-gradient(135deg, #10B981, #059669)", 
+                            color: "#FFFFFF", border: "none", borderRadius: "8px", padding: "8px 16px", fontSize: "13px", fontWeight: 700, 
+                            cursor: loading || todaysTasks.length === 0 ? "not-allowed" : "pointer", opacity: loading || todaysTasks.length === 0 ? 0.7 : 1, transition: "all 0.2s" 
+                        }}>
+                            {loading ? <Spinner size={14} /> : (isPlaying ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />)}
+                            {loading ? "Gerando Áudio..." : (isPlaying ? "Parar" : "Explicar Tarefas")}
+                        </button>
+                    </div>
+                    
+                    {/* Simple Equalizer Animation */}
+                    {isPlaying && (
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px", height: "24px", alignSelf: "center", marginTop: "-8px", marginBottom: "8px" }}>
+                            {[1, 2, 3, 4, 5, 6].map(i => (
+                                <div key={i} style={{
+                                    width: "4px", background: "#10B981", borderRadius: "2px",
+                                    animation: `equalizer ${0.5 + Math.random() * 0.5}s ease-in-out infinite alternate`,
+                                    height: `${Math.random() * 100}%`
+                                }} />
+                            ))}
+                            <style>{`@keyframes equalizer { 0% { height: 2px; } 100% { height: 24px; } }`}</style>
+                        </div>
+                    )}
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                        {todaysTasks.length === 0 ? (
+                            <p style={{ fontSize: "13px", color: "#9CA3AF", textAlign: "center", padding: "20px 0" }}>Nenhuma tarefa registrada para o dia de hoje.</p>
+                        ) : todaysTasks.map(t => {
+                            const agent = agents.find(a => a.id === t.agent_id);
+                            const col = COLUMNS.find(c => c.id === t.type)! || COLUMNS[0];
+                            return (
+                                <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF", padding: "12px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, overflow: "hidden" }}>
+                                        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: col.color, flexShrink: 0 }} />
+                                        <span style={{ fontSize: "13px", color: "#111827", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.title}</span>
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0, marginLeft: "12px" }}>
+                                        {agent ? (
+                                            <span style={{ fontSize: "11px", fontWeight: 600, color: agent.color || "#6B7280", background: (agent.color || "#6B7280") + "15", padding: "2px 6px", borderRadius: "4px", fontFamily: "monospace" }}>@{agent.handle}</span>
+                                        ) : <span style={{ fontSize: "11px", color: "#D1D5DB" }}>sem agente</span>}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function Spinner({ size = 16 }: { size?: number }) {
+    return (
+        <svg fill="none" height={size} viewBox="0 0 16 16" width={size} xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 1.5C4.41015 1.5 1.5 4.41015 1.5 8C1.5 11.5899 4.41015 14.5 8 14.5C11.5899 14.5 14.5 11.5899 14.5 8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" style={{ animation: "spin 1s linear infinite", transformOrigin: "8px 8px" }} />
+        </svg>
     );
 }

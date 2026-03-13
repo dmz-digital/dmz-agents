@@ -1008,8 +1008,57 @@ async def validate_key(req: ValidateKeyRequest):
         supabase.table("dmz_agents_apikeys").update({"last_used_at": "now()"}).eq("id", key_resp.data[0]["id"]).execute()
     except Exception:
         pass
-         
+          
     return {"valid": True, "project_id": project_id}
+
+# ─── Daily Reports (ElevenLabs) ───────────────────────────────────────────────
+import base64
+
+class DailyReportExplainRequest(BaseModel):
+    project_id: str
+    user_first_name: str
+    tasks: list
+
+@app.post("/api/reports/daily/explain")
+async def explain_daily_report(req: DailyReportExplainRequest, authorization: str = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    # Create the context for LLM
+    system_prompt = (
+        f"Você é a inteligência do DMZ OS. Explique as tarefas concluídas hoje para o gestor, {req.user_first_name}. "
+        "Fale no plural em nome do 'squad DMZ'. Comece EXATAMENTE com: 'Oi {req.user_first_name}, vou te explicar o que foi feito hoje...'. "
+        "Mencione as tarefas e seus responsáveis de forma contínua, coesa, coloquial e humanizada (estilo áudio de WhatsApp). "
+        "Seja MUITO direto e rápido (aproximadamente 60 a 80 palavras, textão corrido, sem tópicos ou formatações markdown)."
+    )
+    
+    tasks_text = "; ".join([f"[{t.get('type')}] {t.get('title')} (responsável: @{t.get('agent_handle', 'squad')})" for t in req.tasks])
+    
+    try:
+        script = get_llm_response(system_prompt, f"Tarefas de hoje:\n{tasks_text}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM Error: {str(e)}")
+        
+    el_key = os.getenv("ELEVENLABS_API_KEY", "sk_ab25d27788e65b779f84298d7e676cb2ced43d62ae7ea448")
+    voice_id = os.getenv("ELEVENLABS_VOICE_ID", "r2fkFV8WAqXq2AqBpgJT")
+    
+    if not el_key:
+        return {"script": script, "audio_base64": None, "error": "ElevenLabs config missing"}
+        
+    try:
+        from elevenlabs.client import ElevenLabs
+        client = ElevenLabs(api_key=el_key)
+        audio_generator = client.generate(
+            text=script,
+            voice=voice_id,
+            model="eleven_multilingual_v2"
+        )
+        audio_bytes = b"".join(list(audio_generator))
+        audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+        return {"script": script, "audio_base64": audio_b64}
+    except Exception as e:
+        print(f"ElevenLabs error: {e}")
+        return {"script": script, "audio_base64": None, "error": f"ElevenLabs API Error: {str(e)}"}
 
 if __name__ == "__main__":
     import uvicorn
