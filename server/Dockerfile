@@ -7,6 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . ./
 
-RUN chmod +x start.sh
+ENV PORT=8000
 
-CMD ["./start.sh"]
+ENTRYPOINT ["sh", "-c"]
+CMD ["python -m uvicorn main:app --host 0.0.0.0 --port $PORT"]
