@@ -333,7 +333,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                         <button onClick={() => setShowReports(true)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#4F46E5", cursor: "pointer" }}>
                             <FileText size={14} /> Relatórios
                         </button>
-                        <button onClick={() => alert("A gestão do squad do projeto será liberada em breve...")} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
+                        <button onClick={() => confirmAction("Adicionar Agentes", "A gestão do squad do projeto será liberada em breve na próxima atualização do sistema.", false, "Entendi", "Fechar")} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
                             <Bot size={14} /> Adicionar Agentes
                         </button>
                         <button onClick={() => router.push(`/app/projects?id=${slug}&view=install`)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
@@ -583,7 +583,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
             )}
 
             {showReports && (
-                <ReportsModal tasks={tasks} project={project} agents={agents} onClose={() => setShowReports(false)} />
+                <ReportsModal tasks={tasks} project={project} agents={agents} onClose={() => setShowReports(false)} confirmAction={confirmAction} />
             )}
 
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -642,7 +642,7 @@ function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClo
 
     function handleFeedbackSubmit(action: "approve" | "rework") {
         if (action === "rework" && !feedback.trim()) {
-            alert("Para enviar para Rework (Refazer), adicione um feedback explicando o motivo.");
+            confirmAction("Feedback Obrigatório", "Para enviar para Rework (Refazer), adicione um feedback explicando o motivo.", false, "Entendi", "Fechar");
             return;
         }
         onUpdate(title, description, agentId, feedback, action === "approve" ? "approved" : "rework");
@@ -828,7 +828,7 @@ function AddTaskModal({ column, agents, onSave, onClose }: { column: TaskType; a
 }
 
 // ── Reports Modal ─────────────────────────────────────────────────────────────
-function ReportsModal({ tasks, project, agents, onClose }: { tasks: Task[]; project: any; agents: any[]; onClose: () => void }) {
+function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { tasks: Task[]; project: any; agents: any[]; onClose: () => void; confirmAction: (t: string, m: string, isDanger?: boolean, confirmText?: string, cancelText?: string) => Promise<boolean> }) {
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -874,9 +874,8 @@ function ReportsModal({ tasks, project, agents, onClose }: { tasks: Task[]; proj
             });
 
             const data = await res.json();
-            if (data.audio_base64) {
-                const url = `data:audio/mp3;base64,${data.audio_base64}`;
-                setAudioUrl(url);
+            if (data.audioUrl) {
+                setAudioUrl(data.audioUrl);
                 setTimeout(() => {
                     if (audioRef.current) {
                         audioRef.current.play();
@@ -884,10 +883,10 @@ function ReportsModal({ tasks, project, agents, onClose }: { tasks: Task[]; proj
                     }
                 }, 100);
             } else {
-                alert("Erro ao gerar áudio: " + (data.error || "Desconhecido"));
+                confirmAction("Erro na API de Áudio", data.error || "O servidor não conseguiu gerar a narração.", true, "OK", "Fechar");
             }
         } catch (e: any) {
-            alert("Erro: " + e.message);
+            confirmAction("Erro de Conexão", e.message, true, "OK", "Fechar");
         }
         setLoading(false);
     };

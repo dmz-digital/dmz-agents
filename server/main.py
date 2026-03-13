@@ -1028,8 +1028,9 @@ async def explain_daily_report(req: DailyReportExplainRequest, authorization: st
     system_prompt = (
         f"Você é a inteligência do DMZ OS. Explique as tarefas concluídas hoje para o gestor, {req.user_first_name}. "
         "Fale no plural em nome do 'squad DMZ'. Comece EXATAMENTE com: 'Oi {req.user_first_name}, vou te explicar o que foi feito hoje...'. "
-        "Mencione as tarefas e seus responsáveis de forma contínua, coesa, coloquial e humanizada (estilo áudio de WhatsApp). "
-        "Seja MUITO direto e rápido (aproximadamente 60 a 80 palavras, textão corrido, sem tópicos ou formatações markdown)."
+        "Crie uma narrativa fluida, em linguagem natural humana, coloquial, amigável e com pausas naturais (use vírgulas, pontos e palavras de transição como 'ah', 'bom', 'então', 'na sequência'). "
+        "Não liste itens mecanicamente; conte uma breve história sobre o progresso de hoje, conectando as tarefas executadas pelos agentes (fale os nomes deles). "
+        "Seja super rápido (aprox. 60-80 palavras em texto corrido, sem markdowns)."
     )
     
     tasks_text = "; ".join([f"[{t.get('type')}] {t.get('title')} (responsável: @{t.get('agent_handle', 'squad')})" for t in req.tasks])
@@ -1043,10 +1044,11 @@ async def explain_daily_report(req: DailyReportExplainRequest, authorization: st
     voice_id = os.getenv("ELEVENLABS_VOICE_ID", "r2fkFV8WAqXq2AqBpgJT")
     
     if not el_key:
-        return {"script": script, "audio_base64": None, "error": "ElevenLabs config missing"}
+        return {"script": script, "audioUrl": None, "error": "ElevenLabs config missing"}
         
     try:
         from elevenlabs.client import ElevenLabs
+        import uuid
         client = ElevenLabs(api_key=el_key)
         audio_generator = client.generate(
             text=script,
@@ -1054,11 +1056,25 @@ async def explain_daily_report(req: DailyReportExplainRequest, authorization: st
             model="eleven_multilingual_v2"
         )
         audio_bytes = b"".join(list(audio_generator))
-        audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
-        return {"script": script, "audio_base64": audio_b64}
+        
+        # Save to Supabase
+        bucket_name = "audio-reports"
+        try:
+            supabase.storage.get_bucket(bucket_name)
+        except Exception:
+            try:
+                supabase.storage.create_bucket(bucket_name, {"public": True})
+            except Exception:
+                pass
+                
+        file_name = f"{req.project_id}_{uuid.uuid4().hex}.mp3"
+        supabase.storage.from_(bucket_name).upload(file_name, audio_bytes, {"content-type": "audio/mpeg"})
+        public_url = supabase.storage.from_(bucket_name).get_public_url(file_name)
+        
+        return {"script": script, "audioUrl": public_url}
     except Exception as e:
         print(f"ElevenLabs error: {e}")
-        return {"script": script, "audio_base64": None, "error": f"ElevenLabs API Error: {str(e)}"}
+        return {"script": script, "audioUrl": None, "error": f"ElevenLabs API Error: {str(e)}"}
 
 if __name__ == "__main__":
     import uvicorn
