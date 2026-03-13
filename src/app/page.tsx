@@ -312,8 +312,8 @@ export default function RootPage() {
             />
           </div>
           <div className="text-center mt-12">
-            <Link href="/squad" className="bg-white/5 border border-white/10 px-8 py-4 rounded-2xl font-bold hover:bg-white/10 transition-all inline-flex items-center gap-2">
-              Ver Squad Completo <ArrowRight size={18} />
+            <Link href="/sign-up" className="bg-white/5 border border-white/10 px-8 py-4 rounded-2xl font-bold hover:bg-white/10 transition-all inline-flex items-center gap-2">
+              Criar Meu Squad <ArrowRight size={18} />
             </Link>
           </div>
         </div>

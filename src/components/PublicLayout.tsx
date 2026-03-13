@@ -14,7 +14,7 @@ export function PublicHeader() {
                 </Link>
 
                 <div className="hidden md:flex items-center gap-8 text-sm font-medium text-neutral-400">
-                    <Link href="/squad" className="hover:text-white transition-colors">Agentes</Link>
+                    <a href="/#agents" className="hover:text-white transition-colors">Agentes</a>
                     <a href="/#capabilities" className="hover:text-white transition-colors">Capacidades</a>
                     <a href="/#industries" className="hover:text-white transition-colors">Indústrias</a>
                     <a href="/#pricing" className="hover:text-white transition-colors">Preços</a>
@@ -58,7 +58,7 @@ export function PublicFooter() {
                 <div>
                     <h5 className="font-bold text-white mb-6">Plataforma</h5>
                     <div className="flex flex-col gap-4 text-sm text-neutral-500">
-                        <Link href="/squad" className="hover:text-dmz-accent text-white font-medium">Especialistas</Link>
+                        <a href="/#agents" className="hover:text-dmz-accent text-white font-medium">Especialistas</a>
                         <Link href="/app/projects" className="hover:text-dmz-accent">Projetos</Link>
                         <Link href="/sign-in" className="hover:text-dmz-accent">Login</Link>
                         <Link href="/sign-up" className="hover:text-dmz-accent">Cadastro</Link>
