@@ -860,7 +860,7 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
         }
     }, [selectedDateStr]);
 
-    const handleGenerate = async () => {
+    const handleGenerate = async (forceRegenerate: boolean = false, autoPlay: boolean = false) => {
         if (!selectedDateStr) return;
         setLoading(true);
         try {
@@ -878,6 +878,7 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
                     project_id: project.id,
                     user_first_name: userName,
                     date_str: selectedDateStr,
+                    force_regenerate: forceRegenerate,
                     tasks: reqTasks.map(t => {
                         const agent = agents.find(a => a.id === t.agent_id);
                         return { title: t.title, type: t.type, agent_handle: agent?.handle || "squad" };
@@ -892,6 +893,14 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
             
             if (data.audioUrl) {
                 setAudioUrl(data.audioUrl);
+                if (autoPlay) {
+                    setTimeout(() => {
+                        if (audioRef.current) {
+                            audioRef.current.play().catch(e => console.error("Autoplay falhou", e));
+                            setIsPlaying(true);
+                        }
+                    }, 500);
+                }
             } else if (!data.audioUrl && data.script) {
                console.warn("Áudio não pôde ser gerado ou retornado.");
             } else {
@@ -951,27 +960,26 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
                     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                         
                         <div style={{ display: "flex", gap: "12px" }}>
-                            {!narrativeText && (
-                                <button onClick={handleGenerate} disabled={loading} style={{ 
-                                    display: "flex", alignItems: "center", justifyContent: "center", flex: 1, gap: "8px", background: "linear-gradient(135deg, #4F46E5, #3730A3)", 
-                                    color: "#FFFFFF", border: "none", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: 700, 
-                                    cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "all 0.2s" 
-                                }}>
-                                    {loading ? <Spinner size={16} /> : <FileText size={16} />}
-                                    {loading ? "Gerando/Buscando Relatório..." : "Gerar Relatório Resumido"}
-                                </button>
-                            )}
+                            <button onClick={() => handleGenerate(!!narrativeText, false)} disabled={loading} style={{ 
+                                display: "flex", alignItems: "center", justifyContent: "center", flex: 1, gap: "8px", background: narrativeText ? "#F3F4F6" : "linear-gradient(135deg, #4F46E5, #3730A3)", 
+                                color: narrativeText ? "#374151" : "#FFFFFF", border: narrativeText ? "1px solid #E5E7EB" : "none", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: 700, 
+                                cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "all 0.2s" 
+                            }}>
+                                {loading ? <Spinner size={16} /> : <FileText size={16} />}
+                                {loading ? "Processando..." : (narrativeText ? "Gerar Novo Relatório" : "Gerar Relatório")}
+                            </button>
                             
-                            {narrativeText && audioUrl && (
-                                <button onClick={handlePlayPause} style={{ 
-                                    display: "flex", alignItems: "center", justifyContent: "center", flex: 1, gap: "8px", background: "linear-gradient(135deg, #10B981, #059669)", 
-                                    color: "#FFFFFF", border: "none", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: 700, 
-                                    cursor: "pointer", transition: "all 0.2s" 
-                                }}>
-                                    {isPlaying ? <Square size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
-                                    {isPlaying ? "Pausar Narração" : "Ouvir Relatório"}
-                                </button>
-                            )}
+                            <button onClick={() => {
+                                if (!narrativeText) handleGenerate(false, true);
+                                else handlePlayPause();
+                            }} disabled={loading && !audioUrl && narrativeText} style={{ 
+                                display: "flex", alignItems: "center", justifyContent: "center", flex: 1, gap: "8px", background: "linear-gradient(135deg, #10B981, #059669)", 
+                                color: "#FFFFFF", border: "none", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: 700, 
+                                cursor: (loading && !audioUrl && narrativeText) ? "not-allowed" : "pointer", transition: "all 0.2s", opacity: (loading && !audioUrl && narrativeText) ? 0.7 : 1
+                            }}>
+                                {(!narrativeText && loading) ? <Spinner size={16} /> : (isPlaying ? <Square size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />)}
+                                {isPlaying ? "Pausar Narração" : "Ouvir Relatório"}
+                            </button>
                         </div>
                         
                         {/* Audio Waveform Anim */}

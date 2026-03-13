@@ -1019,6 +1019,7 @@ class DailyReportExplainRequest(BaseModel):
     user_first_name: str
     date_str: str  # YYYY-MM-DD
     tasks: list
+    force_regenerate: bool = False
 
 @app.post("/api/reports/daily/explain")
 async def explain_daily_report(req: DailyReportExplainRequest, authorization: str = Header(None)):
@@ -1026,20 +1027,20 @@ async def explain_daily_report(req: DailyReportExplainRequest, authorization: st
         raise HTTPException(status_code=401, detail="Unauthorized")
     
     # 1. Check if report already exists for this date and project
-    try:
-        report_resp = supabase.table("dmz_agents_reports").select("*").eq("project_id", req.project_id).eq("report_date", req.date_str).execute()
-        if report_resp.data:
-            existing_report = report_resp.data[0]
-            # Since generating audio takes time and money, if we have it, return it.
-            # Even if we just have the narrative, we can return it. (Audio can be generated later if we split the logic, but for now we'll just return what's there)
-            return {
-                "script": existing_report.get("narrative"), 
-                "audioUrl": existing_report.get("audio_url"),
-                "is_cached": True
-            }
-    except Exception as e:
-        print(f"Error checking existing report: {e}")
-        pass # Ignore and generate new if check failed
+    if not req.force_regenerate:
+        try:
+            report_resp = supabase.table("dmz_agents_reports").select("*").eq("project_id", req.project_id).eq("report_date", req.date_str).execute()
+            if report_resp.data:
+                existing_report = report_resp.data[0]
+                # Since generating audio takes time and money, if we have it, return it.
+                return {
+                    "script": existing_report.get("narrative"), 
+                    "audioUrl": existing_report.get("audio_url"),
+                    "is_cached": True
+                }
+        except Exception as e:
+            print(f"Error checking existing report: {e}")
+            pass # Ignore and generate new if check failed
 
     # If no tasks and no report generated yet, return simple message
     if not req.tasks:
