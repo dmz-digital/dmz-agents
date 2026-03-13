@@ -33,6 +33,22 @@ const COLUMNS: { id: TaskType; label: string; color: string; icon: any; descript
 // @orch creates strategy, @syd manages daily flow, individual agents update their own tasks
 const PLANNER = "orchestrator";
 
+function stripMarkdown(text: string) {
+    if (!text) return "";
+    return text
+        .replace(/!\[.*?\]\(.*?\)/g, '')
+        .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+        .replace(/#{1,6}\s+/g, '')
+        .replace(/(\*\*|__)(.*?)\1/g, '$2')
+        .replace(/(\*|_)(.*?)\1/g, '$2')
+        .replace(/~~(.*?)~~/g, '$1')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/\n\s*-\s/g, ' ')
+        .replace(/\n/g, ' ')
+        .trim();
+}
+
 function Tag({ children, color }: { children: React.ReactNode; color: string }) {
     return (
         <span style={{ display: "inline-flex", alignItems: "center", background: color + "12", color, border: `1px solid ${color}25`, borderRadius: "6px", padding: "2px 8px", fontSize: "10px", fontWeight: 600, letterSpacing: "0.04em" }}>
@@ -463,7 +479,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                                                 <h4 style={{ fontSize: "13px", fontWeight: 700, color: "#111827", lineHeight: 1.4, margin: 0, flex: 1 }}>{task.title}</h4>
                                                 <button onClick={e => { e.stopPropagation(); deleteTask(task.id); }} style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "#D1D5DB", marginLeft: "8px" }}><X size={13} /></button>
                                             </div>
-                                            {task.description && <p style={{ fontSize: "12px", color: "#6B7280", lineHeight: 1.5, margin: "0 0 10px", maxHeight: "52px", overflow: "hidden" }}>{task.description}</p>}
+                                            {task.description && <p style={{ fontSize: "12px", color: "#6B7280", lineHeight: 1.5, margin: "0 0 10px", maxHeight: "52px", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>{stripMarkdown(task.description)}</p>}
                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                                 {agent ? (
                                                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
