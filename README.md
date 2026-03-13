@@ -5,7 +5,7 @@
 # DMZ - OS Agents
 **The AI-Native Operating System for Modern Product Squads**
 
-[![Painel Live](https://img.shields.io/badge/Painel-dmz--os.netlify.app-E85D2F?style=for-the-badge&logo=netlify&logoColor=white)](https://dmz-os.netlify.app)
+[![Painel Live](https://img.shields.io/badge/Painel-agents.dmzdigital.com.br-E85D2F?style=for-the-badge&logo=react&logoColor=white)](https://agents.dmzdigital.com.br)
 [![API Railway](https://img.shields.io/badge/API-Railway-000000?style=for-the-badge&logo=railway&logoColor=white)](https://dmz-agents-production.up.railway.app)
 [![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
 [![PyPI Version](https://img.shields.io/pypi/v/dmz-os?style=for-the-badge&color=blue)](https://pypi.org/project/dmz-os/)
@@ -58,27 +58,33 @@ Imagine um squad de **44 especialistas** que operam de forma assíncrona, orques
 
 ---
 
-## 🛠️ Guia de Início Rápido
+## 🛠️ Como Conectar o DMZ-OS (Modelo Híbrido SaaS + Local)
 
-### 1. Inicie o Wizard de Instalação
-A forma mais rápida de injetar o squad em qualquer projeto é usar o comando de instalação:
+O DMZ OS funciona dividindo tarefas entre a nossa **Plataforma Web** (onde você gerencia o projeto) e a **Sua Máquina** (onde os agentes trabalham no código).
+Para plugar o Squad no seu repositório:
 
+### 1. Crie seu Projeto na Nuvem
+Acesse [agents.dmzdigital.com.br](https://agents.dmzdigital.com.br/) e crie um novo projeto. 
+Anote o seu **Project Slug** e a sua **DMZ Security Key** (na guia de Configuração / Instalação).
+
+### 2. Instale o CLI no seu ambiente
+No seu terminal local (onde fica o seu repositório Git ou o seu código atual), instale o pacote globalmente usando:
 ```bash
-# Se você já tem o pacote instalado:
+pip install dmz-os
+```
+
+### 3. Faça o Bind do Projeto e Ative
+Dentro da pasta local do seu projeto, rode o inicializador.
+Ele pedirá o seu **Slug** e a sua **DMZ Security Key** instanciando a pasta invisível `.agents`.
+```bash
 dmz-os install
 ```
 
-O Wizard irá guiar você pela configuração do **Supabase**, escolha das **LLMs** (Claude, GPT, Gemini) e conexão com seu **Slug de Projeto**.
-
-### 2. O Loop de Trabalho (Modo Operação)
-Para ativar seus agentes e deixar o squad em "modo de espera" para novas demandas:
-
+Pronto, agora você levanta o motor do Squad:
 ```bash
-# Inicia os motores e o loop dos agentes
 dmz-os start
 ```
-
-Se o seu projeto ainda não estiver configurado, o comando `start` iniciará automaticamente o **Wizard de Instalação**.
+A partir de agora o Orchestrator lerá as missões do Kanban da web e os especialistas agirão nos seus arquivos locais.
 
 ---
 

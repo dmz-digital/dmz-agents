@@ -228,8 +228,8 @@ export default function AppDashboard() {
                             <div className="h-4 bg-neutral-50 rounded-full w-2/3 opacity-50" />
                         </div>
 
-                        <Link href="/app/memory" className="mt-8 flex items-center justify-between p-4 border border-neutral-100 rounded-2xl group hover:border-purple-200 hover:bg-purple-50/10 transition-all">
-                            <span className="text-sm font-bold text-neutral-700">Ver Logs de IA</span>
+                        <Link href="/app/projects" className="mt-8 flex items-center justify-between p-4 border border-neutral-100 rounded-2xl group hover:border-purple-200 hover:bg-purple-50/10 transition-all">
+                            <span className="text-sm font-bold text-neutral-700">Ver Logs nos Projetos</span>
                             <ChevronRight size={16} className="text-neutral-400 group-hover:text-purple-600 transition-colors" />
                         </Link>
                     </motion.div>

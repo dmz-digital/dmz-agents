@@ -63,4 +63,4 @@ def start_command(project: str | None):
         engine.run_loop()
     except Exception as e:
         console.print(f"[bold red]Erro fatal rodando o squad:[/] {e}")
-        console.print("[dim]Verifique .env.dmz - As credenciais de LLM ou Supabase estão certas?[/]")
+        console.print("[dim]Verifique .env.dmz - A DMZ_API_KEY, SUPABASE_URL ou as chaves de LLM estão corretas?[/]")

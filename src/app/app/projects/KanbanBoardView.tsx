@@ -5,26 +5,29 @@ import { useRouter } from "next/navigation";
 import {
     ArrowLeft, Plus, Bot, Clock, CheckCircle2, AlertTriangle,
     RotateCcw, BookOpen, Activity, GripVertical,
-    Brain, Key, Copy, Check, Settings,
-    Users, X, FolderOpen,
+    Brain, Key, Copy, Check, Settings, Terminal,
+    Users, X, FolderOpen, BadgeCheck,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import AppHeader from "@/components/AppHeader";
 
 // ── Types ───────────────────────────────────────────────────────────────────
-type TaskType = "master_plan" | "on_going" | "done" | "rework";
+type TaskType = "master_plan" | "to_do" | "on_going" | "done" | "rework" | "approved";
 type Task = {
     id: string; project_id: string; agent_id: string | null; type: TaskType;
     title: string; description: string | null; status: string; priority: number;
     assigned_by: string | null; completed_by: string | null; completed_at: string | null;
     metadata: any; created_at: string; updated_at: string;
+    feedback?: string | null;
 };
 
 const COLUMNS: { id: TaskType; label: string; color: string; icon: any; description: string }[] = [
     { id: "master_plan", label: "Master Plan", color: "#2563EB", icon: BookOpen, description: "Backlog estratégico — definido pelo @orch" },
-    { id: "on_going", label: "On Going", color: "#D97706", icon: Activity, description: "Em execução pelos agentes" },
-    { id: "done", label: "Done", color: "#10B981", icon: CheckCircle2, description: "Concluído e validado" },
+    { id: "to_do", label: "To Do", color: "#64748B", icon: Clock, description: "Tarefas aguardando execução" },
+    { id: "on_going", label: "Ongoing", color: "#D97706", icon: Activity, description: "Em execução pelos agentes" },
+    { id: "done", label: "Done", color: "#10B981", icon: CheckCircle2, description: "Concluído e aguardando validação" },
     { id: "rework", label: "Rework", color: "#EF4444", icon: RotateCcw, description: "Precisa ser refeito" },
+    { id: "approved", label: "Approved", color: "#8B5CF6", icon: BadgeCheck, description: "Finalizado e aprovado" },
 ];
 
 // @orch creates strategy, @syd manages daily flow, individual agents update their own tasks
@@ -99,13 +102,20 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     async function moveTask(taskId: string, newType: TaskType, targetTaskId?: string, position?: "top" | "bottom") {
         setDraggedTask(null); setDragOverColumn(null); setDragOverTask(null); setDragOverPosition(null);
 
+        // Audio notification
+        if (newType === "done") {
+            new Audio('/assets/done.mp3').play().catch(() => {});
+        } else if (newType === "on_going") {
+            new Audio('/assets/ongoing.mp3').play().catch(() => {});
+        }
+
         // Otimização e cálculo de prioridade no frontend (para reordenamento vertical)
         let updatedTasks = [...tasks];
         const taskObj = updatedTasks.find(t => t.id === taskId);
         if (!taskObj) return;
 
         taskObj.type = newType;
-        if (newType === "done") { taskObj.status = "completed"; taskObj.completed_at = new Date().toISOString(); }
+        if (newType === "done" || newType === "approved") { taskObj.status = "completed"; taskObj.completed_at = new Date().toISOString(); }
         else if (newType === "on_going" || newType === "rework") { taskObj.status = "in_progress"; taskObj.completed_at = null; }
         else { taskObj.status = "pending"; taskObj.completed_at = null; }
         taskObj.updated_at = new Date().toISOString();
@@ -146,7 +156,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     }
 
     async function createTask(type: TaskType, title: string, description: string, agentId: string | null) {
-        const sm: Record<TaskType, string> = { master_plan: "pending", on_going: "in_progress", done: "completed", rework: "in_progress" };
+        const sm: Record<TaskType, string> = { master_plan: "pending", to_do: "pending", on_going: "in_progress", done: "completed", rework: "in_progress", approved: "completed" };
         const { data } = await supabase.from("dmz_agents_tasks").insert({
             project_id: project.id, type, title, description: description || null,
             agent_id: agentId || null, status: sm[type], priority: 0, assigned_by: PLANNER,
@@ -160,9 +170,27 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
         setTasks(prev => prev.filter(t => t.id !== taskId));
     }
 
-    async function updateTaskContent(taskId: string, title: string, description: string, agentId: string | null) {
-        await supabase.from("dmz_agents_tasks").update({ title, description: description || null, agent_id: agentId }).eq("id", taskId);
-        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, title, description: description || null, agent_id: agentId } : t));
+    async function updateTaskContent(taskId: string, title: string, description: string, agentId: string | null, feedback: string | null, newType?: TaskType) {
+        let updateData: any = { title, description: description || null, agent_id: agentId, feedback: feedback || null };
+        if (newType) {
+            updateData.type = newType;
+            if (newType === "done" || newType === "approved") { updateData.status = "completed"; updateData.completed_at = new Date().toISOString(); }
+            else if (newType === "on_going" || newType === "rework") { updateData.status = "in_progress"; updateData.completed_at = null; }
+            else { updateData.status = "pending"; updateData.completed_at = null; }
+
+            // Audio notification
+            if (newType === "done") new Audio('/assets/done.mp3').play().catch(() => {});
+            else if (newType === "on_going") new Audio('/assets/ongoing.mp3').play().catch(() => {});
+        }
+        await supabase.from("dmz_agents_tasks").update(updateData).eq("id", taskId);
+        
+        if (newType) {
+            // Re-fetch all tasks if moving columns so priority and ordering remains consistent 
+            // but for simplicity we can just update local state:
+            setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updateData } : t));
+        } else {
+            setTasks(prev => prev.map(t => t.id === taskId ? { ...t, title, description: description || null, agent_id: agentId, feedback: feedback || null } : t));
+        }
     }
 
     if (loading) return (
@@ -221,6 +249,9 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                         </div>
                     </div>
                     <div style={{ display: "flex", gap: "8px" }}>
+                        <button onClick={() => router.push(`/app/projects?id=${slug}&view=install`)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
+                            <Terminal size={14} /> Instalação
+                        </button>
                         <button onClick={() => router.push(`/app/projects?id=${slug}&view=memory`)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
                             <Brain size={14} /> Memória
                         </button>
@@ -252,7 +283,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
             )}
 
             {/* Kanban Board */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "24px", alignItems: "flex-start" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "16px", alignItems: "flex-start" }}>
                 {COLUMNS.map(col => {
                     const colTasks = getTasksByColumn(col.id);
                     const Icon = col.icon;
@@ -364,7 +395,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                     agent={getAgent(selectedTask.agent_id)}
                     projectAgents={agents.filter(a => projectAgents.some(pa => pa.agent_id === a.id))}
                     onDelete={() => { deleteTask(selectedTask.id); setSelectedTask(null); }}
-                    onUpdate={(t, d, a) => updateTaskContent(selectedTask.id, t, d, a)}
+                    onUpdate={(t, d, a, f, type) => updateTaskContent(selectedTask.id, t, d, a, f, type)}
                     onClose={() => setSelectedTask(null)}
                 />
             )}
@@ -383,16 +414,26 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
 
 import { Trash, Edit2, Save } from "lucide-react";
 
-function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClose }: { task: Task; agent: any; projectAgents: any[]; onDelete: () => void; onUpdate: (t: string, d: string, a: string | null) => void; onClose: () => void }) {
+function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClose }: { task: Task; agent: any; projectAgents: any[]; onDelete: () => void; onUpdate: (t: string, d: string, a: string | null, feedback: string | null, newType?: TaskType) => void; onClose: () => void }) {
     const col = COLUMNS.find(c => c.id === task.type)!;
     const [isEditing, setIsEditing] = useState(false);
     const [title, setTitle] = useState(task.title);
     const [description, setDescription] = useState(task.description || "");
+    const [feedback, setFeedback] = useState(task.feedback || "");
     const [agentId, setAgentId] = useState<string | null>(task.agent_id);
 
     function handleSave() {
-        onUpdate(title, description, agentId);
+        onUpdate(title, description, agentId, feedback, undefined);
         setIsEditing(false);
+    }
+
+    function handleFeedbackSubmit(action: "approve" | "rework") {
+        if (action === "rework" && !feedback.trim()) {
+            alert("Para enviar para Rework (Refazer), adicione um feedback explicando o motivo.");
+            return;
+        }
+        onUpdate(title, description, agentId, feedback, action === "approve" ? "approved" : "rework");
+        onClose();
     }
 
     return (
@@ -486,6 +527,28 @@ function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClo
                                 </div>
                             )}
                         </div>
+
+                        {/* Customer Feedback Area */}
+                        {(task.type === "done" || task.type === "approved" || task.type === "rework" || feedback) && (
+                            <div style={{ borderTop: "1px solid #F0F0F0", paddingTop: "24px", marginTop: "8px" }}>
+                                <h3 style={{ fontSize: "15px", fontWeight: 800, color: "#111827", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                    Feedback do Cliente (Dani)
+                                </h3>
+                                <p style={{ fontSize: "13px", color: "#6B7280", marginBottom: "16px", lineHeight: 1.5 }}>
+                                    A task foi dada como pronta pelo squad. Se estiver tudo certo clique em Aprovar. Se faltou algo ou algo precisa ser alterado, deixe o motivo abaixo e clique em Rework.
+                                </p>
+                                <textarea value={feedback} onChange={e => setFeedback(e.target.value)} placeholder="Escreva seu feedback ou motivo da recusa..." rows={3} style={{ width: "100%", background: "#F9FAFB", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "12px 14px", fontSize: "14px", color: "#111827", outline: "none", resize: "vertical", marginBottom: "16px" }} />
+                                
+                                <div style={{ display: "flex", gap: "12px" }}>
+                                    <button onClick={() => handleFeedbackSubmit("approve")} style={{ flex: 1, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", background: `linear-gradient(135deg, #8B5CF6, #7C3AED)`, color: "#FFFFFF", border: "none", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 8px rgba(139, 92, 246, 0.25)" }}>
+                                        <CheckCircle2 size={16} /> Aprovar Task
+                                    </button>
+                                    <button onClick={() => handleFeedbackSubmit("rework")} style={{ flex: 1, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", background: "#FFFFFF", border: "1.5px solid #F87171", color: "#EF4444", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>
+                                        <RotateCcw size={16} /> Enviar p/ Rework
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </>
                 )}
             </div>

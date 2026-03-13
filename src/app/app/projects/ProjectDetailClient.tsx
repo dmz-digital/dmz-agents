@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import ProjectsListView from "./ProjectsListView";
 import KanbanBoardView from "./KanbanBoardView";
 import ProjectMemoryView from "./ProjectMemoryView";
+import ProjectInstallView from "./ProjectInstallView";
 
 /**
  * Router client-side para /app/projects (via Search Params - Safe Static Export)
@@ -26,6 +27,11 @@ export default function ProjectDetailClient() {
     // Com project_id + view=memory -> Mostra memória
     if (view === "memory") {
         return <ProjectMemoryView slug={projectId} />;
+    }
+
+    // Com project_id + view=install -> Mostra instruções de instalação CLI
+    if (view === "install") {
+        return <ProjectInstallView slug={projectId} />;
     }
 
     // Com project_id apenas -> Mostra Kanban

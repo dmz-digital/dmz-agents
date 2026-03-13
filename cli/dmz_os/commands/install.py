@@ -114,9 +114,9 @@ def _collect_credentials() -> dict:
     console.print(Panel(
         "[bold]Configuração de credenciais[/]\n\n"
         "Precisamos de 3 informações para conectar o squad:\n"
-        "[dim]1. Supabase URL e Key → [cyan]supabase.com[/cyan][/dim]\n"
+        "[dim]1. DMZ OS URL → Padrão já configurado ([cyan]https://agents.dmzdigital.com.br[/cyan])[/dim]\n"
         "[dim]2. API Key de um LLM → Anthropic / OpenAI / Gemini[/dim]\n"
-        "[dim]3. Slug do seu projeto (criado no painel)[/dim]",
+        "[dim]3. Project Slug e Security Key (DMZ_API_KEY) (criados no painel)[/dim]",
         border_style="blue",
         title="[bold blue]🔑 Credenciais[/]",
     ))
@@ -124,13 +124,15 @@ def _collect_credentials() -> dict:
 
     creds = {}
 
-    # Supabase
+    # Supabase (Config padrão hardcoded que o cliente também passaria ou podemos deixar default via código,
+    # Mas deixaremos o prompt caso o usuário utilize um self-hosted clone no futuro)
     creds["SUPABASE_URL"] = Prompt.ask(
-        "[cyan]Supabase URL[/]",
+        "[cyan]URL da API DMZ (Ex: https://xxxx.supabase.co)[/]",
         default=os.getenv("SUPABASE_URL", ""),
     )
-    creds["SUPABASE_SERVICE_ROLE_KEY"] = Prompt.ask(
-        "[cyan]Supabase Service Role Key[/]",
+    # A DMZ KEY que irá pro RLS Authorization header
+    creds["DMZ_API_KEY"] = Prompt.ask(
+        "[cyan]DMZ Security Key (Ex: dmz_pk_abcd...)[/]",
         password=True,
     )
 
@@ -197,7 +199,8 @@ def _create_agents_folder():
         example.write_text(
             "# Copie para .env.dmz na raiz do projeto e preencha\n\n"
             "SUPABASE_URL=https://xxxx.supabase.co\n"
-            "SUPABASE_SERVICE_ROLE_KEY=\n\n"
+            "DMZ_API_KEY=dmz_pk_xxx\n"
+            "SUPABASE_ANON_KEY=eyJ... (se necessário)\n\n"
             "# Mínimo 1 LLM:\n"
             "ANTHROPIC_API_KEY=\n"
             "OPENAI_API_KEY=\n"

@@ -96,7 +96,6 @@ export default function AppLayout({
         { href: "/app", icon: LayoutDashboard, title: "Dashboard" },
         { href: "/app/agents", icon: Bot, title: "Squad Experts" },
         { href: "/app/projects", icon: FolderOpen, title: "Projects" },
-        { href: "/app/memory", icon: Brain, title: "Memory" },
         { href: "/app/tools", icon: Wrench, title: "Tools" },
         {
             href: "/app/profile",
