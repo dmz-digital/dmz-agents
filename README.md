@@ -88,19 +88,20 @@ A partir de agora o Orchestrator lerá as missões do Kanban da web e os especia
 
 ---
 
-## 🤖 O Squad Especializado (44 Agentes)
-O squad é organizado em categorias estratégicas para cobrir 100% do ciclo de vida de um produto digital:
+## 🤖 O Squad Especializado (52 Agentes)
+O squad é organizado em categorias estratégicas para cobrir 100% do ciclo de vida de um produto digital e operações de negócio:
 
-| Categoria | Agentes Principais | Papel Fundamental |
+| Categoria | Família de Agentes | Papel Fundamental |
 |:---:|---|---|
-| **Core** | `@orch`, `@syd` | Orquestração, Liderança Operacional e Gestão de Saúde do Squad. |
-| **Product** | `@lucas`, `@jose`, `@emma` | Visão de Produto, Gestão de Prazos e Barreira de Qualidade (QA). |
-| **Dev** | `@ryan`, `@alex`, `@oliver` | Coding Full-Stack, Arquitetura Estrutural e Automação DevOps. |
-| **Security** | `@constantine`, `@theron` | Fortaleza de Segurança, Privacidade e Conformidade Legal. |
-| **Design** | `@aurora`, `@victoria` | Estética Premium, Design Systems e Experiência do Usuário (UX). |
-| **Sales** | `@cra`, `@closer`, `@hunter` | Geração de Receita, Outbound, Fechamento e Inteligência Comercial. |
-| **Strategy** | `@kanya`, `@cassandra` | Inteligência de Mercado, Análise de Cenários e Narrativa de Marca. |
-| **Auxiliary** | `@martin`, `@sofia`, `@quantum` | Extração de SOPs, Gestão de Dados e Orquestração de Ferramentas. |
+| **Orchestration** | `@formatting`, `@orch`, `@syd` | Orquestração do framework, Liderança Operacional e Validação. |
+| **Product** | `@david`, `@emma`, `@jose`, `@lucas` | Visão de Produto, Gestão Ágil (SM/PM) e Controle de Qualidade (QA). |
+| **Development** | `@alex`, `@oliver`, `@ryan` | Coding Full-Stack, Arquitetura de Software e Automação DevOps. |
+| **Security** | `@constantine`, `@theron` | Segurança Cibernética Ativa, Proteção de Dados e Conformidade Legal. |
+| **Design** | `@aurora`, `@victoria` | Estética Premium, Criação de Interfaces (UI) e Experiência do Usuário (UX). |
+| **Copy & Chat** | `@cassandra`, `@voice` | Copywriting Persuasivo, Narrativa de Marca e Interações Vocais. |
+| **Data & Strat** | `@kanya`, `@sofia` | Inteligência Estratégica, Modelagem e Extração Avançada de Dados. |
+| **Frameworks** | `@audio_analyzer`, `@code_expert`, `@image_gen`, `@martin`, `@pdf_analyzer`, `@quantum`, `@vision_analyzer`, `@web_search` | Especialistas de integração para OCR, Visão de Máquina, Deep Search e Gerador de SOPs. |
+| **Sales** | `@closer`, `@cra`, `@deck`, `@draft_chief`, `@ecvc`, `@emailcopy`, `@finmodel`, `@hunter`, `@intel`, `@ir`, `@lens`, `@mapper`, `@nurture`, `@oracle`, `@osint`, `@persona`, `@pitch`, `@push`, `@qualifier`, `@radar`, `@rebound`, `@revops`, `@scheduler`, `@social`, `@story`, `@vault` | Máquina massiva de Geração de Receita, Outbound, Prospecção C-Level, Inteligência de Mercado e RevOps. |
 
 ---
 
