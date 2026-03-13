@@ -1017,6 +1017,7 @@ import base64
 class DailyReportExplainRequest(BaseModel):
     project_id: str
     user_first_name: str
+    date_str: str  # YYYY-MM-DD
     tasks: list
 
 @app.post("/api/reports/daily/explain")
@@ -1024,57 +1025,90 @@ async def explain_daily_report(req: DailyReportExplainRequest, authorization: st
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Unauthorized")
     
-    # Create the context for LLM
+    # 1. Check if report already exists for this date and project
+    try:
+        report_resp = supabase.table("dmz_agents_reports").select("*").eq("project_id", req.project_id).eq("report_date", req.date_str).execute()
+        if report_resp.data:
+            existing_report = report_resp.data[0]
+            # Since generating audio takes time and money, if we have it, return it.
+            # Even if we just have the narrative, we can return it. (Audio can be generated later if we split the logic, but for now we'll just return what's there)
+            return {
+                "script": existing_report.get("narrative"), 
+                "audioUrl": existing_report.get("audio_url"),
+                "is_cached": True
+            }
+    except Exception as e:
+        print(f"Error checking existing report: {e}")
+        pass # Ignore and generate new if check failed
+
+    # If no tasks and no report generated yet, return simple message
+    if not req.tasks:
+        return {"script": f"Oi {req.user_first_name}, parece que não tivemos nenhuma atividade registrada para este dia no projeto.", "audioUrl": None}
+
+    # 2. Create the context for LLM
     system_prompt = (
-        f"Você é a inteligência do DMZ OS. Explique as tarefas concluídas hoje para o gestor, {req.user_first_name}. "
-        "Fale no plural em nome do 'squad DMZ'. Comece EXATAMENTE com: 'Oi {req.user_first_name}, vou te explicar o que foi feito hoje...'. "
-        "Crie uma narrativa fluida, em linguagem natural humana, coloquial, amigável e com pausas naturais (use vírgulas, pontos e palavras de transição como 'ah', 'bom', 'então', 'na sequência'). "
-        "Não liste itens mecanicamente; conte uma breve história sobre o progresso de hoje, conectando as tarefas executadas pelos agentes (fale os nomes deles). "
-        "Seja super rápido (aprox. 60-80 palavras em texto corrido, sem markdowns)."
+        f"Você é a inteligência e analista (copywriter) do DMZ OS. O seu objetivo é construir uma narrativa em formato de relatório de "
+        f"atividades. O gestor, {req.user_first_name}, pediu um resumo das tarefas do dia ({req.date_str}). "
+        "Fale no plural em nome do 'squad DMZ' (nossa equipe). Comece EXATAMENTE com: 'Oi {req.user_first_name}, hoje o time trabalhou bastante, vou te contar o que rolou em nosso squad...' ou algo similar, amigável. "
+        "Crie uma história fluida do que foi feito, falando de forma natural e amigável, não parecendo um robô. "
+        "Não liste itens mecanicamente (com bullets). Conecte as tarefas executadas pelos agentes (fale os nomes deles: @syd, @orch, @oliver, etc). "
+        "Exemplo: 'Hoje o Oliver corrigiu X, já a Sofia adicionou Y, e isso vai gerar mais estrutura'. "
+        "Ao final, faça uma conclusão breve. O texto servirá como um relatório para reuniões."
     )
     
     tasks_text = "; ".join([f"[{t.get('type')}] {t.get('title')} (responsável: @{t.get('agent_handle', 'squad')})" for t in req.tasks])
     
     try:
-        script = get_llm_response(system_prompt, f"Tarefas de hoje:\n{tasks_text}")
+        script = get_llm_response(system_prompt, f"Tarefas concluídas:\n{tasks_text}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"LLM Error: {str(e)}")
         
     el_key = os.getenv("ELEVENLABS_API_KEY", "sk_ab25d27788e65b779f84298d7e676cb2ced43d62ae7ea448")
     voice_id = os.getenv("ELEVENLABS_VOICE_ID", "r2fkFV8WAqXq2AqBpgJT")
     
-    if not el_key:
-        return {"script": script, "audioUrl": None, "error": "ElevenLabs config missing"}
-        
-    try:
-        from elevenlabs.client import ElevenLabs
-        import uuid
-        client = ElevenLabs(api_key=el_key)
-        audio_generator = client.generate(
-            text=script,
-            voice=voice_id,
-            model="eleven_multilingual_v2"
-        )
-        audio_bytes = b"".join(list(audio_generator))
-        
-        # Save to Supabase
-        bucket_name = "audio-reports"
+    public_url = None
+    if el_key:
         try:
-            supabase.storage.get_bucket(bucket_name)
-        except Exception:
+            from elevenlabs.client import ElevenLabs
+            import uuid
+            client = ElevenLabs(api_key=el_key)
+            audio_generator = client.generate(
+                text=script,
+                voice=voice_id,
+                model="eleven_multilingual_v2"
+            )
+            audio_bytes = b"".join(list(audio_generator))
+            
+            # Save to Supabase
+            bucket_name = "audio-reports"
             try:
-                supabase.storage.create_bucket(bucket_name, {"public": True})
+                supabase.storage.get_bucket(bucket_name)
             except Exception:
-                pass
-                
-        file_name = f"{req.project_id}_{uuid.uuid4().hex}.mp3"
-        supabase.storage.from_(bucket_name).upload(file_name, audio_bytes, {"content-type": "audio/mpeg"})
-        public_url = supabase.storage.from_(bucket_name).get_public_url(file_name)
-        
-        return {"script": script, "audioUrl": public_url}
+                try:
+                    supabase.storage.create_bucket(bucket_name, {"public": True})
+                except Exception:
+                    pass
+                    
+            file_name = f"{req.project_id}_{req.date_str}_{uuid.uuid4().hex}.mp3"
+            supabase.storage.from_(bucket_name).upload(file_name, audio_bytes, {"content-type": "audio/mpeg"})
+            public_url = supabase.storage.from_(bucket_name).get_public_url(file_name)
+        except Exception as e:
+            print(f"ElevenLabs error: {e}")
+            public_url = None
+
+    # 3. Save to DB
+    try:
+        supabase.table("dmz_agents_reports").upsert({
+            "project_id": req.project_id,
+            "report_date": req.date_str,
+            "narrative": script,
+            "has_audio": public_url is not None,
+            "audio_url": public_url
+        }, on_conflict="project_id,report_date").execute()
     except Exception as e:
-        print(f"ElevenLabs error: {e}")
-        return {"script": script, "audioUrl": None, "error": f"ElevenLabs API Error: {str(e)}"}
+        print(f"Failed to save report to DB: {e}")
+        
+    return {"script": script, "audioUrl": public_url, "is_cached": False}
 
 if __name__ == "__main__":
     import uvicorn

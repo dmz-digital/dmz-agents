@@ -830,21 +830,39 @@ function AddTaskModal({ column, agents, onSave, onClose }: { column: TaskType; a
 // ── Reports Modal ─────────────────────────────────────────────────────────────
 function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { tasks: Task[]; project: any; agents: any[]; onClose: () => void; confirmAction: (t: string, m: string, isDanger?: boolean, confirmText?: string, cancelText?: string) => Promise<boolean> }) {
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
+    const [narrativeText, setNarrativeText] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
-    // Filter today's tasks
-    const now = new Date();
-    const formatter = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "long", year: "numeric" });
-    const todayStr = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
-    
-    const todaysTasks = tasks.filter(t => {
-        const tDate = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t.updated_at || t.created_at));
-        return tDate === todayStr;
+    // Group tasks by date
+    // Unique dates sorting descending
+    const dateMap = new Map<string, Task[]>();
+    tasks.forEach(t => {
+        if (t.type !== "done" && t.type !== "approved" && t.type !== "rework" && t.type !== "on_going") return; // Mostly completed/active ones
+        const d = new Date(t.updated_at || t.created_at);
+        const yyyyMmDd = d.toISOString().split("T")[0]; // YYYY-MM-DD
+        if (!dateMap.has(yyyyMmDd)) dateMap.set(yyyyMmDd, []);
+        dateMap.get(yyyyMmDd)!.push(t);
     });
+    const sortedDates = Array.from(dateMap.keys()).sort((a, b) => b.localeCompare(a));
+    const formatter = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "long", year: "numeric", weekday: "short" });
 
-    const handlePlay = async () => {
+    // Ensure we fetch narrative if changing dates manually
+    useEffect(() => {
+        setAudioUrl(null);
+        setNarrativeText(null);
+        setIsPlaying(false);
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+        }
+    }, [selectedDateStr]);
+
+    const handleGenerateOrPlay = async () => {
+        if (!selectedDateStr) return;
+        
         if (audioUrl) {
             if (audioRef.current) {
                 if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); }
@@ -857,8 +875,10 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
-            const userName = session?.user?.user_metadata?.first_name || session?.user?.email?.split('@')[0] || "Líder";
+            const userName = session?.user?.user_metadata?.first_name || session?.user?.email?.split('@')[0] || "Equipe";
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://dmz-agents-production.up.railway.app";
+            
+            const reqTasks = dateMap.get(selectedDateStr) || [];
             
             const res = await fetch(`${apiUrl}/api/reports/daily/explain`, {
                 method: "POST",
@@ -866,14 +886,19 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
                 body: JSON.stringify({
                     project_id: project.id,
                     user_first_name: userName,
-                    tasks: todaysTasks.map(t => {
+                    date_str: selectedDateStr,
+                    tasks: reqTasks.map(t => {
                         const agent = agents.find(a => a.id === t.agent_id);
                         return { title: t.title, type: t.type, agent_handle: agent?.handle || "squad" };
                     })
                 })
             });
 
+            if (!res.ok) throw new Error("Erro na solicitação. Status " + res.status);
             const data = await res.json();
+            
+            if (data.script) setNarrativeText(data.script);
+            
             if (data.audioUrl) {
                 setAudioUrl(data.audioUrl);
                 setTimeout(() => {
@@ -882,8 +907,11 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
                         setIsPlaying(true);
                     }
                 }, 100);
+            } else if (!data.audioUrl && data.script) {
+               // Apenas avisar se o gerador de voz falhou mas temos o script
+               console.warn("Áudio não pôde ser sintetizado. A narrativa textual está disponível.");
             } else {
-                confirmAction("Erro na API de Áudio", data.error || "O servidor não conseguiu gerar a narração.", true, "OK", "Fechar");
+                confirmAction("Erro na API", data.error || "O servidor não conseguiu gerar o relatório.", true, "OK", "Fechar");
             }
         } catch (e: any) {
             confirmAction("Erro de Conexão", e.message, true, "OK", "Fechar");
@@ -893,16 +921,24 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
 
     return (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)", padding: "24px" }} onClick={onClose}>
-            <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: "24px", padding: "32px", width: "100%", maxWidth: 600, boxShadow: "0 20px 80px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", gap: "24px", maxHeight: "90vh", overflowY: "auto" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: "24px", padding: "32px", width: "100%", maxWidth: 600, boxShadow: "0 20px 80px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", gap: selectedDateStr ? "20px" : "24px", maxHeight: "90vh", overflowY: "auto" }}>
                 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                        <div style={{ width: 44, height: 44, borderRadius: "12px", background: "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <FileText size={22} color="#4F46E5" />
-                        </div>
+                        {selectedDateStr ? (
+                            <button onClick={() => setSelectedDateStr(null)} style={{ width: 36, height: 36, borderRadius: "10px", background: "#F3F4F6", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#6B7280", marginRight: "4px" }}>
+                                <ArrowLeft size={16} />
+                            </button>
+                        ) : (
+                            <div style={{ width: 44, height: 44, borderRadius: "12px", background: "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <FileText size={22} color="#4F46E5" />
+                            </div>
+                        )}
                         <div>
-                            <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#111827", margin: 0, letterSpacing: "-0.02em" }}>Relatório do Projeto</h2>
-                            <span style={{ fontSize: "12px", color: "#6B7280" }}>{formatter.format(now)}</span>
+                            <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#111827", margin: 0, letterSpacing: "-0.02em" }}>Histórico do Projeto</h2>
+                            <span style={{ fontSize: "12px", color: "#6B7280" }}>
+                                {selectedDateStr ? formatter.format(new Date(`${selectedDateStr}T12:00:00Z`)) : `${sortedDates.length} dias documentados`}
+                            </span>
                         </div>
                     </div>
                     <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", padding: "4px" }}><X size={18} /></button>
@@ -912,55 +948,101 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
                     <audio ref={audioRef} src={audioUrl} onEnded={() => setIsPlaying(false)} />
                 )}
 
-                <div style={{ background: "#FAFAFA", border: "1.5px solid #F0F0F0", borderRadius: "16px", padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#374151" }}>Resumo Diário</h3>
-                        <button onClick={handlePlay} disabled={loading || todaysTasks.length === 0} style={{ 
-                            display: "flex", alignItems: "center", gap: "8px", background: "linear-gradient(135deg, #10B981, #059669)", 
-                            color: "#FFFFFF", border: "none", borderRadius: "8px", padding: "8px 16px", fontSize: "13px", fontWeight: 700, 
-                            cursor: loading || todaysTasks.length === 0 ? "not-allowed" : "pointer", opacity: loading || todaysTasks.length === 0 ? 0.7 : 1, transition: "all 0.2s" 
-                        }}>
-                            {loading ? <Spinner size={14} /> : (isPlaying ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />)}
-                            {loading ? "Gerando Áudio..." : (isPlaying ? "Parar" : "Explicar Tarefas")}
-                        </button>
-                    </div>
-                    
-                    {/* Simple Equalizer Animation */}
-                    {isPlaying && (
-                        <div style={{ display: "flex", alignItems: "center", gap: "4px", height: "24px", alignSelf: "center", marginTop: "-8px", marginBottom: "8px" }}>
-                            {[1, 2, 3, 4, 5, 6].map(i => (
-                                <div key={i} style={{
-                                    width: "4px", background: "#10B981", borderRadius: "2px",
-                                    animation: `equalizer ${0.5 + Math.random() * 0.5}s ease-in-out infinite alternate`,
-                                    height: `${Math.random() * 100}%`
-                                }} />
-                            ))}
-                            <style>{`@keyframes equalizer { 0% { height: 2px; } 100% { height: 24px; } }`}</style>
+                {selectedDateStr ? (
+                    // ── Detalhe do Dia ─────────────────────────────────────────────
+                    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                        
+                        <div style={{ display: "flex", gap: "12px" }}>
+                            <button onClick={handleGenerateOrPlay} disabled={loading} style={{ 
+                                display: "flex", alignItems: "center", justifyContent: "center", flex: 1, gap: "8px", background: "linear-gradient(135deg, #10B981, #059669)", 
+                                color: "#FFFFFF", border: "none", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: 700, 
+                                cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "all 0.2s" 
+                            }}>
+                                {loading ? <Spinner size={16} /> : (isPlaying ? <Square size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />)}
+                                {loading ? "Processando Relatório..." : (isPlaying ? "Pausar Narração" : (narrativeText ? "Ouvir Novamente" : "Gerar Relatório Resumido"))}
+                            </button>
                         </div>
-                    )}
+                        
+                        {/* Audio Waveform Anim */}
+                        {isPlaying && (
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px", height: "24px", alignSelf: "center", marginTop: "-8px", marginBottom: "8px" }}>
+                                {[1, 2, 3, 4, 5, 6].map(i => (
+                                    <div key={i} style={{
+                                        width: "4px", background: "#10B981", borderRadius: "2px",
+                                        animation: `equalizer ${0.5 + Math.random() * 0.5}s ease-in-out infinite alternate`,
+                                        height: `${Math.random() * 100}%`
+                                    }} />
+                                ))}
+                                <style>{`@keyframes equalizer { 0% { height: 2px; } 100% { height: 24px; } }`}</style>
+                            </div>
+                        )}
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                        {todaysTasks.length === 0 ? (
-                            <p style={{ fontSize: "13px", color: "#9CA3AF", textAlign: "center", padding: "20px 0" }}>Nenhuma tarefa registrada para o dia de hoje.</p>
-                        ) : todaysTasks.map(t => {
-                            const agent = agents.find(a => a.id === t.agent_id);
-                            const col = COLUMNS.find(c => c.id === t.type)! || COLUMNS[0];
-                            return (
-                                <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF", padding: "12px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, overflow: "hidden" }}>
-                                        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: col.color, flexShrink: 0 }} />
-                                        <span style={{ fontSize: "13px", color: "#111827", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.title}</span>
-                                    </div>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0, marginLeft: "12px" }}>
-                                        {agent ? (
-                                            <span style={{ fontSize: "11px", fontWeight: 600, color: agent.color || "#6B7280", background: (agent.color || "#6B7280") + "15", padding: "2px 6px", borderRadius: "4px", fontFamily: "monospace" }}>@{agent.handle}</span>
-                                        ) : <span style={{ fontSize: "11px", color: "#D1D5DB" }}>sem agente</span>}
-                                    </div>
+                        {narrativeText && (
+                            <div style={{ background: "#EEF2FF", border: "1.5px solid #E0E7FF", borderRadius: "14px", padding: "20px", marginTop: "4px" }}>
+                                <div style={{ fontSize: "11px", fontWeight: 800, color: "#4F46E5", textTransform: "uppercase", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <Bot size={12} /> Narrativa do Squad
                                 </div>
+                                <p style={{ fontSize: "14px", color: "#312E81", lineHeight: 1.6, margin: 0 }}>
+                                    {narrativeText}
+                                </p>
+                            </div>
+                        )}
+
+                        <div style={{ background: "#FAFAFA", border: "1.5px solid #F0F0F0", borderRadius: "16px", padding: "20px" }}>
+                            <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#374151", marginBottom: "16px" }}>Tarefas Trabalhadas ({dateMap.get(selectedDateStr)?.length || 0})</h3>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                {dateMap.get(selectedDateStr)?.map(t => {
+                                    const agent = agents.find(a => a.id === t.agent_id);
+                                    const col = COLUMNS.find(c => c.id === t.type)! || COLUMNS[0];
+                                    return (
+                                        <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF", padding: "12px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, overflow: "hidden" }}>
+                                                <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: col.color, flexShrink: 0 }} />
+                                                <span style={{ fontSize: "13px", color: "#111827", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.title}</span>
+                                            </div>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0, marginLeft: "12px" }}>
+                                                {agent ? (
+                                                    <span style={{ fontSize: "11px", fontWeight: 600, color: agent.color || "#6B7280", background: (agent.color || "#6B7280") + "15", padding: "2px 6px", borderRadius: "4px", fontFamily: "monospace" }}>@{agent.handle}</span>
+                                                ) : <span style={{ fontSize: "11px", color: "#D1D5DB" }}>sem agente</span>}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                    </div>
+                ) : (
+                    // ── Lista de Datas ─────────────────────────────────────────────
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                        {sortedDates.length === 0 ? (
+                            <p style={{ fontSize: "14px", color: "#9CA3AF", textAlign: "center", padding: "40px 0" }}>Nenhuma data com atividades registradas foi encontrada.</p>
+                        ) : sortedDates.map(dateStr => {
+                            const dateTasks = dateMap.get(dateStr) || [];
+                            return (
+                                <button key={dateStr} onClick={() => setSelectedDateStr(dateStr)} style={{ 
+                                    display: "flex", alignItems: "center", justifyContent: "space-between", 
+                                    background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "12px", 
+                                    padding: "16px", cursor: "pointer", transition: "all 0.1s"
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.borderColor = "#D1D5DB"}
+                                onMouseLeave={e => e.currentTarget.style.borderColor = "#F0F0F0"}>
+                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "4px" }}>
+                                        <span style={{ fontSize: "14px", fontWeight: 700, color: "#111827", textTransform: "capitalize" }}>
+                                            {formatter.format(new Date(`${dateStr}T12:00:00Z`))}
+                                        </span>
+                                        <span style={{ fontSize: "12px", color: "#6B7280" }}>
+                                            {dateTasks.length} {dateTasks.length === 1 ? "tarefa iterada" : "tarefas iteradas"}
+                                        </span>
+                                    </div>
+                                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#F3F4F6", display: "flex", alignItems: "center", justifyContent: "center", color: "#9CA3AF" }}>
+                                        <ArrowLeft size={16} style={{ transform: "rotate(180deg)" }} />
+                                    </div>
+                                </button>
                             );
                         })}
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );
