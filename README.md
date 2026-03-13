@@ -51,6 +51,8 @@ Imagine um squad de **44 especialistas** que operam de forma assíncrona, orques
 | **Multimodal Input** | Suporte nativa para upload e entendimento de **PDFs, Imagens e Áudios** diretamente no chat. |
 | **Deep Research** | Pesquisa profunda na internet utilizando **Firecrawl** para extração de dados técnicos e atualizados. |
 | **Intelligent Orchestration** | O `@orch` master planeja demandas de alto nível e gerencia o grafo de execução entre os 44 agentes. |
+| **Realtime Kanban (New!)** | Board de projetos interativo com renderização fluida de Markdown em cards e feedbacks sonoros realtime via WebSockets. |
+| **Dynamic API Keys (New!)** | Geração instantânea e segura de Chaves Locais (CLI) criptografadas em SHA-256 integradas ao PostgreSQL RLS. |
 | **Specialized Skills** | Cada agente possui um conjunto de competências (skills) refinadas e mapeadas no banco de dados. |
 | **MCP Toolset** | Integração nativa com Model Context Protocol para controle de GitHub, Notion, Vercel e mais. |
 | **Persistent Memory** | Memória vetorial e relacional que permite aos agentes "lembrarem" de conversas e decisões passadas. |

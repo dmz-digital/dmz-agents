@@ -313,6 +313,9 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                         </div>
                     </div>
                     <div style={{ display: "flex", gap: "8px" }}>
+                        <button onClick={() => alert("A gestão do squad do projeto será liberada em breve...")} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
+                            <Bot size={14} /> Adicionar Agentes
+                        </button>
                         <button onClick={() => router.push(`/app/projects?id=${slug}&view=install`)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
                             <Terminal size={14} /> Instalação
                         </button>
