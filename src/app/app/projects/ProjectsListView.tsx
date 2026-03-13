@@ -506,15 +506,43 @@ DMZ_API_KEY=${createdProject.api_key}`}
                     </p>
                 </div>
 
-                {categories.map(cat => (
-                    <div key={cat} style={{ marginBottom: "20px" }}>
+                <div style={{ columnCount: "auto", columnWidth: "340px", columnGap: "24px" }}>
+                {categories.map(cat => {
+                    const catAgents = agents.filter(a => a.category === cat);
+                    const allSelected = catAgents.length > 0 && catAgents.every(a => selectedAgents.includes(a.id));
+
+                    return (
+                    <div key={cat} style={{ breakInside: "avoid", marginBottom: "24px" }}>
                         <div style={{
-                            fontSize: "11px", fontWeight: 700, color: CAT_COLORS[cat] || "#6B7280",
-                            textTransform: "uppercase", letterSpacing: "0.06em",
-                            marginBottom: "10px", paddingBottom: "6px", borderBottom: `2px solid ${(CAT_COLORS[cat] || "#6B7280")}15`
-                        }}>{cat}</div>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "8px" }}>
-                            {agents.filter(a => a.category === cat).map(agent => {
+                            display: "flex", justifyContent: "space-between", alignItems: "center",
+                            marginBottom: "12px", paddingBottom: "8px", borderBottom: `2px solid ${(CAT_COLORS[cat] || "#6B7280")}15`
+                        }}>
+                            <span style={{
+                                fontSize: "12px", fontWeight: 800, color: CAT_COLORS[cat] || "#6B7280",
+                                textTransform: "uppercase", letterSpacing: "0.06em"
+                            }}>{cat}</span>
+                            <button 
+                                onClick={() => {
+                                    if (allSelected) {
+                                        setSelectedAgents(prev => prev.filter(id => !catAgents.some(a => a.id === id)));
+                                    } else {
+                                        const newIds = catAgents.map(a => a.id).filter(id => !selectedAgents.includes(id));
+                                        setSelectedAgents(prev => [...prev, ...newIds]);
+                                    }
+                                }}
+                                style={{
+                                    background: allSelected ? (CAT_COLORS[cat] || "#6B7280") + "15" : "transparent",
+                                    border: `1px solid ${(CAT_COLORS[cat] || "#6B7280")}40`,
+                                    borderRadius: "6px", cursor: "pointer", padding: "4px 8px",
+                                    fontSize: "10px", fontWeight: 700, color: CAT_COLORS[cat] || "#6B7280",
+                                    transition: "all 0.15s"
+                                }}
+                            >
+                                {allSelected ? "Desmarcar Todos" : "Selecionar Todos"}
+                            </button>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            {catAgents.map(agent => {
                                 const cc = CAT_COLORS[agent.category] || "#475569";
                                 const isSelected = selectedAgents.includes(agent.id);
                                 return (
@@ -524,7 +552,7 @@ DMZ_API_KEY=${createdProject.api_key}`}
                                         style={{
                                             background: isSelected ? cc + "08" : "#FFFFFF",
                                             border: isSelected ? `1.5px solid ${cc}` : "1.5px solid #F0F0F0",
-                                            borderRadius: "12px", padding: "14px", cursor: "pointer",
+                                            borderRadius: "12px", padding: "12px", cursor: "pointer",
                                             transition: "all 0.15s", position: "relative",
                                         }}
                                     >
@@ -537,18 +565,18 @@ DMZ_API_KEY=${createdProject.api_key}`}
                                                 <Check size={10} color="#FFFFFF" />
                                             </div>
                                         )}
-                                        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                                             <div style={{
-                                                width: 32, height: 32, borderRadius: "8px",
-                                                background: cc + "10", display: "flex", alignItems: "center", justifyContent: "center"
+                                                width: 34, height: 34, borderRadius: "8px",
+                                                background: cc + "10", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
                                             }}>
-                                                <Bot size={15} color={cc} strokeWidth={1.75} />
+                                                <Bot size={16} color={cc} strokeWidth={1.75} />
                                             </div>
                                             <div>
-                                                <div style={{ fontSize: "12px", fontWeight: 700, color: "#111827" }}>
+                                                <div style={{ fontSize: "13px", fontWeight: 800, color: "#111827", lineHeight: 1.2 }}>
                                                     {agent.full_name || agent.name}
                                                 </div>
-                                                <div style={{ fontSize: "10px", color: cc, fontFamily: "monospace", fontWeight: 600 }}>
+                                                <div style={{ fontSize: "11px", color: cc, fontFamily: "monospace", fontWeight: 600, marginTop: "2px" }}>
                                                     @{agent.handle}
                                                 </div>
                                             </div>
@@ -558,7 +586,8 @@ DMZ_API_KEY=${createdProject.api_key}`}
                             })}
                         </div>
                     </div>
-                ))}
+                )})}
+                </div>
 
                 {/* Save bar */}
                 <div style={{

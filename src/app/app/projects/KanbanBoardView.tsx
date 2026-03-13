@@ -114,6 +114,14 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
         const taskObj = updatedTasks.find(t => t.id === taskId);
         if (!taskObj) return;
 
+        // QA Block: Require explicit confirmation for Approved column
+        if (newType === "approved" && taskObj.type !== "approved") {
+            if (!window.confirm("🛡️ CHECK DE QA\n\nEsta tarefa foi validada pelo QA (@emma)? Tudo que vai para Approved sofre release imediato. Confirma a aprovação?")) {
+                setDraggedTask(null); setDragOverColumn(null); setDragOverTask(null); setDragOverPosition(null);
+                return;
+            }
+        }
+
         taskObj.type = newType;
         if (newType === "done" || newType === "approved") { taskObj.status = "completed"; taskObj.completed_at = new Date().toISOString(); }
         else if (newType === "on_going" || newType === "rework") { taskObj.status = "in_progress"; taskObj.completed_at = null; }
