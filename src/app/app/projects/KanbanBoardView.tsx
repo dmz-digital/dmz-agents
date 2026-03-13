@@ -860,17 +860,8 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
         }
     }, [selectedDateStr]);
 
-    const handleGenerateOrPlay = async () => {
+    const handleGenerate = async () => {
         if (!selectedDateStr) return;
-        
-        if (audioUrl) {
-            if (audioRef.current) {
-                if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); }
-                else { audioRef.current.play(); setIsPlaying(true); }
-            }
-            return;
-        }
-
         setLoading(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -901,22 +892,29 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
             
             if (data.audioUrl) {
                 setAudioUrl(data.audioUrl);
-                setTimeout(() => {
-                    if (audioRef.current) {
-                        audioRef.current.play();
-                        setIsPlaying(true);
-                    }
-                }, 100);
             } else if (!data.audioUrl && data.script) {
-               // Apenas avisar se o gerador de voz falhou mas temos o script
-               console.warn("Áudio não pôde ser sintetizado. A narrativa textual está disponível.");
+               console.warn("Áudio não pôde ser gerado ou retornado.");
             } else {
-                confirmAction("Erro na API", data.error || "O servidor não conseguiu gerar o relatório.", true, "OK", "Fechar");
+                confirmAction("Erro", data.error || "Servidor não retornou o relatório.", true, "OK", "Fechar");
             }
         } catch (e: any) {
-            confirmAction("Erro de Conexão", e.message, true, "OK", "Fechar");
+            confirmAction("Erro", e.message, true, "OK", "Fechar");
         }
         setLoading(false);
+    };
+
+    const handlePlayPause = () => {
+        if (!audioRef.current) return;
+        if (isPlaying) {
+            audioRef.current.pause();
+            setIsPlaying(false);
+        } else {
+            audioRef.current.play().catch(e => {
+                console.error("Audio playback failed:", e);
+                setIsPlaying(false);
+            });
+            setIsPlaying(true);
+        }
     };
 
     return (
@@ -953,14 +951,27 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
                     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                         
                         <div style={{ display: "flex", gap: "12px" }}>
-                            <button onClick={handleGenerateOrPlay} disabled={loading} style={{ 
-                                display: "flex", alignItems: "center", justifyContent: "center", flex: 1, gap: "8px", background: "linear-gradient(135deg, #10B981, #059669)", 
-                                color: "#FFFFFF", border: "none", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: 700, 
-                                cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "all 0.2s" 
-                            }}>
-                                {loading ? <Spinner size={16} /> : (isPlaying ? <Square size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />)}
-                                {loading ? "Processando Relatório..." : (isPlaying ? "Pausar Narração" : (narrativeText ? "Ouvir Novamente" : "Gerar Relatório Resumido"))}
-                            </button>
+                            {!narrativeText && (
+                                <button onClick={handleGenerate} disabled={loading} style={{ 
+                                    display: "flex", alignItems: "center", justifyContent: "center", flex: 1, gap: "8px", background: "linear-gradient(135deg, #4F46E5, #3730A3)", 
+                                    color: "#FFFFFF", border: "none", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: 700, 
+                                    cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "all 0.2s" 
+                                }}>
+                                    {loading ? <Spinner size={16} /> : <FileText size={16} />}
+                                    {loading ? "Gerando/Buscando Relatório..." : "Gerar Relatório Resumido"}
+                                </button>
+                            )}
+                            
+                            {narrativeText && audioUrl && (
+                                <button onClick={handlePlayPause} style={{ 
+                                    display: "flex", alignItems: "center", justifyContent: "center", flex: 1, gap: "8px", background: "linear-gradient(135deg, #10B981, #059669)", 
+                                    color: "#FFFFFF", border: "none", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: 700, 
+                                    cursor: "pointer", transition: "all 0.2s" 
+                                }}>
+                                    {isPlaying ? <Square size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
+                                    {isPlaying ? "Pausar Narração" : "Ouvir Relatório"}
+                                </button>
+                            )}
                         </div>
                         
                         {/* Audio Waveform Anim */}
@@ -978,7 +989,7 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
                         )}
 
                         {narrativeText && (
-                            <div style={{ background: "#EEF2FF", border: "1.5px solid #E0E7FF", borderRadius: "14px", padding: "20px", marginTop: "4px" }}>
+                            <div style={{ background: "#EEF2FF", border: "1.5px solid #E0E7FF", borderRadius: "14px", padding: "20px" }}>
                                 <div style={{ fontSize: "11px", fontWeight: 800, color: "#4F46E5", textTransform: "uppercase", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
                                     <Bot size={12} /> Narrativa do Squad
                                 </div>

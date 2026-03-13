@@ -1043,17 +1043,19 @@ async def explain_daily_report(req: DailyReportExplainRequest, authorization: st
 
     # If no tasks and no report generated yet, return simple message
     if not req.tasks:
-        return {"script": f"Oi {req.user_first_name}, parece que não tivemos nenhuma atividade registrada para este dia no projeto.", "audioUrl": None}
+        return {"script": f"Oi {req.user_first_name.split()[0].title()}, parece que não tivemos nenhuma atividade registrada para este dia no projeto.", "audioUrl": None}
+
+    first_name_only = req.user_first_name.split()[0].title()
 
     # 2. Create the context for LLM
     system_prompt = (
         f"Você é a inteligência e analista (copywriter) do DMZ OS. O seu objetivo é construir uma narrativa em formato de relatório de "
-        f"atividades. O gestor, {req.user_first_name}, pediu um resumo das tarefas do dia ({req.date_str}). "
-        "Fale no plural em nome do 'squad DMZ' (nossa equipe). Comece EXATAMENTE com: 'Oi {req.user_first_name}, hoje o time trabalhou bastante, vou te contar o que rolou em nosso squad...' ou algo similar, amigável. "
-        "Crie uma história fluida do que foi feito, falando de forma natural e amigável, não parecendo um robô. "
-        "Não liste itens mecanicamente (com bullets). Conecte as tarefas executadas pelos agentes (fale os nomes deles: @syd, @orch, @oliver, etc). "
-        "Exemplo: 'Hoje o Oliver corrigiu X, já a Sofia adicionou Y, e isso vai gerar mais estrutura'. "
-        "Ao final, faça uma conclusão breve. O texto servirá como um relatório para reuniões."
+        f"atividades. O gestor, {first_name_only}, pediu um resumo das tarefas do dia ({req.date_str}). "
+        f"Fale no plural em nome do 'squad DMZ' (nossa equipe). Comece EXATAMENTE com: 'Oi {first_name_only}, hoje o time trabalhou bastante, vou te contar o que rolou em nosso squad...' ou algo similar, amigável. "
+        f"Crie uma história fluida do que foi feito, falando de forma natural e amigável, não parecendo um robô. "
+        f"Não liste itens mecanicamente (com bullets). Conecte as tarefas executadas pelos agentes (fale os nomes deles: @syd, @orch, @oliver, etc). "
+        f"Exemplo: 'Hoje o Oliver corrigiu X, já a Sofia adicionou Y, e isso vai gerar mais estrutura'. "
+        f"Ao final, faça uma conclusão breve. O texto servirá como um relatório para reuniões."
     )
     
     tasks_text = "; ".join([f"[{t.get('type')}] {t.get('title')} (responsável: @{t.get('agent_handle', 'squad')})" for t in req.tasks])
@@ -1061,6 +1063,7 @@ async def explain_daily_report(req: DailyReportExplainRequest, authorization: st
     try:
         script = get_llm_response(system_prompt, f"Tarefas concluídas:\n{tasks_text}")
     except Exception as e:
+        print(f"LLM Error generating narrative: {e}")
         raise HTTPException(status_code=500, detail=f"LLM Error: {str(e)}")
         
     el_key = os.getenv("ELEVENLABS_API_KEY", "sk_ab25d27788e65b779f84298d7e676cb2ced43d62ae7ea448")
