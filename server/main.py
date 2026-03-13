@@ -1067,64 +1067,17 @@ async def explain_daily_report(req: DailyReportExplainRequest, authorization: st
         print(f"LLM Error generating narrative: {e}")
         raise HTTPException(status_code=500, detail=f"LLM Error: {str(e)}")
         
-    el_key = os.getenv("ELEVENLABS_API_KEY", "sk_ab25d27788e65b779f84298d7e676cb2ced43d62ae7ea448")
-    voice_id = os.getenv("ELEVENLABS_VOICE_ID", "r2fkFV8WAqXq2AqBpgJT")
-    
-    public_url = None
-    if el_key:
-        try:
-            import requests
-            import uuid
-            
-            url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-            headers = {
-                "Accept": "audio/mpeg",
-                "Content-Type": "application/json",
-                "xi-api-key": el_key
-            }
-            data = {
-                "text": script,
-                "model_id": "eleven_multilingual_v2"
-            }
-            # Timeout set intentionally small for long generations
-            response = requests.post(url, json=data, headers=headers, timeout=60)
-            
-            if response.status_code != 200:
-                print(f"ElevenLabs API error: {response.status_code} - {response.text}")
-                audio_bytes = None
-            else:
-                audio_bytes = response.content
-            
-            if audio_bytes:
-                # Save to Supabase
-                bucket_name = "audio"  # Using the existing 'audio' bucket
-                
-                # Place it inside a 'reports' folder in the audio bucket
-                file_name = f"reports/{req.project_id}_{req.date_str}_{uuid.uuid4().hex}.mp3"
-                
-                try:
-                    supabase.storage.from_(bucket_name).upload(file_name, audio_bytes, {"content-type": "audio/mpeg"})
-                except Exception as up_err:
-                    print(f"Storage upload error: {up_err}")
-                    
-                public_url = supabase.storage.from_(bucket_name).get_public_url(file_name)
-        except Exception as e:
-            print(f"ElevenLabs generation error: {e}")
-            public_url = None
-
-    # 3. Save to DB
+    # 3. Save to DB (Only the narrative)
     try:
         supabase.table("dmz_agents_reports").upsert({
             "project_id": req.project_id,
             "report_date": req.date_str,
-            "narrative": script,
-            "has_audio": public_url is not None,
-            "audio_url": public_url
+            "narrative": script
         }, on_conflict="project_id,report_date").execute()
     except Exception as e:
         print(f"Failed to save report to DB: {e}")
         
-    return {"script": script, "audioUrl": public_url, "is_cached": False}
+    return {"script": script, "audioUrl": None, "is_cached": False}
 
 if __name__ == "__main__":
     import uvicorn

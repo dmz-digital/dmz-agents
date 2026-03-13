@@ -891,8 +891,31 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
             
             if (data.script) setNarrativeText(data.script);
             
-            if (data.audioUrl) {
-                setAudioUrl(data.audioUrl);
+            let finalAudioUrl = data.audioUrl;
+
+            // Se não temos áudio (cache antigo ou gerado agora no back sem áudio), 
+            // chamamos a Edge Function para gerar o áudio
+            if (!finalAudioUrl && data.script) {
+                try {
+                    const { data: edgeData, error: edgeError } = await supabase.functions.invoke('generate-report-audio', {
+                        body: { 
+                            script: data.script, 
+                            project_id: project.id, 
+                            date_str: selectedDateStr 
+                        }
+                    });
+
+                    if (edgeError) throw edgeError;
+                    if (edgeData?.audioUrl) {
+                        finalAudioUrl = edgeData.audioUrl;
+                    }
+                } catch (err) {
+                    console.error("Erro ao gerar áudio via Edge Function:", err);
+                }
+            }
+            
+            if (finalAudioUrl) {
+                setAudioUrl(finalAudioUrl);
                 if (autoPlay) {
                     setTimeout(() => {
                         if (audioRef.current) {
@@ -901,8 +924,8 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
                         }
                     }, 500);
                 }
-            } else if (!data.audioUrl && data.script) {
-               console.warn("Áudio não pôde ser gerado ou retornado.");
+            } else if (!finalAudioUrl && data.script) {
+               console.warn("Áudio não pôde ser gerado nesta tentativa.");
             } else {
                 confirmAction("Erro", data.error || "Servidor não retornou o relatório.", true, "OK", "Fechar");
             }
