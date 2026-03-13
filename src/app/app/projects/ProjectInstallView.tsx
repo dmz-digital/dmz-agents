@@ -182,7 +182,7 @@ export default function ProjectInstallView({ slug }: { slug: string }) {
         setGeneratingKey(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            const url = process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin.replace(":3001", ":8000") : "http://localhost:8000");
+            const url = process.env.NEXT_PUBLIC_API_URL || "https://dmz-agents-production.up.railway.app";
             const res = await fetch(`${url}/api/keys/generate`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
