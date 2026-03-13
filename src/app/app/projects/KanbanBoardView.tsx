@@ -330,7 +330,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                         </div>
                     </div>
                     <div style={{ display: "flex", gap: "8px" }}>
-                        <button onClick={() => setShowReports(true)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#4F46E5", cursor: "pointer" }}>
+                        <button onClick={() => setShowReports(true)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
                             <FileText size={14} /> Relatórios
                         </button>
                         <button onClick={() => confirmAction("Adicionar Agentes", "A gestão do squad do projeto será liberada em breve na próxima atualização do sistema.", false, "Entendi", "Fechar")} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
@@ -627,7 +627,7 @@ function formatInline(text: string): React.ReactNode[] {
     return parts;
 }
 
-function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClose, confirmAction }: { task: Task; agent: any; projectAgents: any[]; onDelete: () => void; onUpdate: (t: string, d: string, a: string | null, feedback: string | null, newType?: TaskType) => void; onClose: () => void; confirmAction: (t: string, m: string, isDanger?: boolean) => Promise<boolean> }) {
+function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClose, confirmAction }: { task: Task; agent: any; projectAgents: any[]; onDelete: () => void; onUpdate: (t: string, d: string, a: string | null, feedback: string | null, newType?: TaskType) => void; onClose: () => void; confirmAction: (t: string, m: string, isDanger?: boolean, confirmText?: string, cancelText?: string) => Promise<boolean> }) {
     const col = COLUMNS.find(c => c.id === task.type)!;
     const [isEditing, setIsEditing] = useState(false);
     const [title, setTitle] = useState(task.title);
