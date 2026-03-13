@@ -858,7 +858,7 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
             const userName = session?.user?.user_metadata?.first_name || session?.user?.email?.split('@')[0] || "Líder";
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://dmz-agents-production.up.railway.app";
             
             const res = await fetch(`${apiUrl}/api/reports/daily/explain`, {
                 method: "POST",
