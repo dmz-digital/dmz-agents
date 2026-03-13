@@ -19,6 +19,7 @@ const TOOL_ICONS: Record<string, any> = {
 
 const TYPE_COLORS: Record<string, string> = {
     MCP: "#7C3AED", Token: "#E85D2F", API: "#0891B2", Webhook: "#059669",
+    UI: "#EC4899", Platform: "#F59E0B",
 };
 
 // ── Primitives ──────────────────────────────────────────────────────────────

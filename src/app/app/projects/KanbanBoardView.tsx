@@ -371,7 +371,16 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                                     return (
                                         <div key={task.id} 
                                             draggable 
-                                            onDragStart={() => setDraggedTask(task.id)} 
+                                            onDragStart={() => {
+                                                setDraggedTask(task.id);
+                                                // Initialize audio on user interaction to bypass autoplay restrictions on drop
+                                                if (audioDoneRef.current && audioDoneRef.current.paused) {
+                                                    audioDoneRef.current.volume = 0; audioDoneRef.current.play().then(() => { audioDoneRef.current!.pause(); audioDoneRef.current!.currentTime = 0; audioDoneRef.current!.volume = 1; }).catch(() => {});
+                                                }
+                                                if (audioOngoingRef.current && audioOngoingRef.current.paused) {
+                                                    audioOngoingRef.current.volume = 0; audioOngoingRef.current.play().then(() => { audioOngoingRef.current!.pause(); audioOngoingRef.current!.currentTime = 0; audioOngoingRef.current!.volume = 1; }).catch(() => {});
+                                                }
+                                            }} 
                                             onDragEnd={() => { setDraggedTask(null); setDragOverColumn(null); setDragOverTask(null); setDragOverPosition(null); }}
                                             onDragOver={e => {
                                                 e.preventDefault();
