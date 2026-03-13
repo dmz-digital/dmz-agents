@@ -194,7 +194,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     }
 
     if (loading) return (
-        <div className="max-w-[1400px] mx-auto px-6 pt-12 pb-24">
+        <div className="dmz-container pt-12 pb-24">
             <AppHeader />
             <div style={{ height: 400, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <div style={{ textAlign: "center" }}>
@@ -207,7 +207,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     );
 
     if (!project) return (
-        <div className="max-w-[1400px] mx-auto px-6 pt-12 pb-24">
+        <div className="dmz-container pt-12 pb-24">
             <AppHeader />
             <div style={{ textAlign: "center", padding: "80px 24px" }}>
                 <FolderOpen size={48} color="#D1D5DB" style={{ margin: "0 auto 16px" }} />
@@ -221,7 +221,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     );
 
     return (
-        <div className="max-w-[1400px] mx-auto px-6 pt-12 pb-24">
+        <div className="dmz-container pt-12 pb-24">
             <AppHeader />
             {/* Header */}
             <div style={{ marginBottom: "24px" }}>
@@ -283,7 +283,8 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
             )}
 
             {/* Kanban Board */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "16px", alignItems: "flex-start" }}>
+            <div className="kanban-scroll-x">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(280px, 1fr))", gap: "16px", alignItems: "flex-start", minWidth: "1680px" }}>
                 {COLUMNS.map(col => {
                     const colTasks = getTasksByColumn(col.id);
                     const Icon = col.icon;
@@ -386,7 +387,8 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                         </div>
                     );
                 })}
-            </div>
+            </div>{/* end kanban grid */}
+            </div>{/* end kanban-scroll-x */}
 
             {/* Task Detail Modal */}
             {selectedTask && (

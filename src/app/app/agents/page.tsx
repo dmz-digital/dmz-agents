@@ -423,7 +423,7 @@ function AgentsContent() {
 
 
     return (
-        <div className="max-w-7xl mx-auto px-6 pt-12 pb-24">
+        <div className="dmz-container pt-12 pb-24">
             <AppHeader />
 
             {/* Stats */}

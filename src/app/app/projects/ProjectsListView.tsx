@@ -106,7 +106,7 @@ export default function ProjectsListView() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto px-6 pt-12 pb-24">
+        <div className="dmz-container pt-12 pb-24">
             <AppHeader />
 
             {/* Header */}
@@ -409,7 +409,7 @@ function CreateProject({ onBack, onCreated }: { onBack: () => void; onCreated: (
     // ── Step: Done ──
     if (step === "done" && createdProject) {
         return (
-            <div className="max-w-7xl mx-auto px-6 pt-12 pb-24">
+            <div className="dmz-container pt-12 pb-24">
                 <AppHeader />
                 <div style={{ maxWidth: 560, margin: "40px auto", textAlign: "center" }}>
                     <div style={{
@@ -494,7 +494,7 @@ DMZ_API_KEY=${createdProject.api_key}`}
         const categories = [...new Set(agents.map(a => a.category))];
 
         return (
-            <div className="max-w-7xl mx-auto px-6 pt-12 pb-24">
+            <div className="dmz-container pt-12 pb-24">
                 <AppHeader />
                 <button onClick={() => setStep("info")} style={{
                     background: "none", border: "none", cursor: "pointer",
@@ -599,7 +599,7 @@ DMZ_API_KEY=${createdProject.api_key}`}
 
     // ── Step: Info ──
     return (
-        <div className="max-w-7xl mx-auto px-6 pt-12 pb-24">
+        <div className="dmz-container pt-12 pb-24">
             <AppHeader />
             <button onClick={onBack} style={{
                 background: "none", border: "none", cursor: "pointer",

@@ -80,7 +80,7 @@ export default function ProjectMemoryView({ slug }: { slug: string }) {
     function renderContent(content: any) { return typeof content === "string" ? content : JSON.stringify(content, null, 2); }
 
     if (!loading && !project) return (
-        <div className="max-w-7xl mx-auto px-6 pt-12 pb-24">
+        <div className="dmz-container pt-12 pb-24">
             <AppHeader />
             <div style={{ textAlign: "center", padding: "80px 24px" }}>
                 <Brain size={48} color="#D1D5DB" style={{ margin: "0 auto 16px" }} />
@@ -91,7 +91,7 @@ export default function ProjectMemoryView({ slug }: { slug: string }) {
     );
 
     return (
-        <div className="max-w-7xl mx-auto px-6 pt-12 pb-24">
+        <div className="dmz-container pt-12 pb-24">
             <AppHeader />
             <button onClick={() => router.push(`/app/projects?id=${slug}`)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", color: "#9CA3AF", fontSize: "13px", fontWeight: 500, marginBottom: "16px" }}>
                 <ArrowLeft size={14} /> Board — {project?.name}
