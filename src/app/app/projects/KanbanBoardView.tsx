@@ -283,8 +283,9 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
             )}
 
             {/* Kanban Board */}
+            <div style={{ background: "#F1F3F5", borderRadius: "18px", padding: "16px 12px" }}>
             <div className="kanban-scroll-x">
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(280px, 1fr))", gap: "16px", alignItems: "flex-start", minWidth: "1680px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(220px, 1fr))", gap: "10px", alignItems: "flex-start" }}>
                 {COLUMNS.map(col => {
                     const colTasks = getTasksByColumn(col.id);
                     const Icon = col.icon;
@@ -294,24 +295,31 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                             onDragOver={e => { e.preventDefault(); setDragOverColumn(col.id); }}
                             onDragLeave={() => setDragOverColumn(null)}
                             onDrop={() => { if (draggedTask) moveTask(draggedTask, col.id); }}
-                            style={{ background: isDrop ? col.color + "08" : "#F9FAFB", border: isDrop ? `2px dashed ${col.color}40` : "2px solid transparent", borderRadius: "20px", padding: "20px 16px", minHeight: "500px", transition: "all 0.2s" }}>
+                            style={{
+                                background: isDrop ? col.color + "08" : "transparent",
+                                border: isDrop ? `2px dashed ${col.color}50` : "2px solid transparent",
+                                borderRadius: "14px",
+                                padding: "10px 8px",
+                                minHeight: "500px",
+                                transition: "all 0.2s"
+                            }}>
                             {/* Column Header */}
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", padding: "0 4px" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                    <div style={{ width: 32, height: 32, borderRadius: "10px", background: col.color + "12", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                        <Icon size={16} color={col.color} strokeWidth={2} />
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", padding: "0 2px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <div style={{ width: 28, height: 28, borderRadius: "8px", background: col.color + "18", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                        <Icon size={14} color={col.color} strokeWidth={2} />
                                     </div>
                                     <div>
-                                        <div style={{ fontSize: "15px", fontWeight: 700, color: "#111827" }}>{col.label}</div>
-                                        <div style={{ fontSize: "12px", color: "#9CA3AF", marginTop: "2px" }}>{colTasks.length} {colTasks.length === 1 ? "task" : "tasks"}</div>
+                                        <div style={{ fontSize: "13px", fontWeight: 700, color: "#111827" }}>{col.label}</div>
+                                        <div style={{ fontSize: "11px", color: "#9CA3AF", marginTop: "1px" }}>{colTasks.length} {colTasks.length === 1 ? "task" : "tasks"}</div>
                                     </div>
                                 </div>
-                                <button onClick={() => setShowAddTask(col.id)} style={{ width: 30, height: 30, borderRadius: "10px", background: "#FFFFFF", border: "1.5px solid #E5E7EB", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#9CA3AF" }} title={`Adicionar em ${col.label}`}>
-                                    <Plus size={16} />
+                                <button onClick={() => setShowAddTask(col.id)} style={{ width: 26, height: 26, borderRadius: "8px", background: "rgba(255,255,255,0.8)", border: "1px solid #E5E7EB", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#9CA3AF" }} title={`Adicionar em ${col.label}`}>
+                                    <Plus size={14} />
                                 </button>
                             </div>
                             {/* Cards */}
-                            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                                 {colTasks.map(task => {
                                     const agent = getAgent(task.agent_id);
                                     const dragging = draggedTask === task.id;
@@ -345,8 +353,15 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                                             }}
                                             onClick={() => setSelectedTask(task)}
                                             style={{ 
-                                                background: "#FFFFFF", border: "1.5px solid #E5E7EB", borderRadius: "14px", padding: "18px", cursor: "grab", transition: "all 0.15s", opacity: dragging ? 0.4 : 1, boxShadow: "0 2px 8px rgba(0,0,0,0.03)", borderLeft: `4px solid ${col.color}`,
-                                                // Retorno visual de onde o card vai cair (acima ou abaixo)
+                                                background: "#FFFFFF",
+                                                border: "1px solid #E9EBEE",
+                                                borderRadius: "10px",
+                                                padding: "12px",
+                                                cursor: "grab",
+                                                transition: "all 0.15s",
+                                                opacity: dragging ? 0.4 : 1,
+                                                boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+                                                borderLeft: `3px solid ${col.color}`,
                                                 borderTop: isDragOver && dragOverPosition === "top" ? `3px solid ${col.color}` : undefined,
                                                 borderBottom: isDragOver && dragOverPosition === "bottom" ? `3px solid ${col.color}` : undefined,
                                                 marginTop: isDragOver && dragOverPosition === "top" ? "4px" : "0",
@@ -354,11 +369,11 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                                             }}
                                             onMouseEnter={e => { if (!dragging) (e.currentTarget).style.boxShadow = "0 6px 16px rgba(0,0,0,0.06)"; }}
                                             onMouseLeave={e => { (e.currentTarget).style.boxShadow = "0 2px 8px rgba(0,0,0,0.03)"; }}>
-                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px", pointerEvents: "none" }}>
-                                                <h4 style={{ fontSize: "15px", fontWeight: 700, color: "#111827", lineHeight: 1.4, margin: 0, flex: 1 }}>{task.title}</h4>
-                                                <button onClick={e => { e.stopPropagation(); deleteTask(task.id); }} style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "#D1D5DB", marginLeft: "10px" }}><X size={14} /></button>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px", pointerEvents: "none" }}>
+                                                <h4 style={{ fontSize: "13px", fontWeight: 700, color: "#111827", lineHeight: 1.4, margin: 0, flex: 1 }}>{task.title}</h4>
+                                                <button onClick={e => { e.stopPropagation(); deleteTask(task.id); }} style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "#D1D5DB", marginLeft: "8px" }}><X size={13} /></button>
                                             </div>
-                                            {task.description && <p style={{ fontSize: "13px", color: "#6B7280", lineHeight: 1.6, margin: "0 0 14px", maxHeight: "60px", overflow: "hidden" }}>{task.description}</p>}
+                                            {task.description && <p style={{ fontSize: "12px", color: "#6B7280", lineHeight: 1.5, margin: "0 0 10px", maxHeight: "52px", overflow: "hidden" }}>{task.description}</p>}
                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                                 {agent ? (
                                                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -378,9 +393,9 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                                     );
                                 })}
                                 {colTasks.length === 0 && (
-                                    <div style={{ textAlign: "center", padding: "40px 16px", border: "2px dashed #E5E7EB", borderRadius: "14px" }}>
-                                        <Icon size={20} color="#D1D5DB" style={{ margin: "0 auto 8px" }} />
-                                        <p style={{ fontSize: "11px", color: "#D1D5DB", fontWeight: 500 }}>{col.description}</p>
+                                    <div style={{ textAlign: "center", padding: "32px 12px", border: "2px dashed #DFE1E6", borderRadius: "10px" }}>
+                                        <Icon size={18} color="#C1C7D0" style={{ margin: "0 auto 6px" }} />
+                                        <p style={{ fontSize: "11px", color: "#C1C7D0", fontWeight: 500 }}>{col.description}</p>
                                     </div>
                                 )}
                             </div>
@@ -389,6 +404,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                 })}
             </div>{/* end kanban grid */}
             </div>{/* end kanban-scroll-x */}
+            </div>{/* end board bg */}
 
             {/* Task Detail Modal */}
             {selectedTask && (
