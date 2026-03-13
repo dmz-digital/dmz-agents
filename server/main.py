@@ -1073,30 +1073,43 @@ async def explain_daily_report(req: DailyReportExplainRequest, authorization: st
     public_url = None
     if el_key:
         try:
-            from elevenlabs.client import ElevenLabs
+            import requests
             import uuid
-            client = ElevenLabs(api_key=el_key)
-            audio_generator = client.generate(
-                text=script,
-                voice=voice_id,
-                model="eleven_multilingual_v2"
-            )
-            audio_bytes = b"".join(list(audio_generator))
             
-            # Save to Supabase
-            bucket_name = "audio"  # Using the existing 'audio' bucket
+            url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+            headers = {
+                "Accept": "audio/mpeg",
+                "Content-Type": "application/json",
+                "xi-api-key": el_key
+            }
+            data = {
+                "text": script,
+                "model_id": "eleven_multilingual_v2"
+            }
+            # Timeout set intentionally small for long generations
+            response = requests.post(url, json=data, headers=headers, timeout=60)
             
-            # Place it inside a 'reports' folder in the audio bucket
-            file_name = f"reports/{req.project_id}_{req.date_str}_{uuid.uuid4().hex}.mp3"
+            if response.status_code != 200:
+                print(f"ElevenLabs API error: {response.status_code} - {response.text}")
+                audio_bytes = None
+            else:
+                audio_bytes = response.content
             
-            try:
-                supabase.storage.from_(bucket_name).upload(file_name, audio_bytes, {"content-type": "audio/mpeg"})
-            except Exception as up_err:
-                print(f"Storage upload error: {up_err}")
+            if audio_bytes:
+                # Save to Supabase
+                bucket_name = "audio"  # Using the existing 'audio' bucket
                 
-            public_url = supabase.storage.from_(bucket_name).get_public_url(file_name)
+                # Place it inside a 'reports' folder in the audio bucket
+                file_name = f"reports/{req.project_id}_{req.date_str}_{uuid.uuid4().hex}.mp3"
+                
+                try:
+                    supabase.storage.from_(bucket_name).upload(file_name, audio_bytes, {"content-type": "audio/mpeg"})
+                except Exception as up_err:
+                    print(f"Storage upload error: {up_err}")
+                    
+                public_url = supabase.storage.from_(bucket_name).get_public_url(file_name)
         except Exception as e:
-            print(f"ElevenLabs error: {e}")
+            print(f"ElevenLabs generation error: {e}")
             public_url = None
 
     # 3. Save to DB
