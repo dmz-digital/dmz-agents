@@ -63,8 +63,8 @@ function InfoText({ children }: { children: React.ReactNode }) {
 }
 
 // ── Scenario A: New Project ──────────────────────────────────────────────────
-function NewProjectInstructions({ project }: { project: any }) {
-    const envBlock = `DMZ_PROJECT_SLUG=${project.slug}\nDMZ_API_KEY=${project.api_key}`;
+function NewProjectInstructions({ project, apiKey }: { project: any, apiKey: string }) {
+    const envBlock = `DMZ_PROJECT_SLUG=${project.slug}\nDMZ_API_KEY=${apiKey}`;
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <Step number={1} title="Clone o repositório dos agentes">
@@ -107,8 +107,8 @@ function NewProjectInstructions({ project }: { project: any }) {
 }
 
 // ── Scenario B: Existing Project ─────────────────────────────────────────────
-function ExistingProjectInstructions({ project }: { project: any }) {
-    const envBlock = `DMZ_PROJECT_SLUG=${project.slug}\nDMZ_API_KEY=${project.api_key}`;
+function ExistingProjectInstructions({ project, apiKey }: { project: any, apiKey: string }) {
+    const envBlock = `DMZ_PROJECT_SLUG=${project.slug}\nDMZ_API_KEY=${apiKey}`;
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <Step number={1} title="Clone o repositório dos agentes (caso ainda não tenha)">
@@ -161,17 +161,42 @@ function ExistingProjectInstructions({ project }: { project: any }) {
 export default function ProjectInstallView({ slug }: { slug: string }) {
     const router = useRouter();
     const [project, setProject] = useState<any>(null);
+    const [apiKey, setApiKey] = useState<string>("");
     const [loading, setLoading] = useState(true);
+    const [generatingKey, setGeneratingKey] = useState(false);
     const [scenario, setScenario] = useState<"new" | "existing" | null>(null);
 
     useEffect(() => {
         async function load() {
             const { data } = await supabase.from("dmz_agents_projects").select("*").eq("slug", slug).single();
-            if (data) setProject(data);
+            if (data) {
+                setProject(data);
+                setApiKey(data.api_key || ""); // Legacy fallback
+            }
             setLoading(false);
         }
         load();
     }, [slug]);
+
+    async function handleGenerateKey() {
+        setGeneratingKey(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const url = process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin.replace(":3001", ":8000") : "http://localhost:8000");
+            const res = await fetch(`${url}/api/keys/generate`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+                body: JSON.stringify({ project_id: project.id })
+            });
+            const data = await res.json();
+            if (data.key) setApiKey(data.key);
+            else alert("Falha ao gerar chave: " + JSON.stringify(data));
+        } catch (e) {
+            console.error(e);
+            alert("Erro de conexão ao gerar chave.");
+        }
+        setGeneratingKey(false);
+    }
 
     if (loading) return (
         <div className="dmz-container pt-12 pb-24">
@@ -236,6 +261,34 @@ export default function ProjectInstallView({ slug }: { slug: string }) {
                         <Copy size={12} /> git clone
                     </button>
                 </div>
+            </div>
+
+            {/* API Key Box */}
+            <div style={{
+                background: "#FFFFFF", border: "1.5px solid #E5E7EB", borderRadius: "14px",
+                padding: "20px", marginBottom: "36px", display: "flex", alignItems: "center", gap: "16px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
+            }}>
+                <div style={{ width: 42, height: 42, borderRadius: "10px", background: "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Key size={20} color="#DC2626" />
+                </div>
+                <div style={{ flex: 1 }}>
+                    <h3 style={{ fontSize: "15px", fontWeight: 800, color: "#111827", marginBottom: "4px" }}>Chave de Acesso Local (CLI)</h3>
+                    <p style={{ fontSize: "13px", color: "#6B7280", margin: 0 }}>
+                        {apiKey ? "Sua chave está gerada e aparecerá nos blocos de configuração abaixo." : "Você precisa gerar uma chave para que o CLI consiga se conectar ao painel."}
+                    </p>
+                </div>
+                <button
+                    onClick={handleGenerateKey}
+                    disabled={generatingKey}
+                    style={{
+                        background: generatingKey ? "#E5E7EB" : "#DC2626", color: generatingKey ? "#9CA3AF" : "#FFFFFF",
+                        border: "none", borderRadius: "8px", padding: "10px 16px", cursor: generatingKey ? "not-allowed" : "pointer",
+                        fontSize: "13px", fontWeight: 700, transition: "all 0.2s", whiteSpace: "nowrap"
+                    }}
+                >
+                    {generatingKey ? "Gerando..." : (apiKey ? "Regerar Chave" : "Gerar Nova Chave")}
+                </button>
             </div>
 
             {/* Scenario Selector */}
@@ -333,8 +386,8 @@ export default function ProjectInstallView({ slug }: { slug: string }) {
 
                     <div style={{ maxWidth: "680px" }}>
                         {scenario === "new"
-                            ? <NewProjectInstructions project={project} />
-                            : <ExistingProjectInstructions project={project} />
+                            ? <NewProjectInstructions project={project} apiKey={apiKey} />
+                            : <ExistingProjectInstructions project={project} apiKey={apiKey} />
                         }
                     </div>
 
@@ -353,8 +406,8 @@ export default function ProjectInstallView({ slug }: { slug: string }) {
                                 <code style={{ fontSize: "12px", fontFamily: "monospace", color: "#B45309" }}>{project.slug}</code>
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <span style={{ fontSize: "12px", color: "#92400E", fontWeight: 600 }}>API Key:</span>
-                                <code style={{ fontSize: "12px", fontFamily: "monospace", color: "#B45309" }}>{project.api_key?.slice(0, 12)}••••••••</code>
+                                <span style={{ fontSize: "12px", color: "#92400E", fontWeight: 600 }}>API Key (Local):</span>
+                                <code style={{ fontSize: "12px", fontFamily: "monospace", color: "#B45309" }}>{apiKey ? `${apiKey.slice(0, 12)}...` : "Não gerada"}</code>
                             </div>
                         </div>
                     </div>

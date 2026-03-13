@@ -935,12 +935,81 @@ async def transcribe_audio(req: TranscribeRequest):
             "status": "success"
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         print(f"[transcribe] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ─── API Keys ──────────────────────────────────────────────────────────────────
+
+import hashlib
+import secrets
+from fastapi import Header
+
+class GenerateKeyRequest(BaseModel):
+    project_id: str
+
+@app.post("/api/keys/generate")
+async def generate_key(req: GenerateKeyRequest, authorization: str = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = authorization.split(" ")[1]
+    
+    try:
+        user_resp = supabase.auth.get_user(token)
+        if not user_resp or not user_resp.user:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        user_id = user_resp.user.id
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Auth error: {str(e)}")
+    
+    # Check ownership
+    proj_resp = supabase.table("dmz_agents_projects").select("id").eq("id", req.project_id).eq("owner_id", user_id).execute()
+    if not proj_resp.data:
+        raise HTTPException(status_code=403, detail="Not authorized to generate key for this project")
+    
+    raw_key = f"dmz_pk_{secrets.token_urlsafe(32)}"
+    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+    key_prefix = raw_key[:12]
+    
+    new_key = {
+        "project_id": req.project_id,
+        "owner_id": user_id,
+        "key_hash": key_hash,
+        "key_prefix": key_prefix,
+        "name": "CLI Security Key"
+    }
+    
+    try:
+        res = supabase.table("dmz_agents_apikeys").insert(new_key).execute()
+        return {"key": raw_key, "prefix": key_prefix, "inserted_at": res.data[0]["created_at"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save key: {str(e)}")
+
+class ValidateKeyRequest(BaseModel):
+    api_key: str
+    project_slug: str
+
+@app.post("/api/validate-key")
+async def validate_key(req: ValidateKeyRequest):
+    key_hash = hashlib.sha256(req.api_key.encode()).hexdigest()
+    
+    proj_resp = supabase.table("dmz_agents_projects").select("id").eq("slug", req.project_slug).execute()
+    if not proj_resp.data:
+        raise HTTPException(status_code=404, detail="Project not found")
+    project_id = proj_resp.data[0]["id"]
+    
+    key_resp = supabase.table("dmz_agents_apikeys").select("id, is_active").eq("key_hash", key_hash).eq("project_id", project_id).execute()
+    
+    if not key_resp.data or not key_resp.data[0]["is_active"]:
+         raise HTTPException(status_code=401, detail="Invalid or inactive API Key for this project")
+         
+    # Update last_used_at without failing if it breaks (best effort)
+    try:
+        supabase.table("dmz_agents_apikeys").update({"last_used_at": "now()"}).eq("id", key_resp.data[0]["id"]).execute()
+    except Exception:
+        pass
+         
+    return {"valid": True, "project_id": project_id}
 
 if __name__ == "__main__":
     import uvicorn

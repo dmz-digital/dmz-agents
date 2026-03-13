@@ -107,7 +107,22 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     useEffect(() => {
         if (!project) return;
         const ch = supabase.channel(`tasks-${project.id}`)
-            .on("postgres_changes", { event: "*", schema: "public", table: "dmz_agents_tasks", filter: `project_id=eq.${project.id}` }, () => loadData())
+            .on("postgres_changes", { event: "*", schema: "public", table: "dmz_agents_tasks", filter: `project_id=eq.${project.id}` }, (payload) => {
+                if (payload.eventType === 'UPDATE') {
+                    const oldTask = payload.old as Task;
+                    const newTask = payload.new as Task;
+                    if (oldTask && newTask && oldTask.type !== newTask.type) {
+                        if (newTask.type === "done" && audioDoneRef.current) {
+                            audioDoneRef.current.currentTime = 0;
+                            audioDoneRef.current.play().catch(e => console.warn("Audio blocked:", e));
+                        } else if (newTask.type === "on_going" && audioOngoingRef.current) {
+                            audioOngoingRef.current.currentTime = 0;
+                            audioOngoingRef.current.play().catch(e => console.warn("Audio blocked:", e));
+                        }
+                    }
+                }
+                loadData();
+            })
             .subscribe();
         return () => { supabase.removeChannel(ch); };
     }, [project, loadData]);
