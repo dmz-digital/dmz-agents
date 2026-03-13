@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
     ArrowLeft, Plus, Bot, Clock, CheckCircle2, AlertTriangle,
@@ -66,6 +66,16 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     const [dragOverPosition, setDragOverPosition] = useState<"top" | "bottom" | null>(null);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
+    const audioDoneRef = useRef<HTMLAudioElement | null>(null);
+    const audioOngoingRef = useRef<HTMLAudioElement | null>(null);
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            audioDoneRef.current = new Audio('/assets/done.mp3');
+            audioOngoingRef.current = new Audio('/assets/ongoing.mp3');
+        }
+    }, []);
+
     const loadData = useCallback(async () => {
         const { data: projData } = await supabase.from("dmz_agents_projects").select("*").eq("slug", slug).single();
         if (!projData) { setLoading(false); return; }
@@ -102,17 +112,21 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     async function moveTask(taskId: string, newType: TaskType, targetTaskId?: string, position?: "top" | "bottom") {
         setDraggedTask(null); setDragOverColumn(null); setDragOverTask(null); setDragOverPosition(null);
 
-        // Audio notification
-        if (newType === "done") {
-            new Audio('/assets/done.mp3').play().catch(() => {});
-        } else if (newType === "on_going") {
-            new Audio('/assets/ongoing.mp3').play().catch(() => {});
-        }
-
         // Otimização e cálculo de prioridade no frontend (para reordenamento vertical)
         let updatedTasks = [...tasks];
         const taskObj = updatedTasks.find(t => t.id === taskId);
         if (!taskObj) return;
+
+        // Audio notification only if column changed
+        if (taskObj.type !== newType) {
+            if (newType === "done" && audioDoneRef.current) {
+                audioDoneRef.current.currentTime = 0;
+                audioDoneRef.current.play().catch(e => console.warn("Audio blocked:", e));
+            } else if (newType === "on_going" && audioOngoingRef.current) {
+                audioOngoingRef.current.currentTime = 0;
+                audioOngoingRef.current.play().catch(e => console.warn("Audio blocked:", e));
+            }
+        }
 
         // QA Block: Require explicit confirmation for Approved column
         if (newType === "approved" && taskObj.type !== "approved") {
