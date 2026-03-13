@@ -1089,11 +1089,21 @@ async def explain_daily_report(req: DailyReportExplainRequest, authorization: st
         
     # 3. Save to DB (Only the narrative)
     try:
-        supabase.table("dmz_agents_reports").upsert({
+        # If force_regenerate is True, we reset audio fields to trigger new audio generation in frontend
+        report_data = {
             "project_id": req.project_id,
             "report_date": req.date_str,
             "narrative": script
-        }, on_conflict="project_id,report_date").execute()
+        }
+        
+        if req.force_regenerate:
+            report_data["has_audio"] = False
+            report_data["audio_url"] = None
+
+        supabase.table("dmz_agents_reports").upsert(
+            report_data, 
+            on_conflict="project_id,report_date"
+        ).execute()
     except Exception as e:
         print(f"Failed to save report to DB: {e}")
         
