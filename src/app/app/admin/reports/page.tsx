@@ -21,6 +21,7 @@ interface ReportsConfig {
         similarity_boost: number;
         style: number;
         use_speaker_boost: boolean;
+        speed?: number;
     };
 }
 
@@ -32,7 +33,8 @@ const DEFAULT_CONFIG: ReportsConfig = {
         stability: 0.5,
         similarity_boost: 0.75,
         style: 0.0,
-        use_speaker_boost: true
+        use_speaker_boost: true,
+        speed: 1.0
     }
 };
 
@@ -214,9 +216,29 @@ export default function ReportsAdmin() {
                                         })}
                                         className="w-full accent-dmz-accent"
                                     />
-                                    <div className="flex justify-between mt-1">
-                                        <span className="text-[9px] text-neutral-300 font-bold uppercase">Menos Real</span>
-                                        <span className="text-[9px] text-neutral-300 font-bold uppercase">Mais Realismo</span>
+                                    <div className="flex justify-between mt-1 text-[9px] text-neutral-300 font-bold uppercase">
+                                        <span>Menos Real</span>
+                                        <span>Mais Realismo</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-neutral-400 tracking-widest block mb-1">Velocidade ({config.voice_settings.speed || 1.0})</label>
+                                    <input
+                                        type="range"
+                                        min="0.5"
+                                        max="2"
+                                        step="0.1"
+                                        value={config.voice_settings.speed || 1.0}
+                                        onChange={e => setConfig({ 
+                                            ...config, 
+                                            voice_settings: { ...config.voice_settings, speed: parseFloat(e.target.value) } 
+                                        })}
+                                        className="w-full accent-dmz-accent"
+                                    />
+                                    <div className="flex justify-between mt-1 text-[9px] text-neutral-300 font-bold uppercase">
+                                        <span>Devagar</span>
+                                        <span>Rápido</span>
                                     </div>
                                 </div>
                             </div>
