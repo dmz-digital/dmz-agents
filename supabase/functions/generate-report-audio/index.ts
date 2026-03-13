@@ -26,8 +26,25 @@ Deno.serve(async (req: Request) => {
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         );
 
+        // 0. Fetch Config
+        const { data: configData } = await supabaseClient
+            .from('dmz_agents_config')
+            .select('value')
+            .eq('key', 'reports_config')
+            .single();
+        
+        const reportsConfig = configData?.value || {};
+        const elSettings = reportsConfig?.elevenlabs || reportsConfig; // Backward compatibility check
+
         const elKey = Deno.env.get('ELEVENLABS_API_KEY');
-        const voiceId = Deno.env.get('ELEVENLABS_VOICE_ID') || 'r2fkFV8WAqXq2AqBpgJT';
+        const voiceId = elSettings.voice_id || Deno.env.get('ELEVENLABS_VOICE_ID') || 'r2fkFV8WAqXq2AqBpgJT';
+        const modelId = elSettings.model_id || 'eleven_multilingual_v2';
+        const voiceSettings = elSettings.voice_settings || {
+            stability: 0.5,
+            similarity_boost: 0.75,
+            style: 0.0,
+            use_speaker_boost: true
+        };
 
         if (!elKey) {
             return new Response(JSON.stringify({ error: 'ELEVENLABS_API_KEY not set in Supabase' }), {
@@ -36,7 +53,7 @@ Deno.serve(async (req: Request) => {
             });
         }
 
-        console.log(`Generating audio for project ${project_id} - date ${date_str}`);
+        console.log(`Generating audio for project ${project_id} - date ${date_str} using voice ${voiceId}`);
 
         // 1. Call ElevenLabs
         const elResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
@@ -48,7 +65,8 @@ Deno.serve(async (req: Request) => {
             },
             body: JSON.stringify({
                 text: script,
-                model_id: 'eleven_multilingual_v2',
+                model_id: modelId,
+                voice_settings: voiceSettings
             }),
         });
 

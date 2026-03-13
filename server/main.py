@@ -1048,16 +1048,26 @@ async def explain_daily_report(req: DailyReportExplainRequest, authorization: st
 
     first_name_only = req.user_first_name.split()[0].title()
 
-    # 2. Create the context for LLM
-    system_prompt = (
-        f"Você é a inteligência e analista (copywriter) do DMZ OS. O seu objetivo é construir uma narrativa em formato de relatório de "
-        f"atividades. O gestor, {first_name_only}, pediu um resumo das tarefas do dia ({req.date_str}). "
-        f"Fale no plural em nome do 'squad DMZ' (nossa equipe). Comece EXATAMENTE com: 'Oi {first_name_only}, hoje o time trabalhou bastante, vou te contar o que rolou em nosso squad...' ou algo similar, amigável. "
-        f"Crie uma história fluida do que foi feito, falando de forma natural e amigável, não parecendo um robô. "
-        f"Não liste itens mecanicamente (com bullets). Conecte as tarefas executadas pelos agentes (fale os nomes deles: syd, orch, oliver, etc, mas SEMPRE sem o caractere @ para o áudio ficar perfeito). "
-        f"Exemplo: 'Hoje o Oliver corrigiu X, já a Sofia adicionou Y, e isso vai gerar mais estrutura'. "
-        f"Ao final, faça uma conclusão breve. O texto servirá como um relatório para reuniões."
-    )
+    # 2. Fetch Config from DB
+    try:
+        config_res = supabase.table("dmz_agents_config").select("value").eq("key", "reports_config").execute()
+        if config_res.data:
+            reports_config = config_res.data[0]["value"]
+            system_prompt_template = reports_config.get("system_prompt", "")
+            system_prompt = system_prompt_template.replace("{user_first_name}", first_name_only).replace("{date_str}", req.date_str)
+        else:
+            raise Exception("Config not found")
+    except Exception as e:
+        print(f"Error fetching report config: {e}. Using fallback prompt.")
+        system_prompt = (
+            f"Você é a inteligência e analista (copywriter) do DMZ OS. O seu objetivo é construir uma narrativa em formato de relatório de "
+            f"atividades. O gestor, {first_name_only}, pediu um resumo das tarefas do dia ({req.date_str}). "
+            f"Fale no plural em nome do 'squad DMZ' (nossa equipe). Comece EXATAMENTE com: 'Oi {first_name_only}, hoje o time trabalhou bastante, vou te contar o que rolou em nosso squad...' ou algo similar, amigável. "
+            f"Crie uma história fluida do que foi feito, falando de forma natural e amigável, não parecendo um robô. "
+            f"Não liste itens mecanicamente (com bullets). Conecte as tarefas executadas pelos agentes (fale os nomes deles: syd, orch, oliver, etc, mas SEMPRE sem o caractere @ para o áudio ficar perfeito). "
+            f"Exemplo: 'Hoje o Oliver corrigiu X, já a Sofia adicionou Y, e isso vai gerar mais estrutura'. "
+            f"Ao final, faça uma conclusão breve. O texto servirá como um relatório para reuniões."
+        )
     
     tasks_text = "; ".join([f"[{t.get('type')}] {t.get('title')} (responsável: {t.get('agent_handle', 'squad')})" for t in req.tasks])
     

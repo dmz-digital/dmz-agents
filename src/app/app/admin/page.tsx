@@ -81,6 +81,15 @@ export default function AdminDashboard() {
             color: "bg-emerald-500",
             href: "/app/admin/models",
             features: ["Chat & Fallback", "Geração de Imagens", "Transcrição de Áudio"]
+        },
+        {
+            id: "reports",
+            title: "Reports & Voice",
+            description: "Gerencie a narrativa dos relatórios e parâmetros de voz da ElevenLabs.",
+            icon: FileText,
+            color: "bg-pink-500",
+            href: "/app/admin/reports",
+            features: ["Prompt do Relatório", "Parâmetros ElevenLabs", "Voice ID Management"]
         }
     ];
 
