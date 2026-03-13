@@ -66,6 +66,19 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     const [dragOverPosition, setDragOverPosition] = useState<"top" | "bottom" | null>(null);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
+    type ConfirmAction = { title: string; message: string; isDanger?: boolean; confirmText?: string; cancelText?: string; onConfirm: () => void; onCancel: () => void; };
+    const [confirmData, setConfirmData] = useState<ConfirmAction | null>(null);
+
+    const confirmAction = useCallback(async (title: string, message: string, isDanger: boolean = false, confirmText: string = "Confirmar", cancelText: string = "Cancelar") => {
+        return new Promise<boolean>((resolve) => {
+            setConfirmData({
+                title, message, isDanger, confirmText, cancelText,
+                onConfirm: () => { setConfirmData(null); resolve(true); },
+                onCancel: () => { setConfirmData(null); resolve(false); }
+            });
+        });
+    }, []);
+
     const audioDoneRef = useRef<HTMLAudioElement | null>(null);
     const audioOngoingRef = useRef<HTMLAudioElement | null>(null);
 
@@ -130,7 +143,8 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
 
         // QA Block: Require explicit confirmation for Approved column
         if (newType === "approved" && taskObj.type !== "approved") {
-            if (!window.confirm("🛡️ CHECK DE QA\n\nEsta tarefa foi validada pelo QA (@emma)? Tudo que vai para Approved sofre release imediato. Confirma a aprovação?")) {
+            const confirmed = await confirmAction("🛡️ CHECK DE QA", "Esta tarefa foi validada pelo QA (@emma)? Tudo que vai para Approved sofre release imediato. Confirma a aprovação?", false, "Aprovar Release");
+            if (!confirmed) {
                 setDraggedTask(null); setDragOverColumn(null); setDragOverTask(null); setDragOverPosition(null);
                 return;
             }
@@ -193,7 +207,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     }
 
     async function deleteProject() {
-        if (!window.confirm("ATENÇÃO: Você tem certeza que deseja excluir DEFINITIVAMENTE este projeto? Todas as tarefas e configurações serão perdidas.")) return;
+        if (!await confirmAction("Excluir Projeto", "ATENÇÃO: Você tem certeza que deseja excluir DEFINITIVAMENTE este projeto? Todas as tarefas e configurações serão perdidas.", true, "Excluir Definitivamente")) return;
         
         await supabase.from("dmz_agents_projects").delete().eq("id", project.id);
         router.push("/app/projects");
@@ -467,6 +481,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                     onDelete={() => { deleteTask(selectedTask.id); setSelectedTask(null); }}
                     onUpdate={(t, d, a, f, type) => updateTaskContent(selectedTask.id, t, d, a, f, type)}
                     onClose={() => setSelectedTask(null)}
+                    confirmAction={confirmAction}
                 />
             )}
 
@@ -477,6 +492,52 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                     onSave={(t, d, a) => createTask(showAddTask, t, d, a)}
                     onClose={() => setShowAddTask(null)} />
             )}
+            {/* Custom Confirm Modal */}
+            {confirmData && (
+                <div style={{
+                    position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center",
+                    background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", padding: "24px"
+                    }} onClick={confirmData.onCancel}>
+                    <div style={{
+                        background: "#FFFFFF", borderRadius: "16px", padding: "32px", width: "100%", maxWidth: "420px",
+                        boxShadow: "0 24px 48px rgba(0,0,0,0.25)", border: "1px solid rgba(0,0,0,0.05)",
+                        display: "flex", flexDirection: "column", gap: "24px"
+                    }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
+                            <div style={{
+                                width: 44, height: 44, borderRadius: "12px", flexShrink: 0,
+                                background: confirmData.isDanger ? "#FEE2E2" : "#EEF2FF",
+                                display: "flex", alignItems: "center", justifyContent: "center"
+                            }}>
+                                <AlertTriangle size={20} color={confirmData.isDanger ? "#EF4444" : "#4F46E5"} strokeWidth={2.5} />
+                            </div>
+                            <div>
+                                <h3 style={{ fontSize: "17px", fontWeight: 800, color: "#111827", margin: "0 0 6px", letterSpacing: "-0.01em" }}>
+                                    {confirmData.title}
+                               </h3>
+                                <p style={{ fontSize: "14px", color: "#4B5563", margin: 0, lineHeight: 1.5 }}>
+                                    {confirmData.message}
+                                </p>
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "4px" }}>
+                            <button onClick={confirmData.onCancel} style={{
+                                padding: "10px 18px", background: "#F3F4F6", color: "#4B5563", border: "1px solid #E5E7EB", borderRadius: "8px", fontSize: "13px", fontWeight: 700, cursor: "pointer"
+                            }}>
+                                {confirmData.cancelText}
+                            </button>
+                            <button onClick={confirmData.onConfirm} style={{
+                                padding: "10px 18px", color: "#FFFFFF", borderRadius: "8px", fontSize: "13px", fontWeight: 700, cursor: "pointer", border: "none",
+                                background: confirmData.isDanger ? "linear-gradient(135deg, #EF4444, #B91C1C)" : "linear-gradient(135deg, #4F46E5, #4338CA)",
+                                boxShadow: confirmData.isDanger ? "0 4px 12px rgba(239,68,68,0.2)" : "0 4px 12px rgba(79,70,229,0.2)"
+                            }}>
+                                {confirmData.confirmText}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
     );
@@ -484,7 +545,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
 
 import { Trash, Edit2, Save } from "lucide-react";
 
-function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClose }: { task: Task; agent: any; projectAgents: any[]; onDelete: () => void; onUpdate: (t: string, d: string, a: string | null, feedback: string | null, newType?: TaskType) => void; onClose: () => void }) {
+function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClose, confirmAction }: { task: Task; agent: any; projectAgents: any[]; onDelete: () => void; onUpdate: (t: string, d: string, a: string | null, feedback: string | null, newType?: TaskType) => void; onClose: () => void; confirmAction: (t: string, m: string, isDanger?: boolean) => Promise<boolean> }) {
     const col = COLUMNS.find(c => c.id === task.type)!;
     const [isEditing, setIsEditing] = useState(false);
     const [title, setTitle] = useState(task.title);
@@ -525,7 +586,7 @@ function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClo
                                 <Edit2 size={14} />
                             </button>
                         )}
-                        <button onClick={() => { if(window.confirm("Você tem certeza que deseja excluir esta task?")) onDelete(); }} style={{ background: "#FEE2E2", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#EF4444" }} title="Excluir">
+                        <button onClick={async () => { if(await confirmAction("Excluir Task", "Você tem certeza que deseja excluir DEFINITIVAMENTE esta task do Kanban?", true)) onDelete(); }} style={{ background: "#FEE2E2", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#EF4444" }} title="Excluir">
                             <Trash size={14} />
                         </button>
                         <button onClick={onClose} style={{ background: "#F3F4F6", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#6B7280" }}><X size={16} /></button>
@@ -624,7 +685,7 @@ function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClo
                             <div style={{ marginTop: "32px", paddingTop: "24px", borderTop: "1.5px solid #F3F4F6", textAlign: "center" }}>
                                 <p style={{ fontSize: "12px", color: "#9CA3AF", marginBottom: "16px" }}>Objetivo distribuído em tasks individuais?</p>
                                 <button
-                                    onClick={() => { if(window.confirm("Isso excluirá o placeholder do Master Plan para focar apenas nas tasks individuais do squad. Deseja prosseguir?")) onDelete(); }}
+                                    onClick={async () => { if (await confirmAction("Finalizar Master Plan", "Isso excluirá o placeholder do Master Plan para focar apenas nas tasks individuais do squad. Deseja prosseguir?", false)) onDelete(); }}
                                     style={{ background: "#F3F4F6", border: "none", borderRadius: "10px", padding: "10px 20px", fontSize: "13px", fontWeight: 700, color: "#6B7280", cursor: "pointer", transition: "all 0.2s" }}
                                     onMouseEnter={e => (e.currentTarget.style.background = "#E5E7EB")}
                                     onMouseLeave={e => (e.currentTarget.style.background = "#F3F4F6")}
