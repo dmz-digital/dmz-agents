@@ -33,7 +33,7 @@ export default function AppHeader({
             {showButtons && (
                 <div className="flex items-center gap-3">
                     <Link
-                        href="/app/projects?view=select"
+                        href="/app/projects?create=1"
                         className="flex items-center gap-2 bg-white border border-neutral-200 text-neutral-700 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-neutral-50 transition-all shadow-sm active:scale-95"
                     >
                         <Plus size={16} strokeWidth={3} />

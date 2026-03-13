@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
     FolderOpen, Plus, ArrowRight, Clock, CheckCircle2,
     Users, Bot, Activity, MoreHorizontal, Search,
@@ -53,6 +53,7 @@ const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function ProjectsListView() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [projects, setProjects] = useState<any[]>([]);
     const [agents, setAgents] = useState<any[]>([]);
     const [projectAgents, setProjectAgents] = useState<any[]>([]);
@@ -65,6 +66,13 @@ export default function ProjectsListView() {
     useEffect(() => {
         loadData();
     }, []);
+
+    // Auto-open create modal when ?create=1
+    useEffect(() => {
+        if (searchParams.get("create") === "1") {
+            setShowCreate(true);
+        }
+    }, [searchParams]);
 
     async function loadData() {
         const [{ data: projData }, { data: agentData }, { data: paData }, { data: taskData }] = await Promise.all([
@@ -110,28 +118,13 @@ export default function ProjectsListView() {
             <AppHeader />
 
             {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px" }}>
-                <div>
-                    <h1 style={{ fontSize: "26px", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em" }}>
-                        Meus Projetos
-                    </h1>
-                    <p style={{ fontSize: "13px", color: "#9CA3AF", marginTop: "4px" }}>
-                        Gerencie e acompanhe seus projetos com o squad de agentes
-                    </p>
-                </div>
-                <button
-                    onClick={() => setShowCreate(true)}
-                    style={{
-                        display: "flex", alignItems: "center", gap: "8px",
-                        background: "linear-gradient(135deg, #E85D2F, #D14D22)",
-                        color: "#FFFFFF", border: "none", borderRadius: "12px",
-                        padding: "12px 24px", fontSize: "13px", fontWeight: 700,
-                        cursor: "pointer", transition: "all 0.2s",
-                        boxShadow: "0 2px 12px rgba(232,93,47,0.3)"
-                    }}
-                >
-                    <Plus size={16} strokeWidth={2.5} /> Novo Projeto
-                </button>
+            <div style={{ marginBottom: "28px" }}>
+                <h1 style={{ fontSize: "26px", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em" }}>
+                    Meus Projetos
+                </h1>
+                <p style={{ fontSize: "13px", color: "#9CA3AF", marginTop: "4px" }}>
+                    Gerencie e acompanhe seus projetos com o squad de agentes
+                </p>
             </div>
 
             {/* Search */}
