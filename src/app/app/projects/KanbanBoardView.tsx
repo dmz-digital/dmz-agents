@@ -866,7 +866,7 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
-            const userName = session?.user?.user_metadata?.first_name || session?.user?.email?.split('@')[0] || "Equipe";
+            const userName = session?.user?.user_metadata?.first_name || session?.user?.user_metadata?.full_name?.split(' ')[0] || session?.user?.email?.split('@')[0] || "Equipe";
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://dmz-agents-production.up.railway.app";
             
             const reqTasks = dateMap.get(selectedDateStr) || [];

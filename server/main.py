@@ -1053,12 +1053,12 @@ async def explain_daily_report(req: DailyReportExplainRequest, authorization: st
         f"atividades. O gestor, {first_name_only}, pediu um resumo das tarefas do dia ({req.date_str}). "
         f"Fale no plural em nome do 'squad DMZ' (nossa equipe). Comece EXATAMENTE com: 'Oi {first_name_only}, hoje o time trabalhou bastante, vou te contar o que rolou em nosso squad...' ou algo similar, amigável. "
         f"Crie uma história fluida do que foi feito, falando de forma natural e amigável, não parecendo um robô. "
-        f"Não liste itens mecanicamente (com bullets). Conecte as tarefas executadas pelos agentes (fale os nomes deles: @syd, @orch, @oliver, etc). "
+        f"Não liste itens mecanicamente (com bullets). Conecte as tarefas executadas pelos agentes (fale os nomes deles: syd, orch, oliver, etc, mas SEMPRE sem o caractere @ para o áudio ficar perfeito). "
         f"Exemplo: 'Hoje o Oliver corrigiu X, já a Sofia adicionou Y, e isso vai gerar mais estrutura'. "
         f"Ao final, faça uma conclusão breve. O texto servirá como um relatório para reuniões."
     )
     
-    tasks_text = "; ".join([f"[{t.get('type')}] {t.get('title')} (responsável: @{t.get('agent_handle', 'squad')})" for t in req.tasks])
+    tasks_text = "; ".join([f"[{t.get('type')}] {t.get('title')} (responsável: {t.get('agent_handle', 'squad')})" for t in req.tasks])
     
     try:
         script = get_llm_response(system_prompt, f"Tarefas concluídas:\n{tasks_text}")
