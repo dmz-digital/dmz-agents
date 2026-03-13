@@ -6,7 +6,7 @@ import {
     ArrowLeft, Plus, Bot, Clock, CheckCircle2, AlertTriangle,
     RotateCcw, BookOpen, Activity, GripVertical,
     Brain, Key, Copy, Check, Settings, Terminal,
-    Users, X, FolderOpen, BadgeCheck,
+    Users, X, FolderOpen, BadgeCheck, ListTodo
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import AppHeader from "@/components/AppHeader";
@@ -276,6 +276,12 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "6px" }}>
                             <h1 style={{ fontSize: "26px", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em" }}>{project.name}</h1>
                             <Tag color="#10B981">{project.status}</Tag>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#F3F4F6", borderRadius: "8px", padding: "4px 10px", fontSize: "11px", fontWeight: 700, color: "#6B7280" }}>
+                                <ListTodo size={12} /> {tasks.length} tasks
+                            </span>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#ECFDF5", borderRadius: "8px", padding: "4px 10px", fontSize: "11px", fontWeight: 700, color: "#10B981" }}>
+                                <CheckCircle2 size={12} /> {tasks.filter(t => t.type === "done" || t.type === "approved").length} concluídas
+                            </span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
                             <code style={{ fontSize: "12px", color: "#9CA3AF", fontFamily: "monospace" }}>slug: {project.slug}</code>
@@ -545,6 +551,40 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
 
 import { Trash, Edit2, Save } from "lucide-react";
 
+function SimpleMarkdown({ text }: { text: string }) {
+    const lines = text.split("\n");
+    const elements: React.ReactNode[] = [];
+    let listItems: React.ReactNode[] = [];
+    const flushList = () => { if (listItems.length) { elements.push(<ul key={`ul-${elements.length}`} style={{ margin: "6px 0 10px 0", paddingLeft: "20px", listStyle: "none" }}>{listItems}</ul>); listItems = []; } };
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+        if (!trimmed) { flushList(); elements.push(<div key={`br-${i}`} style={{ height: "8px" }} />); continue; }
+        if (trimmed.startsWith("## ")) { flushList(); elements.push(<h3 key={`h-${i}`} style={{ fontSize: "14px", fontWeight: 800, color: "#111827", margin: "14px 0 6px 0", textTransform: "uppercase", letterSpacing: "0.04em", borderBottom: "1px solid #F0F0F0", paddingBottom: "6px" }}>{trimmed.slice(3)}</h3>); continue; }
+        if (trimmed.startsWith("- ")) { const content = trimmed.slice(2); listItems.push(<li key={`li-${i}`} style={{ fontSize: "14px", color: "#4B5563", lineHeight: 1.7, marginBottom: "4px", position: "relative", paddingLeft: "14px" }}><span style={{ position: "absolute", left: 0, color: "#9CA3AF", fontWeight: 700 }}>•</span>{formatInline(content)}</li>); continue; }
+        flushList();
+        elements.push(<p key={`p-${i}`} style={{ fontSize: "14px", color: "#4B5563", lineHeight: 1.7, margin: "2px 0" }}>{formatInline(trimmed)}</p>);
+    }
+    flushList();
+    return <div>{elements}</div>;
+}
+
+function formatInline(text: string): React.ReactNode[] {
+    const parts: React.ReactNode[] = [];
+    const regex = /(\*\*(.+?)\*\*)|(`([^`]+)`)/g;
+    let lastIndex = 0;
+    let match;
+    let key = 0;
+    while ((match = regex.exec(text)) !== null) {
+        if (match.index > lastIndex) parts.push(<span key={key++}>{text.slice(lastIndex, match.index)}</span>);
+        if (match[2]) parts.push(<strong key={key++} style={{ fontWeight: 700, color: "#111827" }}>{match[2]}</strong>);
+        else if (match[4]) parts.push(<code key={key++} style={{ background: "#F3F4F6", padding: "1px 6px", borderRadius: "5px", fontSize: "12px", fontFamily: "monospace", color: "#7C3AED" }}>{match[4]}</code>);
+        lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < text.length) parts.push(<span key={key++}>{text.slice(lastIndex)}</span>);
+    return parts;
+}
+
 function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClose, confirmAction }: { task: Task; agent: any; projectAgents: any[]; onDelete: () => void; onUpdate: (t: string, d: string, a: string | null, feedback: string | null, newType?: TaskType) => void; onClose: () => void; confirmAction: (t: string, m: string, isDanger?: boolean) => Promise<boolean> }) {
     const col = COLUMNS.find(c => c.id === task.type)!;
     const [isEditing, setIsEditing] = useState(false);
@@ -624,9 +664,7 @@ function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClo
                                 {task.title}
                             </h2>
                             {task.description ? (
-                                <p style={{ fontSize: "15px", color: "#4B5563", lineHeight: 1.6, whiteSpace: "pre-wrap", margin: 0 }}>
-                                    {task.description}
-                                </p>
+                                <SimpleMarkdown text={task.description} />
                             ) : (
                                 <p style={{ fontSize: "14px", color: "#9CA3AF", fontStyle: "italic", margin: 0 }}>Sem descrição detalhada.</p>
                             )}
