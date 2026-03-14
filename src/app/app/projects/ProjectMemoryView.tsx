@@ -24,13 +24,13 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default function ProjectMemoryView({ slug }: { slug: string }) {
     const router = useRouter();
+    const [activeTab, setActiveTab] = useState("all");
     const [project, setProject] = useState<any>(null);
     const [memories, setMemories] = useState<any[]>([]);
     const [agents, setAgents] = useState<any[]>([]);
     const [projectAgents, setProjectAgents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
-    const [typeFilter, setTypeFilter] = useState("All");
     const [agentFilter, setAgentFilter] = useState("All");
 
     useEffect(() => {
@@ -49,10 +49,16 @@ export default function ProjectMemoryView({ slug }: { slug: string }) {
             const formattedChat = (chatData || []).map((c: any) => ({
                 id: `chat-${c.id}`, memory_type: "chat_log", key: "Mensagem de Chat",
                 project_id: c.project_id, agent_id: c.agent_id || (c.role === "user" ? "user" : null),
-                content: c.content || c.file_name || "Anexo", tags: [c.role].filter(Boolean), created_at: c.created_at
+                content: c.content || c.file_name || "Anexo", tags: [c.role].filter(Boolean), created_at: c.created_at,
+                tab: "chat"
             }));
 
-            const combined = [...(memData || []), ...formattedChat]
+            const formattedMem = (memData || []).map((m: any) => ({
+                ...m,
+                tab: m.memory_type === "artifact" ? "code" : "brain"
+            }));
+
+            const combined = [...formattedMem, ...formattedChat]
                 .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                 .slice(0, 150);
 
@@ -61,11 +67,10 @@ export default function ProjectMemoryView({ slug }: { slug: string }) {
         load();
     }, [slug]);
 
-    const memTypes = ["All", ...Array.from(new Set(memories.map(m => m.memory_type)))];
     const squadAgents = agents.filter(a => projectAgents.some(pa => pa.agent_id === a.id));
 
     const filtered = memories.filter(m => {
-        const mt = typeFilter === "All" || m.memory_type === typeFilter;
+        const mt = activeTab === "all" || m.tab === activeTab;
         const ma = agentFilter === "All" || m.agent_id === agentFilter;
         const ms = !search || (m.key || "").toLowerCase().includes(search.toLowerCase()) || JSON.stringify(m.content).toLowerCase().includes(search.toLowerCase());
         return mt && ma && ms;
@@ -77,7 +82,10 @@ export default function ProjectMemoryView({ slug }: { slug: string }) {
         return a ? `@${a.handle}` : agentId;
     }
     function getAgentColor(agentId: string) { return agents.find(a => a.id === agentId)?.color || "#6B7280"; }
-    function renderContent(content: any) { return typeof content === "string" ? content : JSON.stringify(content, null, 2); }
+    function renderContent(content: any) { 
+        if (typeof content === "string") return content;
+        return JSON.stringify(content, null, 2);
+    }
 
     if (!loading && !project) return (
         <div className="dmz-container pt-12 pb-24">
@@ -90,6 +98,13 @@ export default function ProjectMemoryView({ slug }: { slug: string }) {
         </div>
     );
 
+    const TABS = [
+        { id: "all", label: "Toda a Memória", icon: Brain },
+        { id: "chat", label: "Histórico de Chat", icon: Bot },
+        { id: "brain", label: "Conhecimento Base", icon: TagIcon },
+        { id: "code", label: "Artefatos & Código", icon: Search },
+    ];
+
     return (
         <div className="dmz-container pt-12 pb-24">
             <AppHeader />
@@ -101,40 +116,38 @@ export default function ProjectMemoryView({ slug }: { slug: string }) {
                 <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#111827", letterSpacing: "-0.04em", display: "flex", alignItems: "center", gap: "10px" }}>
                     <Brain size={24} color="#7C3AED" /> Memória do Projeto
                 </h1>
-                <p style={{ fontSize: "13px", color: "#9CA3AF", marginTop: "4px" }}>Tudo que os agentes aprenderam e registraram neste projeto</p>
+                <p style={{ fontSize: "13px", color: "#9CA3AF", marginTop: "4px" }}>Isolamento e curadoria de tudo que o squad produziu</p>
             </div>
 
-            {/* Stats */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginBottom: "24px" }}>
-                {[
-                    { label: "Total Entries", value: memories.length, sub: "memórias", color: "#7C3AED", Icon: Brain },
-                    { label: "Tipos", value: new Set(memories.map(m => m.memory_type)).size, sub: "categorias", color: "#2563EB", Icon: TagIcon },
-                    { label: "Agentes", value: new Set(memories.filter(m => m.agent_id).map(m => m.agent_id)).size, sub: "contribuíram", color: "#E85D2F", Icon: Bot },
-                ].map(s => (
-                    <div key={s.label} style={{ background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "14px", padding: "18px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
-                            <div style={{ fontSize: "28px", fontWeight: 800, color: s.color, letterSpacing: "-0.04em", lineHeight: 1 }}>{s.value}</div>
-                            <div style={{ width: 32, height: 32, background: s.color + "10", borderRadius: "9px", display: "flex", alignItems: "center", justifyContent: "center" }}><s.Icon size={15} color={s.color} /></div>
-                        </div>
-                        <div style={{ fontSize: "12px", fontWeight: 600, color: "#111827" }}>{s.label}</div>
-                        <div style={{ fontSize: "11px", color: "#9CA3AF" }}>{s.sub}</div>
-                    </div>
-                ))}
+            {/* Tabs */}
+            <div style={{ display: "flex", gap: "8px", borderBottom: "1.5px solid #F0F0F0", marginBottom: "24px", paddingBottom: "2px" }}>
+                {TABS.map(tab => {
+                    const isActive = activeTab === tab.id;
+                    return (
+                        <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                            style={{
+                                display: "flex", alignItems: "center", gap: "8px", padding: "10px 16px",
+                                border: "none", background: "none", cursor: "pointer", position: "relative",
+                                color: isActive ? "#111827" : "#9CA3AF", fontSize: "13px", fontWeight: 600, transition: "all 0.2s"
+                            }}>
+                            <tab.icon size={14} color={isActive ? "#7C3AED" : "#9CA3AF"} />
+                            {tab.label}
+                            {isActive && <div style={{ position: "absolute", bottom: -2, left: 0, right: 0, height: "2px", background: "#7C3AED", borderRadius: "10px" }} />}
+                        </button>
+                    )
+                })}
             </div>
 
             {/* Filters */}
             <div style={{ display: "flex", gap: "8px", marginBottom: "16px", alignItems: "center", flexWrap: "wrap" }}>
                 <div style={{ position: "relative" }}>
                     <Search size={13} color="#9CA3AF" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
-                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar memórias..."
+                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar nesta aba..."
                         style={{ background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "9px", padding: "8px 12px 8px 30px", fontSize: "12px", color: "#111827", width: "200px", outline: "none" }} />
                 </div>
-                <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} style={{ background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "9px", padding: "8px 12px", fontSize: "12px", color: "#111827", outline: "none" }}>
-                    {memTypes.map(t => <option key={t} value={t}>{t === "All" ? "Todos os Tipos" : t}</option>)}
-                </select>
                 {squadAgents.length > 0 && (
                     <select value={agentFilter} onChange={e => setAgentFilter(e.target.value)} style={{ background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "9px", padding: "8px 12px", fontSize: "12px", color: "#111827", outline: "none" }}>
-                        <option value="All">Todos os Agentes</option>
+                        <option value="All">Filtro por Agente</option>
                         {squadAgents.map(a => <option key={a.id} value={a.id}>@{a.handle} — {a.name}</option>)}
                     </select>
                 )}
@@ -142,38 +155,58 @@ export default function ProjectMemoryView({ slug }: { slug: string }) {
 
             {/* Entries */}
             {loading ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    {[1, 2, 3].map(i => <div key={i} style={{ height: 100, background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "14px", animation: "pulse 1.5s infinite" }} />)}
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {[1, 2, 3].map(i => <div key={i} style={{ height: 120, background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "14px", animation: "pulse 1.5s infinite" }} />)}
                 </div>
             ) : filtered.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "48px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "14px" }}>
+                <div style={{ textAlign: "center", padding: "64px 24px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "14px" }}>
                     <Brain size={32} color="#D1D5DB" style={{ margin: "0 auto 12px" }} />
-                    <p style={{ fontSize: "14px", color: "#9CA3AF", fontWeight: 500 }}>Nenhuma memória encontrada.</p>
-                    <p style={{ fontSize: "12px", color: "#D1D5DB" }}>As memórias aparecerão conforme os agentes trabalharem.</p>
+                    <p style={{ fontSize: "14px", color: "#9CA3AF", fontWeight: 500 }}>Nenhum registro encontrado nesta categoria.</p>
                 </div>
             ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                     {filtered.map(m => {
                         const tc = TYPE_COLORS[m.memory_type] || "#6B7280";
+                        const isSystem = m.agent_id && m.agent_id !== "user";
                         return (
-                            <div key={m.id} style={{ background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "14px", padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                                <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "8px", flexWrap: "wrap" }}>
-                                    <Tag color={tc}>{m.memory_type}</Tag>
-                                    <code style={{ fontSize: "11px", color: "#6B7280", fontFamily: "monospace", fontWeight: 600 }}>{m.key}</code>
-                                    {m.agent_id && <span style={{ fontSize: "10px", color: getAgentColor(m.agent_id), fontWeight: 600, fontFamily: "monospace" }}>{getAgentHandle(m.agent_id)}</span>}
-                                    <span style={{ marginLeft: "auto", fontSize: "10px", color: "#D1D5DB", fontFamily: "monospace" }}>{new Date(m.created_at).toLocaleString("pt-BR")}</span>
+                            <div key={m.id} style={{ 
+                                background: "#FFFFFF", 
+                                border: "1.5px solid #F0F0F0", 
+                                borderLeft: `4px solid ${tc}`,
+                                borderRadius: "14px", 
+                                padding: "18px 22px", 
+                                boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                                transition: "all 0.15s"
+                            }}>
+                                <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "12px", flexWrap: "wrap" }}>
+                                    <Tag color={tc}>{m.memory_type.toUpperCase()}</Tag>
+                                    {isSystem && <span style={{ fontSize: "11px", color: getAgentColor(m.agent_id), fontWeight: 700, fontFamily: "monospace", background: getAgentColor(m.agent_id) + "10", padding: "2px 8px", borderRadius: "6px" }}>{getAgentHandle(m.agent_id)}</span>}
+                                    {!isSystem && m.agent_id === "user" && <span style={{ fontSize: "11px", color: "#111827", fontWeight: 700 }}>VOCÊ</span>}
+                                    <span style={{ fontSize: "11px", color: "#9CA3AF", fontWeight: 500 }}>• {m.key}</span>
+                                    <span style={{ marginLeft: "auto", fontSize: "10px", color: "#D1D5DB", fontFamily: "monospace" }}>{new Date(m.created_at).toLocaleString("pt-BR", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" })}</span>
+                                </div>
+                                <div style={{ 
+                                    fontSize: "13px", 
+                                    color: "#374151", 
+                                    lineHeight: 1.6, 
+                                    whiteSpace: "pre-wrap", 
+                                    maxHeight: activeTab === "all" ? "120px" : "none", 
+                                    overflow: "auto",
+                                    padding: "4px 0"
+                                }}>
+                                    {renderContent(m.content)}
                                 </div>
                                 {m.tags?.length > 0 && (
-                                    <div style={{ display: "flex", gap: "4px", marginBottom: "6px" }}>
-                                        {m.tags.map((t: string) => <span key={t} style={{ fontSize: "10px", background: "#F3F4F6", padding: "1px 6px", borderRadius: "4px", color: "#6B7280" }}>#{t}</span>)}
+                                    <div style={{ display: "flex", gap: "6px", marginTop: "12px" }}>
+                                        {m.tags.map((t: string) => <span key={t} style={{ fontSize: "10px", background: "#F9FAFB", padding: "2px 8px", borderRadius: "5px", color: "#9CA3AF", border: "1px solid #F0F0F0" }}>#{t}</span>)}
                                     </div>
                                 )}
-                                <div style={{ fontSize: "12px", color: "#6B7280", lineHeight: 1.7, whiteSpace: "pre-wrap", maxHeight: "120px", overflow: "hidden" }}>{renderContent(m.content)}</div>
                             </div>
                         );
                     })}
                 </div>
             )}
+            <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }`}</style>
         </div>
     );
 }

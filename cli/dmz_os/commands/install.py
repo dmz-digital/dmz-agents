@@ -140,14 +140,12 @@ def _collect_credentials() -> dict:
 
     creds = {}
 
-    # Supabase (URL Padrão)
-    default_url = "https://mqqiyyxcoutbmuszwejz.supabase.co"
-    creds["SUPABASE_URL"] = Prompt.ask(
-        "[cyan]URL da API DMZ[/]",
-        default=os.getenv("SUPABASE_URL", default_url),
-    )
+    # Supabase (URL Padrão da Plataforma DMZ)
+    # Não perguntamos mais ao usuário para evitar confusão técnica.
+    # O cliente só precisa do Slug e da DMZ_API_KEY.
+    creds["SUPABASE_URL"] = "https://mqqiyyxcoutbmuszwejz.supabase.co"
+    creds["SUPABASE_ANON_KEY"] = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcWl5eXhjb3V0Ym11c3p3ZWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyNTIwNzcsImV4cCI6MjA1Njg0MDA3N30.C_shC-v_f_9zYV8k2zP9bXm9zYVYvU_zQ1e0-O5_Rkk"
 
-    # Slug do projeto (Necessário para a validação)
     creds["DMZ_PROJECT_SLUG"] = Prompt.ask("[cyan]Slug do projeto (ex: yvoo-studio)[/]")
     
     # DMZ Security Key
@@ -163,8 +161,7 @@ def _collect_credentials() -> dict:
             url = creds["SUPABASE_URL"]
             api_key = creds["DMZ_API_KEY"]
             opts = ClientOptions(headers={"x-dmz-api-key": api_key})
-            # Usando a anon key padrão do sistema (se houver) ou a que o user passar
-            anon_key = os.getenv("SUPABASE_ANON_KEY") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcWl5eXhjb3V0Ym11c3p3ZWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyNTIwNzcsImV4cCI6MjA1Njg0MDA3N30.C_shC-v_f_9zYV8k2zP9bXm9zYVYvU_zQ1e0-O5_Rkk"
+            anon_key = creds["SUPABASE_ANON_KEY"]
             
             client = create_client(url, anon_key, options=opts)
             
@@ -225,6 +222,7 @@ def _collect_credentials() -> dict:
         console.print("[red]⚠ Pelo menos 1 API Key de LLM é necessária.[/]")
         raise typer.Exit(1)
 
+    creds["PROJECT_ID"] = project_data["id"]
     return creds
 
 
@@ -301,10 +299,26 @@ def _create_agents_folder():
         readme.write_text(
             "# .agents/\n\n"
             "Esta pasta contém o squad de AI agents do DMZ OS.\n\n"
-            "- Não edite os arquivos internos\n"
+            "- **Canal Prioritário:** Use o Chat da sua IDE mencionando @agente (ex: @orch)\n"
             "- Configurações em `.env.dmz` na raiz do projeto\n"
             "- Docs completos: https://github.com/eldanielsantos-git/dmz-agents\n"
         )
+
+    # .cursorrules (Instruções para a IA da IDE)
+    rules_path = Path.cwd() / ".cursorrules"
+    if not rules_path.exists():
+        rules_path.write_text(
+            "# DMZ OS — Integração de Squad\n\n"
+            "Você está operando em um ambiente com DMZ OS instalado.\n"
+            "Sempre que o usuário mencionar um agente usando @ (ex: @orch, @cassandra, @syd),\n"
+            "você deve tratar isso como uma delegacia de tarefa.\n\n"
+            "**Instrução:**\n"
+            "Ao detectar uma @menção, você deve invocar a ferramenta de terminal e rodar:\n"
+            "`dmz-os ask \"@agente [mensagem original]\"`.\n\n"
+            "Não tente realizar a tarefa você mesmo se houver uma @menção específica para outro agente.\n"
+            "Confirme o envio da demanda para o Kanban do DMZ OS.\n"
+        )
+        console.print("[green]✓[/] [bold].cursorrules[/] criado para integrar o Chat da IDE ao Squad")
 
     console.print(f"[green]✓[/] Pasta [bold].agents/[/] criada")
 
@@ -355,6 +369,40 @@ def _orch_welcome(project_slug: str):
         title="[bold green]✓ Squad pronto[/]",
         padding=(1, 3),
     ))
+
+
+def _create_onboarding_task(creds: dict):
+    """Cria a primeira task de verificação no Kanban do cliente."""
+    try:
+        url = creds["SUPABASE_URL"]
+        anon_key = creds["SUPABASE_ANON_KEY"]
+        api_key = creds["DMZ_API_KEY"]
+        
+        opts = ClientOptions(headers={"x-dmz-api-key": api_key})
+        client = create_client(url, anon_key, options=opts)
+
+        # Verifica se já existe uma task de boas-vindas para não duplicar
+        check = client.table("dmz_agents_tasks")\
+            .select("id")\
+            .eq("project_id", creds["PROJECT_ID"])\
+            .eq("title", "🚩 Verificação de Instalação: Squad DMZ Pronto!")\
+            .execute()
+
+        if not check.data:
+            client.table("dmz_agents_tasks").insert({
+                "project_id": creds["PROJECT_ID"],
+                "agent_id": "orchestrator",
+                "type": "to_do",
+                "title": "🚩 Verificação de Instalação: Squad DMZ Pronto!",
+                "description": "### Parabéns! 🚀\nSe você está lendo esta tarefa, o link entre seu ambiente local e a Nuvem DMZ foi estabelecido com sucesso.\n\n**O que isso significa?**\n- Seus comandos via terminal (CLI) estão chegando até nós.\n- Seus agentes agora podem ler e escrever códigos no seu repositório local.\n- O Kanban Web está em sincronia total com sua IDE.\n\n**Próximo Passo:**\nRode `dmz-os start` no seu terminal e veja o **@orch** assumir esta tarefa!",
+                "status": "pending",
+                "priority": 100,
+                "metadata": {"onboarding": True}
+            }).execute()
+            console.print("[dim]  → Task de verificação criada no Kanban[/]")
+    except Exception as e:
+        # Silencioso para não quebrar o install se falhar apenas a task
+        console.print(f"[dim]  [yellow]⚠[/] Nota: Não foi possível criar a task automática ({e})[/]")
 
 
 def _open_docs():
@@ -427,10 +475,10 @@ def install_command(project: str | None, yes: bool):
     # 5. Ativar squad (animação)
     _show_squad_activation()
 
-    # 6. @orch dá boas-vindas
-    _orch_welcome(creds["DMZ_PROJECT_SLUG"])
+    # 7. Criar Task de Verificação
+    _create_onboarding_task(creds)
 
-    # 7. Abrir documentação
+    # 8. Abrir documentação
     console.print()
     if Confirm.ask("Abrir o guia de uso agora?", default=True):
         _open_docs()

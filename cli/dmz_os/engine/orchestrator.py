@@ -56,12 +56,11 @@ class OrchestratorEngine:
                 time.sleep(10) # Se der erro (ex: internet cair) cai pra 10 segs de backoff
 
     def _check_for_new_demands(self):
-        """Busca tasks 'pending' destinadas ao @orch."""
+        """Busca tasks 'pending' vinculadas ao projeto."""
         res = self.db.table("dmz_agents_tasks")\
             .select("*")\
             .eq("project_id", self.project_id)\
             .eq("status", "pending")\
-            .eq("agent_id", "orchestrator")\
             .order("priority", desc=True)\
             .order("created_at")\
             .limit(1)\
@@ -69,48 +68,65 @@ class OrchestratorEngine:
         
         if not res.data:
             return # Nada para fazer agora
-
-        task = res.data[0]
-        self._process_demand(task)
-
-    def _process_demand(self, task: dict):
-        """Um humano submeteu um requerimento para o @orch pelo DMZ OS!"""
-        console.print(Panel(f"Recebi demanda: [bold]{task['title']}[/]", title="[cyan]@orch[/]"))
         
-        # Marca a tarefa como init process
+        task = res.data[0]
+        # Se a task for do @orch ou se não houver agente específico (fallback pro @orch)
+        agent_handle = task.get("agent_id") or "orchestrator"
+        self._process_demand(task, agent_handle)
+
+    def _process_demand(self, task: dict, agent_id: str):
+        """Executa a demanda usando o contexto do agente responsável."""
+        agent_context = AgentContext(self.db, self.project_id, agent_id)
+        
+        console.print(Panel(
+            f"Lendo demanda: [bold]{task['title']}[/]\n"
+            f"[dim]Agente Designado:[/] [bold cyan]@{agent_id}[/]", 
+            title=f"[cyan]@{agent_id}[/]",
+            border_style="cyan"
+        ))
+        
+        # Marca a tarefa como in_progress
         self.db.table("dmz_agents_tasks")\
             .update({"status": "in_progress"})\
             .eq("id", task["id"])\
             .execute()
 
-        # O prompt mestre do @orch é gerado juntando o prompt dele com DB Skills e contexto
-        system_prompt = self.orch_agent.build_system_prompt()
-        user_prompt = f"Por favor planeje e resolva ou delegue a seguinte demanda:\nTÍTULO: {task['title']}\nDESCRIÇÃO: {task.get('description', '')}"
+        # Build do cérebro do agente
+        system_prompt = agent_context.build_system_prompt()
+        user_prompt = f"### DEMANDA TÉCNICA\n\nTÍTULO: {task['title']}\nDESCRIÇÃO: {task.get('description', 'Sem descrição adicional.')}\n\nExecute esta tarefa. Se precisar de mais informações, responda detalhando o que falta. Se concluir, escreva um log técnico da execução."
 
-        console.print("[dim]Pensando (conectando no LLM)...[/]")
+        console.print(f"  [dim]@{agent_id} está processando no LLM...[/]")
         
         try:
-            # Chama o LLM!
+            # Wake up LLM
+            start_time = time.time()
             response_text = get_llm_response(system_prompt, user_prompt)
+            duration = time.time() - start_time
             
-            # TODO: O LLM pode retornar JSON para delegar. Por enquanto salvamos a resposta como completion
-            console.print("[green]Plano concluído e memorizado![/]")
+            console.print(f"  [green]✓[/] Executor: [bold]@{agent_id}[/] concluiu em {duration:.1f}s")
             
-            # Salva na memória
-            self.orch_agent.save_memory(
+            # Salva na memória técnica do projeto
+            agent_context.save_memory(
                 content=response_text,
-                task_context=f"Resposta à task: {task['title']}"
+                task_context=f"Task Concluída: {task['title']} (ID: {task['id']})"
             )
             
-            # Conclui a task master
+            # Conclui a task
             self.db.table("dmz_agents_tasks")\
-                .update({"status": "completed"})\
+                .update({
+                    "status": "completed",
+                    "completed_at": "now()",
+                    "feedback": f"Executado via CLI Local por @{agent_id}"
+                })\
                 .eq("id", task["id"])\
                 .execute()
 
         except Exception as e:
-            console.print(f"[red]Erro executando task {task['id']}:[/] {e}")
+            console.print(f"  [red]✖[/] Erro executando via @{agent_id}: {e}")
             self.db.table("dmz_agents_tasks")\
-                .update({"status": "blocked"})\
+                .update({
+                    "status": "blocked",
+                    "feedback": f"Erro CLI: {str(e)}"
+                })\
                 .eq("id", task["id"])\
                 .execute()

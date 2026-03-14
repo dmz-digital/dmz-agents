@@ -7,7 +7,7 @@ import {
     RotateCcw, BookOpen, Activity, GripVertical,
     Brain, Key, Copy, Check, Settings, Terminal,
     Users, X, FolderOpen, BadgeCheck, ListTodo, FileText, Play, Volume2, Square,
-    ChevronLeft, ChevronRight, Search
+    ChevronLeft, ChevronRight, Search, Star
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import AppHeader from "@/components/AppHeader";
@@ -122,7 +122,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
 
         const [{ data: taskData }, { data: agentData }, { data: paData }, { data: keyData }, { data: assigneesData }] = await Promise.all([
             supabase.from("dmz_agents_tasks").select("*").eq("project_id", projData.id).order("priority", { ascending: false }).order("created_at"),
-            supabase.from("dmz_agents_definitions").select("id, handle, name, full_name, icon, color, category"),
+            supabase.from("dmz_agents_definitions").select("id, handle, name, full_name, icon, color, category, ranking_score, tasks_completed"),
             supabase.from("dmz_agents_project_agents").select("agent_id, status").eq("project_id", projData.id),
             supabase.from("dmz_agents_apikeys").select("*").eq("project_id", projData.slug).eq("is_active", true),
             supabase.from("dmz_agents_task_assignees").select("task_id, agent_id, role")
@@ -964,23 +964,31 @@ function AddAgentsModal({ agents, projectAgents, onToggle, onToggleAll, onClose 
                 <div className="kanban-scroll-y" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "10px", maxHeight: "60vh", overflowY: "auto", padding: "4px" }}>
                     {agents.map(agent => {
                         const isActive = projectAgents.some(pa => pa.agent_id === agent.id);
+                        const score = agent.ranking_score || 0;
+                        const tasksCount = agent.tasks_completed || 0;
+
                         return (
-                            <button
-                                key={agent.id}
-                                onClick={() => onToggle(agent.id)}
-                                style={{
-                                    display: "flex", alignItems: "center", gap: "10px", padding: "12px",
-                                    background: isActive ? (agent.color || "#6B7280") + "08" : "#FFFFFF",
-                                    border: isActive ? `1.5px solid ${agent.color || "#6B7280"}` : "1.5px solid #F0F0F0",
-                                    borderRadius: "14px", cursor: "pointer", textAlign: "left", transition: "all 0.15s"
-                                }}
-                            >
-                                <div style={{ width: 32, height: 32, borderRadius: "8px", background: (agent.color || "#6B7280") + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 800, color: agent.color || "#6B7280" }}>
-                                    {isActive ? <BadgeCheck size={16} /> : agent.handle?.charAt(0).toUpperCase()}
+                            <button key={agent.id} onClick={() => onToggle(agent.id)} style={{ 
+                                display: "flex", alignItems: "center", gap: "10px", padding: "12px 16px", 
+                                background: isActive ? (agent.color || "#6B7280") + "08" : "#FFFFFF", 
+                                border: isActive ? `1.5px solid ${agent.color || "#6B7280"}` : "1.5px solid #F0F0F0", 
+                                borderRadius: "14px", cursor: "pointer", transition: "all 0.15s", textAlign: "left" 
+                            }}>
+                                <div style={{ width: 36, height: 36, borderRadius: "10px", background: (agent.color || "#6B7280") + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", fontWeight: 800, color: agent.color || "#6B7280" }}>
+                                    {agent.handle?.charAt(0).toUpperCase()}
                                 </div>
-                                <div>
+                                <div style={{ flex: 1 }}>
                                     <div style={{ fontSize: "13px", fontWeight: 700, color: "#111827" }}>{agent.name}</div>
-                                    <div style={{ fontSize: "11px", color: agent.color || "#6B7280", fontFamily: "monospace" }}>@{agent.handle}</div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <div style={{ fontSize: "11px", color: agent.color || "#6B7280", fontFamily: "monospace", fontWeight: 600 }}>@{agent.handle}</div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "3px", background: "#FFFBEB", padding: "1px 6px", borderRadius: "6px", border: "1px solid #FEF3C7" }}>
+                                            <Star size={10} fill="#F59E0B" color="#F59E0B" />
+                                            <span style={{ fontSize: "10px", fontWeight: 700, color: "#92400E" }}>{score.toFixed(1)}</span>
+                                        </div>
+                                        <div style={{ fontSize: "10px", color: "#9CA3AF", fontWeight: 500 }}>
+                                            {tasksCount} tasks
+                                        </div>
+                                    </div>
                                 </div>
                             </button>
                         );

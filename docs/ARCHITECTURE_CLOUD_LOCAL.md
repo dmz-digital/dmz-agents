@@ -25,7 +25,7 @@ A plataforma centralizada (ex: `agents.dmzdigital.com.br`) opera todo o cérebro
 
 ## 💻 O que fica na Máquina (IDE Local) / Repositório do Cliente
 
-Na IDE do cliente (VS Code, Cursor, etc), ou seja, na pasta do projeto real (ex: `yvoo-studio`), a interferência do DMZ OS é mínima. Instalamos apenas um **Agent Client (A ponte CLI)**.
+Na IDE do cliente (Antigravivy, VS Code, Cursor, etc), ou seja, na pasta do projeto real (ex: `yvoo-studio`), a interferência do DMZ OS é mínima. Instalamos apenas um **Agent Client (A ponte CLI)**.
 
 ### A Estrutura Local (Apenas 2 arquivos que o cliente nota)
 
@@ -57,29 +57,42 @@ Nada do "Motor DMZ" sobe para o Github final das agências ou projetos criados. 
 - Atribui ao projeto os Agentes da "Agência DMZ" que quer trabalhar (ex: O time de Copy, o Dev e o Tech Lead).
 
 **Passo 2: Cliente Instala o Squad no Computador dele**
-- Ele navega para a pasta local em branco `~/Documentos/yvoo-studio` (seu IDE via Cursor/VSCode).
-- Roda o comando no terminal (baixando nossa lib via pip): `dmz-os install`.
-- O CLI interativamente pede a chave DMZ dele.
+- Ele navega para a pasta local do seu projeto (ex: `~/Documentos/meu-app`).
+- **Instalação Instantânea (One-liner):** O cliente simplesmente copia e cola o comando oficial do README:
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/eldanielsantos-git/dmz-agents/main/install.sh | bash
+  ```
+  *Nota: Não é necessário alterar nada na URL. Este comando baixa o instalador inteligente que configura o CLI `dmz-os` automaticamente no sistema.*
+- Após a instalação do CLI, ele roda: `dmz-os install`.
+- O CLI interativamente pede a chave DMZ e valida o repositório Git em tempo real.
+  *Nota: A URL de conexão com a infraestrutura DMZ é preenchida automaticamente. O cliente NÃO precisa fornecer seu próprio Supabase; o CLI se conecta à nossa nuvem para buscar as diretrizes do squad.*
 - Magicamente um `.env.dmz` aparece localmente, porém o CLI já **atualiza o `.gitignore` na hora** impedindo essas credenciais de subirem pro Github dele.
 
-**Passo 3: Iniciando o Robô / Comunicação Bilateral**
-- O cliente digita `dmz-os start`. O Orquestrador acorda e estabelece o link contínuo com a nuvem DMZ.
-- **Dois Caminhos de Ação (A Ponte Bilateral):**
-   - **Caminho A (Web → IDE):** O cliente cria um Card no painel web ("Crie uma página de Login bonita"). No mesmo segundo, como um webhook, o Agente local percebe o card, pega o código e começa a trabalhar escrevendo na máquina em tempo real. Quando terminar, move sozinho a Task no Kanban Web para Done.
-   - **Caminho B (IDE → Web):** O cliente já está codando mas bateu a frustração. Pelo terminal do IDE ele roda: `dmz-os ask "Refatora o auth, quebrou meu token!"`. Essa intenção é fisgada pela CLI Local, que, sem o usuário ter que logar na internet, aciona nossa API REST Cloud. Um Card "PRIORIDADE" nasce instantaneamente no Kanban DMZ para o `@orch` resolver.
+**Passo 3: Iniciando o Robô / Universal Execution Engine**
+- O cliente digita `dmz-os start`. O sistema ativa nosso **Universal Execution Engine**.
+- **A Ponte Inteligente:** Diferente de sistemas comuns, o CLI não roda apenas o "Orquestrador". Ele atua como um despachante universal:
+   - Se houver um card para a `@cassandra`, o motor local a invoca.
+   - Se o card for para o `@dev`, o motor local assume a persona do desenvolvedor.
+   - Isso permite que **todo o squad** trabalhe na sua máquina local de forma coordenada, sem que você precise abrir múltiplos terminais.
+- **Fluxo Bilateral:**
+   - **Caminho A (Web → IDE):** Você cria um card no Kanban Web. O motor local percebe a demanda, assume o agente responsável e começa a codar/escrever na sua pasta real. Ao concluir, ele move o card para **Done**.
+   - **Caminho B (IDE → Web):** Pelo terminal você roda `dmz-os ask "@syd refatora o componente X"`. A CLI cria o card "PRIORIDADE" no Kanban Web e o squad já começa a agir.
 
-**Passo 4: O Deploy Final do Cliente**
-- Quando tudo estiver pronto, ele apenas diz `git status`. Ele rodará `git add .` e verá apenas seus maravilhosos novos componentes em React codados pelos Especialistas (nenhum rastro da mecânica dos Agentes, tudo invisível).
+**Passo 4: Validação e Deploy Final**
+- No Kanban Web, quando o squad termina uma tarefa ela entra em **Done**.
+- O cliente revisa e clica em **"Aprovar"**. Isso move a task para o status **Approved**, garantindo que o código está validado pelo humano.
+- O cliente então faz o `git push` final. Ele verá apenas os maravilhosos novos componentes codados (nenhum rastro da mecânica dos Agentes, tudo invisível).
 - Ele faz deploy na Vercel e o projeto brilha!
 
-**Passo 5: Invocação Direta de Agentes pela IDE**
-- O cliente pode e **deve** interagir com agentes específicos diretamente de sua IDE através do nosso CLI.
-- Por padrão, rodar apenas `dmz-os ask "Cria uma landing page"` envia a demanda genérica para o painel Master Plan, acionando o nosso orquestrador-chefe (`@orch`), que então decide quem vai trabalhar.
-- Porém, caso o cliente já saiba quem ele quer acionar (por exemplo, pedir um texto direto para a Copy Chief), ele pode mencionar (taguear) o agente diretamente na linha de comando:
-   - `dmz-os ask "@cassandra escreve um e-mail persuasivo para vender meu curso"`
-   - `dmz-os ask "@syd como está o andamento da sprint? Faz um resumo"`
-   - `dmz-os ask "@alex analisa a arquitetura atual do meu banco Supabase"`
-- Nossa ponte local detecta a tag (`@nome`) e despacha o card **diretamente para a fila pessoal daquele agente** no Kanban, acelerando fluxos e isolando discussões extremamente técnicas da visão geral do Master Plan.
+**Passo 5: Invocação Nativa pelo Chat da IDE (Canal Oficial)**
+- O DMZ OS é projetado para que o desenvolvedor **nunca precise sair do chat da IDE** para comandar o squad.
+- **Como funciona:** Durante a instalação, o CLI cria um arquivo de regras inteligente (`.cursorrules` ou similar). Isso "ensina" a IA assistente da sua IDE (Antigravity, Cursor, Windsurf) a reconhecer o seu squad.
+- **Uso no Chat:** basta digitar normalmente no chat lateral da IDE:
+   - *"@orch cria a modelagem desse banco"*
+   - *"@cassandra revisa o texto deste arquivo"*
+- **A Ponte Automática:** Ao ver o `@`, a IA da IDE não tentará fazer a tarefa sozinha; ela automaticamente invocará o comando `dmz-os ask` em segundo plano para você.
+- Isso garante que a demanda vire um card oficial no Kanban Cloud e que o agente especialista correto assuma o trabalho.
+- O Terminal continua disponível como alternativa (`dmz-os ask "@agente ..."`), mas o Chat da IDE é agora a interface prioritária e sugerida.
 
 ---
 
