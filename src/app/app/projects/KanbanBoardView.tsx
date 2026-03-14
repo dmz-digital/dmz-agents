@@ -122,7 +122,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     useEffect(() => { loadData(); }, [loadData]);
 
     useEffect(() => {
-        if (!project) return;
+        if (!project?.id) return;
         const ch = supabase.channel(`tasks-${project.id}`)
             .on("postgres_changes", { event: "*", schema: "public", table: "dmz_agents_tasks", filter: `project_id=eq.${project.id}` }, (payload) => {
                 if (payload.eventType === 'UPDATE') {
@@ -138,11 +138,25 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                         }
                     }
                 }
-                loadData();
+                
+                setTasks(prev => {
+                    if (payload.eventType === 'INSERT') {
+                        // Prevent duplicates if already added optimistically
+                        if (prev.some(t => t.id === payload.new.id)) return prev;
+                        return [...prev, payload.new as Task].sort((a, b) => b.priority - a.priority || new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+                    }
+                    if (payload.eventType === 'DELETE') {
+                        return prev.filter(t => t.id !== payload.old?.id);
+                    }
+                    if (payload.eventType === 'UPDATE') {
+                        return prev.map(t => t.id === payload.new.id ? payload.new as Task : t).sort((a, b) => b.priority - a.priority || new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+                    }
+                    return prev;
+                });
             })
             .subscribe();
         return () => { supabase.removeChannel(ch); };
-    }, [project, loadData]);
+    }, [project?.id]);
 
     function getAgent(agentId: string | null) {
         if (!agentId) return null;
