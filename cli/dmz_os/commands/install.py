@@ -304,21 +304,24 @@ def _create_agents_folder():
             "- Docs completos: https://github.com/eldanielsantos-git/dmz-agents\n"
         )
 
-    # .cursorrules (Instruções para a IA da IDE)
-    rules_path = Path.cwd() / ".cursorrules"
-    if not rules_path.exists():
-        rules_path.write_text(
-            "# DMZ OS — Integração de Squad\n\n"
-            "Você está operando em um ambiente com DMZ OS instalado.\n"
-            "Sempre que o usuário mencionar um agente usando @ (ex: @orch, @cassandra, @syd),\n"
-            "você deve tratar isso como uma delegacia de tarefa.\n\n"
-            "**Instrução:**\n"
-            "Ao detectar uma @menção, você deve invocar a ferramenta de terminal e rodar:\n"
-            "`dmz-os ask \"@agente [mensagem original]\"`.\n\n"
-            "Não tente realizar a tarefa você mesmo se houver uma @menção específica para outro agente.\n"
-            "Confirme o envio da demanda para o Kanban do DMZ OS.\n"
-        )
-        console.print("[green]✓[/] [bold].cursorrules[/] criado para integrar o Chat da IDE ao Squad")
+    # Regras para IAs da IDE (Cursor, Windsurf, etc.)
+    rules_content = (
+        "# DMZ OS — Integração de Squad\n\n"
+        "Você está operando em um ambiente com DMZ OS instalado.\n"
+        "Sempre que o usuário mencionar um agente usando @ (ex: @orch, @cassandra, @syd),\n"
+        "você deve tratar isso como uma delegacia de tarefa oficial.\n\n"
+        "**Instrução Crítica:**\n"
+        "Ao detectar uma @menção, você deve usar sua ferramenta de terminal/shell e rodar:\n"
+        "`dmz-os ask \"@agente [mensagem original]\"`.\n\n"
+        "Não tente realizar a tarefa você mesmo se houver uma @menção específica para outro agente.\n"
+        "Após rodar o comando, confirme ao usuário que a demanda foi enviada para o Kanban do DMZ OS.\n"
+    )
+
+    for filename in [".cursorrules", ".windsurfrules"]:
+        path = Path.cwd() / filename
+        if not path.exists():
+            path.write_text(rules_content)
+            console.print(f"[green]✓[/] [bold]{filename}[/] criado para integrar o Chat da IDE")
 
     console.print(f"[green]✓[/] Pasta [bold].agents/[/] criada")
 
