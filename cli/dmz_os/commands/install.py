@@ -16,6 +16,7 @@ import sys
 import time
 import subprocess
 import shutil
+import re
 from pathlib import Path
 
 import typer
@@ -26,6 +27,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 from rich.text import Text
 from rich.rule import Rule
 from rich import print as rprint
+from supabase import create_client, ClientOptions
 
 console = Console()
 
@@ -108,58 +110,120 @@ def _detect_project_type() -> str:
     return "new_project"
 
 
+def _get_local_git_remote() -> str | None:
+    """Detecta a URL do repositório git local."""
+    try:
+        res = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            capture_output=True, text=True, check=False
+        )
+        if res.returncode == 0:
+            url = res.stdout.strip()
+            # Normalizar: remover .git no final e transformar em minúsculo
+            return re.sub(r"\.git$", "", url).lower()
+    except Exception:
+        pass
+    return None
+
+
 def _collect_credentials() -> dict:
-    """Coleta credenciais de forma interativa."""
+    """Coleta credenciais de forma interativa e valida contra o Supabase."""
     console.print()
     console.print(Panel(
-        "[bold]Configuração de credenciais[/]\n\n"
-        "Precisamos de 3 informações para conectar o squad:\n"
-        "[dim]1. DMZ OS URL → Padrão já configurado ([cyan]https://agents.dmzdigital.com.br[/cyan])[/dim]\n"
-        "[dim]2. API Key de um LLM → Anthropic / OpenAI / Gemini[/dim]\n"
-        "[dim]3. Project Slug e Security Key (DMZ_API_KEY) (criados no painel)[/dim]",
+        "[bold]Conexão com a Plataforma DMZ OS[/]\n\n"
+        "Configurando o link seguro entre seu ambiente local e a nuvem.\n"
+        "[dim]Siga as orientações para ativar seu squad de 85 agentes.[/]",
         border_style="blue",
-        title="[bold blue]🔑 Credenciais[/]",
+        title="[bold blue]🔗 Onboarding Local[/]",
     ))
     console.print()
 
     creds = {}
 
-    # Supabase (Config padrão hardcoded que o cliente também passaria ou podemos deixar default via código,
-    # Mas deixaremos o prompt caso o usuário utilize um self-hosted clone no futuro)
+    # Supabase (URL Padrão)
+    default_url = "https://mqqiyyxcoutbmuszwejz.supabase.co"
     creds["SUPABASE_URL"] = Prompt.ask(
-        "[cyan]URL da API DMZ (Ex: https://xxxx.supabase.co)[/]",
-        default=os.getenv("SUPABASE_URL", ""),
+        "[cyan]URL da API DMZ[/]",
+        default=os.getenv("SUPABASE_URL", default_url),
     )
-    # A DMZ KEY que irá pro RLS Authorization header
+
+    # Slug do projeto (Necessário para a validação)
+    creds["DMZ_PROJECT_SLUG"] = Prompt.ask("[cyan]Slug do projeto (ex: yvoo-studio)[/]")
+    
+    # DMZ Security Key
     creds["DMZ_API_KEY"] = Prompt.ask(
-        "[cyan]DMZ Security Key (Ex: dmz_pk_abcd...)[/]",
+        "[cyan]DMZ Security Key (obtida no Painel Web)[/]",
         password=True,
     )
 
+    # --- VALIDAÇÃO EM TEMPO REAL ---
+    with console.status("[bold yellow]Validando credenciais e projeto...[/]"):
+        try:
+            # Setup temporário do client para validação
+            url = creds["SUPABASE_URL"]
+            api_key = creds["DMZ_API_KEY"]
+            opts = ClientOptions(headers={"x-dmz-api-key": api_key})
+            # Usando a anon key padrão do sistema (se houver) ou a que o user passar
+            anon_key = os.getenv("SUPABASE_ANON_KEY") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcWl5eXhjb3V0Ym11c3p3ZWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyNTIwNzcsImV4cCI6MjA1Njg0MDA3N30.C_shC-v_f_9zYV8k2zP9bXm9zYVYvU_zQ1e0-O5_Rkk"
+            
+            client = create_client(url, anon_key, options=opts)
+            
+            # Tenta buscar o projeto
+            res = client.table("dmz_agents_projects").select("*").eq("slug", creds["DMZ_PROJECT_SLUG"]).single().execute()
+            
+            if not res.data:
+                console.print(f"\n[red]⚠ Erro: Projeto '[bold]{creds['DMZ_PROJECT_SLUG']}[/]' não encontrado ou Security Key inválida.[/]")
+                raise typer.Exit(1)
+            
+            project_data = res.data
+            console.print(f"\n[green]✓ Projeto '[bold]{project_data['name']}[/]' identificado com sucesso![/]")
+            
+            # --- VALIDAÇÃO DE GIT (SEGURANÇA CONTRA INJEÇÃO) ---
+            db_repo = project_data.get("repo_url")
+            local_repo = _get_local_git_remote()
+
+            if db_repo:
+                db_repo_norm = re.sub(r"\.git$", "", db_repo).lower()
+                if local_repo and local_repo != db_repo_norm:
+                    console.print(Panel(
+                        f"[bold red]ALERTA DE SEGURANÇA: REPOSITÓRIO DIVERGENTE[/]\n\n"
+                        f"Este projeto está configurado para o repositório:\n"
+                        f"[cyan]{db_repo}[/]\n\n"
+                        f"Mas este diretório local está conectado a:\n"
+                        f"[yellow]{local_repo}[/]\n\n"
+                        "Executar agentes em um repositório diferente pode causar injeção de código indesejada.",
+                        border_style="red"
+                    ))
+                    if not Confirm.ask("[bold red]Deseja continuar mesmo assim?[/]", default=False):
+                        raise typer.Exit(1)
+                elif not local_repo:
+                    console.print("[yellow]⚠ Aviso: Este diretório não é um repositório Git. Os agentes podem ter dificuldade em versionar alterações.[/]")
+            else:
+                console.print("[dim]ℹ Nenhuma URL de repositório configurada no painel para este projeto.[/]")
+
+        except Exception as e:
+            if isinstance(e, typer.Exit): raise e
+            console.print(f"\n[red]⚠ Falha na conexão/validação:[/] {e}")
+            raise typer.Exit(1)
+
     # LLM
     console.print()
-    console.print("[dim]Escolha pelo menos 1 provedor de LLM:[/]")
+    console.print(Panel(
+        "Agora, forneça as chaves das IAs que o squad irá utilizar.\n"
+        "[dim]Estas chaves ficam apenas no seu .env.dmz local.[/]",
+        title="[bold]🤖 Modelos de IA[/]"
+    ))
     anthropic = Prompt.ask("[cyan]Anthropic API Key[/] [dim](Enter para pular)[/]", default="", password=True)
     openai = Prompt.ask("[cyan]OpenAI API Key[/] [dim](Enter para pular)[/]", default="", password=True)
     gemini = Prompt.ask("[cyan]Gemini API Key[/] [dim](Enter para pular)[/]", default="", password=True)
 
-    if anthropic:
-        creds["ANTHROPIC_API_KEY"] = anthropic
-    if openai:
-        creds["OPENAI_API_KEY"] = openai
-    if gemini:
-        creds["GEMINI_API_KEY"] = gemini
+    if anthropic: creds["ANTHROPIC_API_KEY"] = anthropic
+    if openai: creds["OPENAI_API_KEY"] = openai
+    if gemini: creds["GEMINI_API_KEY"] = gemini
 
     if not any([anthropic, openai, gemini]):
-        console.print("[red]⚠ Pelo menos 1 API Key de LLM é obrigatória.[/]")
+        console.print("[red]⚠ Pelo menos 1 API Key de LLM é necessária.[/]")
         raise typer.Exit(1)
-
-    # Slug do projeto
-    console.print()
-    console.print(
-        "[dim]Crie seu projeto em → [cyan]https://agents.dmzdigital.com.br/projects[/cyan] e copie o slug[/]"
-    )
-    creds["DMZ_PROJECT_SLUG"] = Prompt.ask("[cyan]Slug do projeto[/]", default="meu-projeto")
 
     return creds
 

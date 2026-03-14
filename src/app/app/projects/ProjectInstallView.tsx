@@ -127,17 +127,17 @@ function ExistingProjectInstructions({ project, apiKey }: { project: any, apiKey
 
             <Step number={3} title="Adicione o .env.dmz no seu projeto existente">
                 <InfoText>
-                    Navegue até a <strong>raiz do seu projeto atual</strong> e crie o arquivo <code style={{ background: "#F3F4F6", padding: "1px 5px", borderRadius: 4, fontSize: 12 }}>.env.dmz</code>. Não esqueça de adicioná-lo ao <code style={{ background: "#F3F4F6", padding: "1px 5px", borderRadius: 4, fontSize: 12 }}>.gitignore</code>!
+                    Navegue até a <strong>raiz do seu projeto atual</strong> e crie o arquivo <code style={{ background: "#F3F4F6", padding: "1px 5px", borderRadius: 4, fontSize: 12 }}>.env.dmz</code>.
                 </InfoText>
                 <CodeBlock code={envBlock} />
-                <CodeBlock code={`# Adicione ao .gitignore:\necho ".env.dmz" >> .gitignore`} />
+                <CodeBlock code={`# Adicione ao .gitignore:\necho ".env.dmz" >> .gitignore\necho ".agents/" >> .gitignore`} />
             </Step>
 
-            <Step number={4} title="Sincronize o squad com o seu projeto">
+            <Step number={4} title="Sincronize e Valide o Repositório">
                 <InfoText>
-                    No terminal, dentro do seu projeto existente, execute o comando de inicialização. Os agentes vão se conectar ao Board já existente:
+                    No terminal, execute o comando de instalação. O CLI irá validar se este diretório corresponde ao <strong>Repositório Git</strong> cadastrado no painel para evitar injeção de código em projetos errados:
                 </InfoText>
-                <CodeBlock code="dmz start --attach" />
+                <CodeBlock code="dmz-os install" />
             </Step>
 
             <Step number={5} title="Importe tarefas existentes (opcional)">
