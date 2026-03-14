@@ -250,11 +250,17 @@ def _secure_gitignore():
 def _write_env_file(creds: dict):
     """Grava o arquivo .env.dmz na raiz do projeto."""
     env_path = Path.cwd() / ".env.dmz"
+    # Proteção: Se a SUPABASE_URL estiver vazia por qualquer motivo, injeta a oficial
+    if not creds.get("SUPABASE_URL"):
+        creds["SUPABASE_URL"] = "https://mqqiyyxcoutbmuszwejz.supabase.co"
+    if not creds.get("SUPABASE_ANON_KEY"):
+        creds["SUPABASE_ANON_KEY"] = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcWl5eXhjb3V0Ym11c3p3ZWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyNTIwNzcsImV4cCI6MjA1Njg0MDA3N30.C_shC-v_f_9zYV8k2zP9bXm9zYVYvU_zQ1e0-O5_Rkk"
+
     lines = ["# DMZ OS — configurações do squad\n", f"# Gerado em {time.strftime('%Y-%m-%d %H:%M')}\n\n"]
     for key, value in creds.items():
         lines.append(f"{key}={value}\n")
     env_path.write_text("".join(lines))
-    console.print(f"[green]✓[/] Credenciais salvas em [bold].env.dmz[/]")
+    console.print(f"[green]✓[/] Credenciais salvas/corrigidas em [bold].env.dmz[/]")
     
     _secure_gitignore()
 
@@ -306,22 +312,24 @@ def _create_agents_folder():
 
     # Regras para IAs da IDE (Cursor, Windsurf, etc.)
     rules_content = (
-        "# DMZ OS — Integração de Squad\n\n"
-        "Você está operando em um ambiente com DMZ OS instalado.\n"
+        "# DMZ OS — INSTRUÇÕES DE SQUAD (CRÍTICO)\n\n"
+        "VOCÊ ESTÁ INTEGRADO AO SQUAD DMZ OS.\n"
         "Sempre que o usuário mencionar um agente usando @ (ex: @orch, @cassandra, @syd),\n"
-        "você deve tratar isso como uma delegacia de tarefa oficial.\n\n"
-        "**Instrução Crítica:**\n"
-        "Ao detectar uma @menção, você deve usar sua ferramenta de terminal/shell e rodar:\n"
-        "`dmz-os ask \"@agente [mensagem original]\"`.\n\n"
-        "Não tente realizar a tarefa você mesmo se houver uma @menção específica para outro agente.\n"
-        "Após rodar o comando, confirme ao usuário que a demanda foi enviada para o Kanban do DMZ OS.\n"
+        "você NÃO deve tentar realizar a tarefa sozinho. \n\n"
+        "**SUA ÚNICA RESPOSTA E AÇÃO DEVE SER:**\n"
+        "1. Usar sua ferramenta de TERMINAL/SHELL imediatamente.\n"
+        "2. Rodar o comando: `dmz-os ask \"@agente [mensagem do usuário]\"`.\n"
+        "3. Confirmar ao usuário: \"Enviado para o @agente no Kanban DMZ! 🚀\"\n\n"
+        "Isso é fundamental para a sincronia do projeto. O @orch é quem comanda a execução profunda via terminal. Repasse a bola sempre que houver um @.\n"
     )
 
-    for filename in [".cursorrules", ".windsurfrules"]:
+    for filename in [".cursorrules", ".windsurfrules", ".agents/IDE_RULES.md"]:
         path = Path.cwd() / filename
-        if not path.exists():
+        if not path.exists() or ".rules" in filename:
+            path.parent.mkdir(exist_ok=True)
             path.write_text(rules_content)
-            console.print(f"[green]✓[/] [bold]{filename}[/] criado para integrar o Chat da IDE")
+            if not filename.startswith(".agents"):
+                console.print(f"[green]✓[/] [bold]{filename}[/] (re)criado com regras imperativas")
 
     console.print(f"[green]✓[/] Pasta [bold].agents/[/] criada")
 
