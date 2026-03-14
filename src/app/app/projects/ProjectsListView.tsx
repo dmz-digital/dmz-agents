@@ -328,6 +328,7 @@ function CreateProject({ onBack, onCreated }: { onBack: () => void; onCreated: (
     const [projectName, setProjectName] = useState("");
     const [projectSlug, setProjectSlug] = useState("");
     const [projectDesc, setProjectDesc] = useState("");
+    const [projectRepo, setProjectRepo] = useState("");
     const [agents, setAgents] = useState<any[]>([]);
     const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
     const [creating, setCreating] = useState(false);
@@ -357,6 +358,7 @@ function CreateProject({ onBack, onCreated }: { onBack: () => void; onCreated: (
             name: projectName,
             slug: slug,
             description: projectDesc || null,
+            repo_url: projectRepo || null,
             owner_id: user.id,
             api_key: apiKey,
             status: "setup",
@@ -436,6 +438,16 @@ function CreateProject({ onBack, onCreated }: { onBack: () => void; onCreated: (
                                     </code>
                                 </div>
                                 <CopyButton text={createdProject.slug} />
+                            </div>
+                            <div style={{ height: 1, background: "#333" }} />
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div>
+                                    <div style={{ fontSize: "10px", color: "#6B7280", marginBottom: "2px" }}>REPOSITÓRIO GIT</div>
+                                    <code style={{ fontSize: "13px", color: "#38BDF8", fontFamily: "monospace" }}>
+                                        {createdProject.repo_url || "Não informado"}
+                                    </code>
+                                </div>
+                                {createdProject.repo_url && <CopyButton text={createdProject.repo_url} />}
                             </div>
                             <div style={{ height: 1, background: "#333" }} />
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -685,6 +697,24 @@ DMZ_API_KEY=${createdProject.api_key}`}
                         />
                         <p style={{ fontSize: "11px", color: "#9CA3AF", marginTop: "4px" }}>
                             Identificador único do projeto. Gerado automaticamente a partir do nome.
+                        </p>
+                    </div>
+                    <div>
+                        <label style={{ fontSize: "12px", fontWeight: 600, color: "#374151", marginBottom: "6px", display: "block" }}>
+                            URL do seu Repositório Git (onde o projeto será desenvolvido)
+                        </label>
+                        <input
+                            value={projectRepo}
+                            onChange={e => setProjectRepo(e.target.value)}
+                            placeholder="https://github.com/usuario/seu-projeto.git"
+                            style={{
+                                width: "100%", background: "#F9FAFB", border: "1.5px solid #F0F0F0",
+                                borderRadius: "10px", padding: "12px 14px", fontSize: "14px",
+                                color: "#111827", outline: "none"
+                            }}
+                        />
+                        <p style={{ fontSize: "11px", color: "#9CA3AF", marginTop: "4px" }}>
+                            O DMZ OS usará esta URL para isolar o código dos agentes no seu ambiente.
                         </p>
                     </div>
                     <div>
