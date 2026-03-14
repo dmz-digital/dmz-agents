@@ -7,7 +7,7 @@ import {
     RotateCcw, BookOpen, Activity, GripVertical,
     Brain, Key, Copy, Check, Settings, Terminal,
     Users, X, FolderOpen, BadgeCheck, ListTodo, FileText, Play, Volume2, Square,
-    ChevronLeft, ChevronRight
+    ChevronLeft, ChevronRight, Search
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import AppHeader from "@/components/AppHeader";
@@ -85,6 +85,10 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [showReports, setShowReports] = useState(false);
     const [showAddAgents, setShowAddAgents] = useState(false);
+    const [showSearch, setShowSearch] = useState(false); // Intelligent Global Search
+    const [searchTerm, setSearchTerm] = useState("");
+    const [searchResults, setSearchResults] = useState<{ agents: any[], tasks: any[] }>({ agents: [], tasks: [] });
+    const [isSearching, setIsSearching] = useState(false);
     const [apiKeys, setApiKeys] = useState<any[]>([]);
     const [isGeneratingKey, setIsGeneratingKey] = useState(false);
 
@@ -133,6 +137,60 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     }, [slug]);
 
     useEffect(() => { loadData(); }, [loadData]);
+
+    useEffect(() => {
+        const handleK = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                setShowSearch(true);
+            }
+        };
+        window.addEventListener('keydown', handleK);
+        return () => window.removeEventListener('keydown', handleK);
+    }, []);
+
+    const performSearch = useCallback(async (term: string) => {
+        if (!term.trim()) {
+            setSearchResults({ agents: [], tasks: [] });
+            return;
+        }
+        setIsSearching(true);
+        try {
+            // Search Agents
+            const { data: agentData } = await supabase
+                .from('dmz_agents_definitions')
+                .select('*')
+                .or(`name.ilike.%${term}%,handle.ilike.%${term}%,category.ilike.%${term}%`)
+                .limit(5);
+
+            // Search Tasks
+            const { data: taskData } = await supabase
+                .from('dmz_agents_tasks')
+                .select('*, dmz_agents_definitions(name, handle, color)')
+                .or(`title.ilike.%${term}%,description.ilike.%${term}%,status.ilike.%${term}%,type.ilike.%${term}%`)
+                .eq('project_id', project.id)
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            setSearchResults({ 
+                agents: agentData || [], 
+                tasks: (taskData || []).map(t => ({ ...t, agent: t.dmz_agents_definitions }))
+            });
+        } catch (err) {
+            console.error("Search error:", err);
+        } finally {
+            setIsSearching(false);
+        }
+    }, [project?.id]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            performSearch(searchTerm);
+        }, 300);
+        return () => {
+            clearTimeout(timer);
+        };
+    }, [searchTerm, performSearch]);
 
     useEffect(() => {
         if (!project?.id) return;
@@ -406,7 +464,10 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                             </div>
                         </div>
                     </div>
-                    <div style={{ display: "flex", gap: "8px" }}>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        <button onClick={() => setShowSearch(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 42, height: 42, background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", color: "#E85D2F", cursor: "pointer", transition: "all 0.2s", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }} onMouseEnter={e => { e.currentTarget.style.borderColor = "#E85D2F"; e.currentTarget.style.background = "#FFF5F2"; }} onMouseLeave={e => { e.currentTarget.style.borderColor = "#F0F0F0"; e.currentTarget.style.background = "#FFFFFF"; }} title="Busca Inteligente (Ctrl+K)">
+                            <Search size={22} strokeWidth={2.5} />
+                        </button>
                         <button onClick={() => setShowReports(true)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
                             <FileText size={14} /> Relatórios
                         </button>
@@ -628,29 +689,20 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
             </div>{/* end board bg */}
 
             {/* TaskDetailModal with navigation */}
-            {selectedTask && (() => {
-                const colTasks = getTasksByColumn(selectedTask.type);
-                const currentIndex = colTasks.findIndex(t => t.id === selectedTask.id);
-                const prevTask = currentIndex > 0 ? colTasks[currentIndex - 1] : null;
-                const nextTask = currentIndex !== -1 && currentIndex < colTasks.length - 1 ? colTasks[currentIndex + 1] : null;
-
-                return (
-                    <TaskDetailModal
-                        task={selectedTask}
-                        agent={getAgent(selectedTask.agent_id)}
-                        projectAgents={agents.filter(a => projectAgents.some(pa => pa.agent_id === a.id))}
-                        onDelete={() => { deleteTask(selectedTask.id); setSelectedTask(null); }}
-                        onUpdate={(t, d, a, f, type) => updateTaskContent(selectedTask.id, t, d, a, f, type)}
-                        onToggleAssignee={(agentId) => toggleTaskAssignee(selectedTask.id, agentId)}
-                        onClose={() => setSelectedTask(null)}
-                        confirmAction={confirmAction}
-                        hasPrev={!!prevTask}
-                        hasNext={!!nextTask}
-                        onPrev={() => prevTask && setSelectedTask(prevTask)}
-                        onNext={() => nextTask && setSelectedTask(nextTask)}
-                    />
-                );
-            })()}
+            {selectedTask && (
+                <TaskDetailModalWrapper 
+                    selectedTask={selectedTask}
+                    getTasksByColumn={getTasksByColumn}
+                    getAgent={getAgent}
+                    agents={agents}
+                    projectAgents={projectAgents}
+                    deleteTask={deleteTask}
+                    updateTaskContent={updateTaskContent}
+                    toggleTaskAssignee={toggleTaskAssignee}
+                    setSelectedTask={setSelectedTask}
+                    confirmAction={confirmAction}
+                />
+            )}
 
             {/* Add Task Modal */}
             {showAddTask && (
@@ -705,6 +757,97 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                 </div>
             )}
 
+            {/* Global Search Modal */}
+            {showSearch && (
+                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)", zIndex: 200, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "80px 24px" }} onClick={() => setShowSearch(false)}>
+                    <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: "20px", width: "100%", maxWidth: "600px", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                        <div style={{ padding: "20px", borderBottom: "1.5px solid #F3F4F6", display: "flex", alignItems: "center", gap: "12px" }}>
+                            <Search size={20} color="#9CA3AF" />
+                            <input 
+                                autoFocus
+                                placeholder="Buscar por agente, tarefa, status ou termo..." 
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                style={{ flex: 1, border: "none", outline: "none", fontSize: "16px", fontWeight: 500, color: "#111827" }}
+                            />
+                            <div style={{ background: "#F3F4F6", padding: "4px 8px", borderRadius: "6px", fontSize: "10px", fontWeight: 700, color: "#9CA3AF" }}>ESC</div>
+                        </div>
+                        
+                        <div style={{ maxHeight: "450px", overflowY: "auto", padding: "12px" }} className="modal-content-scroll">
+                            <style>{`.modal-content-scroll::-webkit-scrollbar { display: none; }`}</style>
+                            
+                            {searchTerm.trim() === "" ? (
+                                <div style={{ padding: "40px", textAlign: "center", color: "#9CA3AF" }}>
+                                    <div style={{ fontSize: "13px", fontWeight: 500 }}>Digite algo para começar a busca inteligente...</div>
+                                    <div style={{ fontSize: "11px", marginTop: "4px" }}>Ex: "analytics", "@orch", "todo" ou uma tarefa específica</div>
+                                </div>
+                            ) : (
+                                <>
+                                    {isSearching ? (
+                                        <div style={{ padding: "40px", textAlign: "center", color: "#9CA3AF", fontSize: "13px" }}>Buscando...</div>
+                                    ) : (searchResults.agents.length === 0 && searchResults.tasks.length === 0) ? (
+                                        <div style={{ padding: "40px", textAlign: "center", color: "#9CA3AF", fontSize: "13px" }}>Nenhum resultado encontrado para "{searchTerm}"</div>
+                                    ) : (
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                                            {searchResults.agents.length > 0 && (
+                                                <div>
+                                                    <div style={{ fontSize: "10px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", paddingLeft: "8px", marginBottom: "8px" }}>Agentes</div>
+                                                    {searchResults.agents.map(ag => (
+                                                        <div key={ag.id} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px", borderRadius: "12px", cursor: "pointer", transition: "all 0.1s" }} onMouseEnter={e => e.currentTarget.style.background = "#F9FAFB"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                                            <div style={{ width: 32, height: 32, borderRadius: "8px", background: ag.color, display: "flex", alignItems: "center", justifyContent: "center", color: "#FFF", fontSize: "12px", fontWeight: 800 }}>{ag.handle.charAt(0).toUpperCase()}</div>
+                                                            <div>
+                                                                <div style={{ fontSize: "13px", fontWeight: 700, color: "#111827" }}>{ag.name} <span style={{ color: "#9CA3AF", fontWeight: 500, marginLeft: "4px" }}>@{ag.handle}</span></div>
+                                                                <div style={{ fontSize: "11px", color: "#6B7280" }}>{ag.category} • {ag.active ? 'Ativo' : 'Inativo'}</div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            
+                                            {searchResults.tasks.length > 0 && (
+                                                <div>
+                                                    <div style={{ fontSize: "10px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", paddingLeft: "8px", marginBottom: "8px" }}>Tarefas</div>
+                                                    {searchResults.tasks.map(t => (
+                                                        <div key={t.id} onClick={() => { setSelectedTask(t); setShowSearch(false); }} style={{ display: "flex", alignItems: "flex-start", gap: "12px", padding: "10px", borderRadius: "12px", cursor: "pointer", transition: "all 0.1s" }} onMouseEnter={e => e.currentTarget.style.background = "#F9FAFB"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                                            <div style={{ width: 32, height: 32, borderRadius: "8px", background: COLUMNS.find(c => c.id === t.type)?.color + "15", display: "flex", alignItems: "center", justifyContent: "center", color: COLUMNS.find(c => c.id === t.type)?.color, flexShrink: 0 }}>
+                                                                {t.type === 'approved' ? <BadgeCheck size={16} /> : <ListTodo size={16} />}
+                                                            </div>
+                                                            <div style={{ flex: 1 }}>
+                                                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                                                    <div style={{ fontSize: "13px", fontWeight: 700, color: "#111827" }}>{t.title}</div>
+                                                                    <div style={{ fontSize: "9px", fontWeight: 800, color: "#9CA3AF", background: "#F3F4F6", padding: "2px 5px", borderRadius: "4px" }}>#{t.id.slice(0, 4).toUpperCase()}</div>
+                                                                </div>
+                                                                <div style={{ fontSize: "11px", color: "#6B7280", marginTop: "2px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                                                    <span style={{ color: COLUMNS.find(c => c.id === t.type)?.color, fontWeight: 700, textTransform: "uppercase" }}>{t.type.replace('_',' ')}</span>
+                                                                    <span>•</span>
+                                                                    <span>@{t.agent?.handle || 'unassigned'}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                        
+                        <div style={{ padding: "12px 20px", background: "#F9FAFB", borderTop: "1.5px solid #F3F4F6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ display: "flex", gap: "16px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "10px", color: "#6B7280" }}>
+                                    <kbd style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: "4px", padding: "1px 4px", boxShadow: "0 1px 0 rgba(0,0,0,0.05)" }}>↵</kbd> selecionar
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "10px", color: "#6B7280" }}>
+                                    <kbd style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: "4px", padding: "1px 4px", boxShadow: "0 1px 0 rgba(0,0,0,0.05)" }}>↑↓</kbd> navegar
+                                </div>
+                            </div>
+                            <div style={{ fontSize: "10px", color: "#9CA3AF" }}>DMZ Intelligence Search v1.0</div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {showReports && (
                 <ReportsModal tasks={tasks} project={project} agents={agents} onClose={() => setShowReports(false)} confirmAction={confirmAction} />
             )}
@@ -720,6 +863,33 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
 
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
+    );
+}
+
+function TaskDetailModalWrapper({ 
+    selectedTask, getTasksByColumn, getAgent, agents, projectAgents, 
+    deleteTask, updateTaskContent, toggleTaskAssignee, setSelectedTask, confirmAction 
+}: any) {
+    const colTasks = getTasksByColumn(selectedTask.type);
+    const currentIndex = colTasks.findIndex((t: any) => t.id === selectedTask.id);
+    const prevTask = currentIndex > 0 ? colTasks[currentIndex - 1] : null;
+    const nextTask = currentIndex !== -1 && currentIndex < colTasks.length - 1 ? colTasks[currentIndex + 1] : null;
+
+    return (
+        <TaskDetailModal
+            task={selectedTask}
+            agent={getAgent(selectedTask.agent_id)}
+            projectAgents={agents.filter((a: any) => projectAgents.some((pa: any) => pa.agent_id === a.id))}
+            onDelete={() => { deleteTask(selectedTask.id); setSelectedTask(null); }}
+            onUpdate={(t: any, d: any, a: any, f: any, type: any) => updateTaskContent(selectedTask.id, t, d, a, f, type)}
+            onToggleAssignee={(agentId: any) => toggleTaskAssignee(selectedTask.id, agentId)}
+            onClose={() => setSelectedTask(null)}
+            confirmAction={confirmAction}
+            hasPrev={!!prevTask}
+            hasNext={!!nextTask}
+            onPrev={() => prevTask && setSelectedTask(prevTask)}
+            onNext={() => nextTask && setSelectedTask(nextTask)}
+        />
     );
 }
 
@@ -833,13 +1003,21 @@ function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onTog
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (isEditing) return; // Don't navigate while typing
-            if (e.key === "ArrowLeft" && hasPrev && onPrev) onPrev();
-            if (e.key === "ArrowRight" && hasNext && onNext) onNext();
+            if (isEditing) return;
+            if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                e.preventDefault(); // Prevent accidental scrolling
+                if (e.key === "ArrowLeft" && hasPrev && onPrev) onPrev();
+                if (e.key === "ArrowRight" && hasNext && onNext) onNext();
+            }
             if (e.key === "Escape") onClose();
         };
         window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
+        // Hide body scroll when modal is open
+        document.body.style.overflow = 'hidden';
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+            document.body.style.overflow = 'unset';
+        };
     }, [isEditing, hasPrev, hasNext, onPrev, onNext, onClose]);
 
     function handleFeedbackSubmit(action: "approve" | "rework") {
@@ -852,17 +1030,17 @@ function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onTog
     }
 
     return (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", gap: "24px", zIndex: 100, backdropFilter: "blur(4px)", padding: "24px" }} onClick={onClose}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", gap: "24px", zIndex: 100, backdropFilter: "blur(8px)", padding: "24px" }} onClick={onClose}>
             {hasPrev && onPrev ? (
-                <button onClick={(e) => { e.stopPropagation(); onPrev(); }} style={{ background: "#FFFFFF", border: "none", width: 48, height: 48, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", color: "#4B5563", flexShrink: 0, transition: "transform 0.15s" }} onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.05)")} onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}><ChevronLeft size={24} /></button>
+                <button onClick={(e) => { e.stopPropagation(); onPrev(); }} style={{ background: "#FFFFFF", border: "none", width: 48, height: 48, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 10px 25px rgba(0,0,0,0.2)", color: "#111827", flexShrink: 0, transition: "all 0.2s" }} onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.1)")} onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}><ChevronLeft size={24} strokeWidth={3} /></button>
             ) : <div style={{ width: 48, flexShrink: 0 }} />}
             <div onClick={e => e.stopPropagation()} style={{ 
-                background: "#FFFFFF", borderRadius: "24px", padding: "32px", width: "100%", maxWidth: 600, 
-                boxShadow: "0 20px 80px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", gap: "24px", 
-                maxHeight: "90vh", overflowY: "auto",
-                msOverflowStyle: 'none', scrollbarWidth: 'none' // Hide scrollbar for IE, Edge and Firefox
-            }} className="hide-scrollbar">
-                <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+                background: "#FFFFFF", borderRadius: "28px", padding: "40px", width: "100%", maxWidth: 680, 
+                boxShadow: "0 30px 100px rgba(0,0,0,0.3)", display: "flex", flexDirection: "column", gap: "28px", 
+                maxHeight: "85vh", overflowY: "auto",
+                scrollbarWidth: 'none', msOverflowStyle: 'none'
+            }} className="modal-content-scroll">
+                <style>{`.modal-content-scroll::-webkit-scrollbar { display: none; }`}</style>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                         <div style={{ width: 40, height: 40, borderRadius: "12px", background: col.color + "15", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -930,9 +1108,14 @@ function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onTog
                 ) : (
                     <>
                         <div>
-                            <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#111827", marginBottom: "16px", lineHeight: 1.3 }}>
-                                {task.title}
-                            </h2>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+                                <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#111827", lineHeight: 1.3, margin: 0 }}>
+                                    {task.title}
+                                </h2>
+                                <span style={{ fontSize: "12px", fontWeight: 800, color: "#9CA3AF", background: "#F3F4F6", padding: "2px 8px", borderRadius: "6px", fontFamily: "monospace", flexShrink: 0 }}>
+                                    #{task.id.slice(0, 4).toUpperCase()}
+                                </span>
+                            </div>
                             {task.description ? (
                                 <SimpleMarkdown text={task.description} />
                             ) : (
@@ -1006,7 +1189,7 @@ function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onTog
                 )}
             </div>
             {hasNext && onNext ? (
-                <button onClick={(e) => { e.stopPropagation(); onNext(); }} style={{ background: "#FFFFFF", border: "none", width: 48, height: 48, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", color: "#4B5563", flexShrink: 0, transition: "transform 0.15s" }} onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.05)")} onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}><ChevronRight size={24} /></button>
+                <button onClick={(e) => { e.stopPropagation(); onNext(); }} style={{ background: "#FFFFFF", border: "none", width: 48, height: 48, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 10px 25px rgba(0,0,0,0.2)", color: "#111827", flexShrink: 0, transition: "all 0.2s" }} onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.1)")} onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}><ChevronRight size={24} strokeWidth={3} /></button>
             ) : <div style={{ width: 48, flexShrink: 0 }} />}
         </div>
     );
@@ -1193,7 +1376,8 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
 
     return (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)", padding: "24px" }} onClick={onClose}>
-            <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: "24px", padding: "32px", width: "100%", maxWidth: 600, boxShadow: "0 20px 80px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", gap: selectedDateStr ? "20px" : "24px", maxHeight: "90vh", overflowY: "auto" }}>
+            <div onClick={e => e.stopPropagation()} className="reports-modal-scroll" style={{ background: "#FFFFFF", borderRadius: "24px", padding: "32px", width: "100%", maxWidth: 600, boxShadow: "0 20px 80px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", gap: selectedDateStr ? "20px" : "24px", maxHeight: "90vh", overflowY: "auto" }}>
+                <style>{`.reports-modal-scroll::-webkit-scrollbar { display: none; }`}</style>
                 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
@@ -1277,7 +1461,7 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
                             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                                 {(() => {
                                     const dayTasks = dateMap.get(selectedDateStr) || [];
-                                    const ORDER: TaskType[] = ["approved", "done", "on_going", "rework", "to_do"];
+                                    const ORDER: TaskType[] = ["approved", "to_do", "on_going", "done", "rework"];
                                     
                                     return ORDER.map(type => {
                                         const typeTasks = dayTasks.filter(t => t.type === type);
@@ -1312,8 +1496,16 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
                                                                 border: isApprovalSection ? "1px solid #FEE2E2" : "1px solid #E5E7EB",
                                                                 boxShadow: isApprovalSection ? "0 2px 4px rgba(239,68,68,0.05)" : "none"
                                                             }}>
-                                                                <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, overflow: "hidden" }}>
-                                                                    <span style={{ fontSize: "13px", color: "#111827", fontWeight: 500 }}>{t.title}</span>
+                                                                <div style={{ display: "flex", flexDirection: "column", gap: "2px", flex: 1, overflow: "hidden" }}>
+                                                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                                        <span style={{ fontSize: "10px", fontWeight: 800, color: "#9CA3AF", fontFamily: "monospace" }}>#{t.id.slice(0, 4).toUpperCase()}</span>
+                                                                        <span style={{ fontSize: "13px", color: "#111827", fontWeight: 600 }}>{t.title}</span>
+                                                                    </div>
+                                                                    {t.description && (
+                                                                        <p style={{ fontSize: "11px", color: "#6B7280", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                                            {stripMarkdown(t.description)}
+                                                                        </p>
+                                                                    )}
                                                                 </div>
                                                                 <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0, marginLeft: "12px" }}>
                                                                     {handles.length > 0 ? (
