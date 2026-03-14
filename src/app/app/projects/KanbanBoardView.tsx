@@ -20,6 +20,7 @@ type Task = {
     assigned_by: string | null; completed_by: string | null; completed_at: string | null;
     metadata: any; created_at: string; updated_at: string;
     feedback?: string | null;
+    assignees?: { agent_id: string; role: string }[];
 };
 
 const COLUMNS: { id: TaskType; label: string; color: string; icon: any; description: string }[] = [
@@ -83,6 +84,9 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     const [dragOverPosition, setDragOverPosition] = useState<"top" | "bottom" | null>(null);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [showReports, setShowReports] = useState(false);
+    const [showAddAgents, setShowAddAgents] = useState(false);
+    const [apiKeys, setApiKeys] = useState<any[]>([]);
+    const [isGeneratingKey, setIsGeneratingKey] = useState(false);
 
     type ConfirmAction = { title: string; message: string; isDanger?: boolean; confirmText?: string; cancelText?: string; onConfirm: () => void; onCancel: () => void; };
     const [confirmData, setConfirmData] = useState<ConfirmAction | null>(null);
@@ -112,12 +116,20 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
         if (!projData) { setLoading(false); return; }
         setProject(projData);
 
-        const [{ data: taskData }, { data: agentData }, { data: paData }] = await Promise.all([
+        const [{ data: taskData }, { data: agentData }, { data: paData }, { data: keyData }, { data: assigneesData }] = await Promise.all([
             supabase.from("dmz_agents_tasks").select("*").eq("project_id", projData.id).order("priority", { ascending: false }).order("created_at"),
             supabase.from("dmz_agents_definitions").select("id, handle, name, full_name, icon, color, category"),
             supabase.from("dmz_agents_project_agents").select("agent_id, status").eq("project_id", projData.id),
+            supabase.from("dmz_agents_apikeys").select("*").eq("project_id", projData.slug).eq("is_active", true),
+            supabase.from("dmz_agents_task_assignees").select("task_id, agent_id, role")
         ]);
-        setTasks(taskData || []); setAgents(agentData || []); setProjectAgents(paData || []); setLoading(false);
+
+        const tasksWithAssignees = (taskData || []).map(t => ({
+            ...t,
+            assignees: (assigneesData || []).filter(a => a.task_id === t.id)
+        }));
+
+        setTasks(tasksWithAssignees); setAgents(agentData || []); setProjectAgents(paData || []); setApiKeys(keyData || []); setLoading(false);
     }, [slug]);
 
     useEffect(() => { loadData(); }, [loadData]);
@@ -248,6 +260,19 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
         setShowAddTask(null);
     }
 
+    async function toggleTaskAssignee(taskId: string, agentId: string) {
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
+        const exists = task.assignees?.some(a => a.agent_id === agentId);
+        
+        if (exists) {
+            await supabase.from("dmz_agents_task_assignees").delete().eq("task_id", taskId).eq("agent_id", agentId);
+        } else {
+            await supabase.from("dmz_agents_task_assignees").insert({ task_id: taskId, agent_id: agentId, role: 'executor' });
+        }
+        loadData(); 
+    }
+
     async function deleteTask(taskId: string) {
         await supabase.from("dmz_agents_tasks").delete().eq("id", taskId);
         setTasks(prev => prev.filter(t => t.id !== taskId));
@@ -280,6 +305,43 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
             setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updateData } : t));
         } else {
             setTasks(prev => prev.map(t => t.id === taskId ? { ...t, title, description: description || null, agent_id: agentId, feedback: feedback || null } : t));
+        }
+    }
+
+    async function handleGenerateKey() {
+        if (!project) return;
+        setIsGeneratingKey(true);
+        try {
+            const res = await fetch("/api/keys/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ project_id: project.slug, name: `Key_${new Date().toLocaleDateString()}` })
+            });
+            const data = await res.json();
+            if (data.api_key) {
+                // Show the key once
+                confirmAction("API Key Gerada", `Anote sua chave (ela não será exibida novamente):\n\n${data.api_key}`, false, "Copiado", "Fechar");
+                if (typeof window !== "undefined") navigator.clipboard.writeText(data.api_key);
+                // Refresh list
+                const { data: updatedKeys } = await supabase.from("dmz_agents_apikeys").select("*").eq("project_id", project.slug).eq("is_active", true);
+                setApiKeys(updatedKeys || []);
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsGeneratingKey(false);
+        }
+    }
+
+    async function handleToggleProjectAgent(agentId: string) {
+        if (!project) return;
+        const exists = projectAgents.some(pa => pa.agent_id === agentId);
+        if (exists) {
+            const { error } = await supabase.from("dmz_agents_project_agents").delete().eq("project_id", project.id).eq("agent_id", agentId);
+            if (!error) setProjectAgents(prev => prev.filter(pa => pa.agent_id !== agentId));
+        } else {
+            const { error } = await supabase.from("dmz_agents_project_agents").insert({ project_id: project.id, agent_id: agentId, status: "active" });
+            if (!error) setProjectAgents(prev => [...prev, { agent_id: agentId, status: "active" }]);
         }
     }
 
@@ -348,7 +410,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                         <button onClick={() => setShowReports(true)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
                             <FileText size={14} /> Relatórios
                         </button>
-                        <button onClick={() => confirmAction("Adicionar Agentes", "A gestão do squad do projeto será liberada em breve na próxima atualização do sistema.", false, "Entendi", "Fechar")} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
+                        <button onClick={() => setShowAddAgents(true)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
                             <Bot size={14} /> Adicionar Agentes
                         </button>
                         <button onClick={() => router.push(`/app/projects?id=${slug}&view=install`)} style={{ display: "flex", alignItems: "center", gap: "6px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 16px", fontSize: "12px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
@@ -373,12 +435,24 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}><code style={{ fontSize: "12px", color: "#111827", fontFamily: "monospace" }}>{project.slug}</code><CopyBtn text={project.slug} /></div>
                         </div>
                         <div>
-                            <div style={{ fontSize: "10px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", marginBottom: "6px" }}>API Key</div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}><code style={{ fontSize: "12px", color: "#E85D2F", fontFamily: "monospace" }}>{project.api_key}</code><CopyBtn text={project.api_key} /></div>
+                            <div style={{ fontSize: "10px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", marginBottom: "6px" }}>API Keys</div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                {apiKeys.length === 0 ? (
+                                    <div style={{ fontSize: "11px", color: "#9CA3AF" }}>Nenhuma chave ativa</div>
+                                ) : apiKeys.map(k => (
+                                    <div key={k.id} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                        <code style={{ fontSize: "12px", color: "#E85D2F", fontFamily: "monospace" }}>{k.key_prefix}...hash</code>
+                                        <span style={{ fontSize: "10px", color: "#9CA3AF" }}>({k.name})</span>
+                                    </div>
+                                ))}
+                                <button onClick={handleGenerateKey} disabled={isGeneratingKey} style={{ background: "none", border: "1px dashed #D1D5DB", borderRadius: "6px", padding: "4px 8px", fontSize: "11px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
+                                    {isGeneratingKey ? "Gerando..." : "+ Gerar Nova Key"}
+                                </button>
+                            </div>
                         </div>
                         <div>
-                            <div style={{ fontSize: "10px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", marginBottom: "6px" }}>.env.dmz</div>
-                            <CopyBtn text={`DMZ_PROJECT_SLUG=${project.slug}\nDMZ_API_KEY=${project.api_key}`} />
+                            <div style={{ fontSize: "10px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", marginBottom: "6px" }}>Setup .env.dmz</div>
+                            <CopyBtn text={`DMZ_PROJECT_SLUG=${project.slug}\nDMZ_API_KEY=SUA_CHAVE_AQUI`} />
                         </div>
                         <div style={{ display: "flex", alignItems: "flex-end", marginLeft: "auto" }}>
                             <button
@@ -495,17 +569,39 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                                             onMouseEnter={e => { if (!dragging) (e.currentTarget).style.boxShadow = "0 6px 16px rgba(0,0,0,0.06)"; }}
                                             onMouseLeave={e => { (e.currentTarget).style.boxShadow = "0 2px 8px rgba(0,0,0,0.03)"; }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px", pointerEvents: "none" }}>
-                                                <h4 style={{ fontSize: "13px", fontWeight: 700, color: "#111827", lineHeight: 1.4, margin: 0, flex: 1 }}>{task.title}</h4>
-                                                <button onClick={e => { e.stopPropagation(); deleteTask(task.id); }} style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "#D1D5DB", marginLeft: "8px" }}><X size={13} /></button>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ fontSize: "9px", fontWeight: 800, color: col.color, background: col.color + "12", padding: "1px 5px", borderRadius: "4px", display: "inline-block", marginBottom: "4px", letterSpacing: "0.02em" }}>#{task.id.slice(0, 4).toUpperCase()}</div>
+                                                    <h4 style={{ fontSize: "13px", fontWeight: 700, color: "#111827", lineHeight: 1.4, margin: 0 }}>{task.title}</h4>
+                                                </div>
+                                                <button onClick={e => { e.stopPropagation(); deleteTask(task.id); }} style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "#D1D5DB", marginLeft: "8px", pointerEvents: "auto" }}><X size={13} /></button>
                                             </div>
                                             {task.description && <p style={{ fontSize: "12px", color: "#6B7280", lineHeight: 1.5, margin: "0 0 10px", maxHeight: "52px", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>{stripMarkdown(task.description)}</p>}
                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                {agent ? (
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                                        <div style={{ width: 22, height: 22, borderRadius: "6px", background: (agent.color || "#6B7280") + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 800, color: agent.color || "#6B7280" }}>{agent.handle?.charAt(0).toUpperCase()}</div>
-                                                        <span style={{ fontSize: "12px", fontWeight: 600, color: agent.color || "#6B7280", fontFamily: "monospace" }}>@{agent.handle}</span>
-                                                    </div>
-                                                ) : <span style={{ fontSize: "12px", color: "#D1D5DB" }}>sem agente</span>}
+                                                <div style={{ display: "flex", alignItems: "center" }}>
+                                                    {task.assignees && task.assignees.length > 0 ? (
+                                                        <div style={{ display: "flex", alignItems: "center" }}>
+                                                            {task.assignees.map((as, idx) => {
+                                                                const ag = getAgent(as.agent_id);
+                                                                if (!ag) return null;
+                                                                return (
+                                                                    <div key={as.agent_id} style={{ 
+                                                                        width: 22, height: 22, borderRadius: "50%", 
+                                                                        background: ag.color || "#6B7280", 
+                                                                        display: "flex", alignItems: "center", justifyContent: "center", 
+                                                                        fontSize: "9px", fontWeight: 800, color: "#FFF",
+                                                                        marginLeft: idx > 0 ? "-8px" : "0",
+                                                                        border: "2px solid #FFF",
+                                                                        zIndex: 10 - idx
+                                                                    }} title={`@${ag.handle}`}>
+                                                                        {ag.handle?.charAt(0).toUpperCase()}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    ) : (
+                                                        <span style={{ fontSize: "11px", color: "#D1D5DB" }}>sem agente</span>
+                                                    )}
+                                                </div>
                                                 <span style={{ fontSize: "11px", color: "#9CA3AF", fontFamily: "monospace" }}>{new Date(task.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}</span>
                                             </div>
                                             {task.completed_at && (
@@ -545,6 +641,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                         projectAgents={agents.filter(a => projectAgents.some(pa => pa.agent_id === a.id))}
                         onDelete={() => { deleteTask(selectedTask.id); setSelectedTask(null); }}
                         onUpdate={(t, d, a, f, type) => updateTaskContent(selectedTask.id, t, d, a, f, type)}
+                        onToggleAssignee={(agentId) => toggleTaskAssignee(selectedTask.id, agentId)}
                         onClose={() => setSelectedTask(null)}
                         confirmAction={confirmAction}
                         hasPrev={!!prevTask}
@@ -612,7 +709,67 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                 <ReportsModal tasks={tasks} project={project} agents={agents} onClose={() => setShowReports(false)} confirmAction={confirmAction} />
             )}
 
+            {showAddAgents && (
+                <AddAgentsModal
+                    agents={agents}
+                    projectAgents={projectAgents}
+                    onToggle={handleToggleProjectAgent}
+                    onClose={() => setShowAddAgents(false)}
+                />
+            )}
+
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+    );
+}
+
+function AddAgentsModal({ agents, projectAgents, onToggle, onClose }: { agents: any[]; projectAgents: any[]; onToggle: (id: string) => void; onClose: () => void }) {
+    return (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)", padding: "24px" }} onClick={onClose}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: "24px", padding: "32px", width: "100%", maxWidth: 500, boxShadow: "0 20px 80px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", gap: "24px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div style={{ width: 40, height: 40, borderRadius: "12px", background: "#E85D2F15", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <Bot size={20} color="#E85D2F" />
+                        </div>
+                        <div>
+                            <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#111827", margin: 0 }}>Gerenciar Squad</h3>
+                            <p style={{ fontSize: "12px", color: "#6B7280", margin: 0 }}>Selecione os agentes que trabalharão neste projeto</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF" }}><X size={20} /></button>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", maxHeight: "400px", overflowY: "auto", padding: "4px" }}>
+                    {agents.map(agent => {
+                        const isActive = projectAgents.some(pa => pa.agent_id === agent.id);
+                        return (
+                            <button
+                                key={agent.id}
+                                onClick={() => onToggle(agent.id)}
+                                style={{
+                                    display: "flex", alignItems: "center", gap: "10px", padding: "12px",
+                                    background: isActive ? (agent.color || "#6B7280") + "08" : "#FFFFFF",
+                                    border: isActive ? `1.5px solid ${agent.color || "#6B7280"}` : "1.5px solid #F0F0F0",
+                                    borderRadius: "14px", cursor: "pointer", textAlign: "left", transition: "all 0.15s"
+                                }}
+                            >
+                                <div style={{ width: 32, height: 32, borderRadius: "8px", background: (agent.color || "#6B7280") + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 800, color: agent.color || "#6B7280" }}>
+                                    {isActive ? <BadgeCheck size={16} /> : agent.handle?.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: "13px", fontWeight: 700, color: "#111827" }}>{agent.name}</div>
+                                    <div style={{ fontSize: "11px", color: agent.color || "#6B7280", fontFamily: "monospace" }}>@{agent.handle}</div>
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <button onClick={onClose} style={{ width: "100%", background: "#111827", color: "#FFFFFF", border: "none", borderRadius: "12px", padding: "14px", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}>
+                    Concluir Ajustes
+                </button>
+            </div>
         </div>
     );
 }
@@ -653,7 +810,7 @@ function formatInline(text: string): React.ReactNode[] {
     return parts;
 }
 
-function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClose, confirmAction, hasPrev, hasNext, onPrev, onNext }: { task: Task; agent: any; projectAgents: any[]; onDelete: () => void; onUpdate: (t: string, d: string, a: string | null, feedback: string | null, newType?: TaskType) => void; onClose: () => void; confirmAction: (t: string, m: string, isDanger?: boolean, confirmText?: string, cancelText?: string) => Promise<boolean>; hasPrev?: boolean; hasNext?: boolean; onPrev?: () => void; onNext?: () => void; }) {
+function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onToggleAssignee, onClose, confirmAction, hasPrev, hasNext, onPrev, onNext }: { task: Task; agent: any; projectAgents: any[]; onDelete: () => void; onUpdate: (t: string, d: string, a: string | null, feedback: string | null, newType?: TaskType) => void; onToggleAssignee?: (agentId: string) => void; onClose: () => void; confirmAction: (t: string, m: string, isDanger?: boolean, confirmText?: string, cancelText?: string) => Promise<boolean>; hasPrev?: boolean; hasNext?: boolean; onPrev?: () => void; onNext?: () => void; }) {
     const col = COLUMNS.find(c => c.id === task.type)!;
     const [isEditing, setIsEditing] = useState(false);
     const [title, setTitle] = useState(task.title);
@@ -674,6 +831,17 @@ function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClo
         setIsEditing(false);
     }
 
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (isEditing) return; // Don't navigate while typing
+            if (e.key === "ArrowLeft" && hasPrev && onPrev) onPrev();
+            if (e.key === "ArrowRight" && hasNext && onNext) onNext();
+            if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [isEditing, hasPrev, hasNext, onPrev, onNext, onClose]);
+
     function handleFeedbackSubmit(action: "approve" | "rework") {
         if (action === "rework" && !feedback.trim()) {
             confirmAction("Feedback Obrigatório", "Para enviar para Rework (Refazer), adicione um feedback explicando o motivo.", false, "Entendi", "Fechar");
@@ -688,7 +856,13 @@ function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClo
             {hasPrev && onPrev ? (
                 <button onClick={(e) => { e.stopPropagation(); onPrev(); }} style={{ background: "#FFFFFF", border: "none", width: 48, height: 48, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", color: "#4B5563", flexShrink: 0, transition: "transform 0.15s" }} onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.05)")} onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}><ChevronLeft size={24} /></button>
             ) : <div style={{ width: 48, flexShrink: 0 }} />}
-            <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: "24px", padding: "32px", width: "100%", maxWidth: 600, boxShadow: "0 20px 80px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", gap: "24px", maxHeight: "90vh", overflowY: "auto" }}>
+            <div onClick={e => e.stopPropagation()} style={{ 
+                background: "#FFFFFF", borderRadius: "24px", padding: "32px", width: "100%", maxWidth: 600, 
+                boxShadow: "0 20px 80px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", gap: "24px", 
+                maxHeight: "90vh", overflowY: "auto",
+                msOverflowStyle: 'none', scrollbarWidth: 'none' // Hide scrollbar for IE, Edge and Firefox
+            }} className="hide-scrollbar">
+                <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                         <div style={{ width: 40, height: 40, borderRadius: "12px", background: col.color + "15", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -723,13 +897,30 @@ function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClo
                             <textarea value={description} onChange={e => setDescription(e.target.value)} rows={4} style={{ width: "100%", background: "#F9FAFB", border: "1.5px solid #F0F0F0", borderRadius: "10px", padding: "10px 14px", fontSize: "14px", color: "#4B5563", outline: "none", resize: "vertical" }} />
                         </div>
                         <div>
-                            <label style={{ fontSize: "12px", fontWeight: 600, color: "#374151", marginBottom: "6px", display: "block" }}>Responsável</label>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                                <button onClick={() => setAgentId("orchestrator")} style={{ background: agentId === "orchestrator" ? "#E85D2F10" : "#F9FAFB", border: agentId === "orchestrator" ? "1.5px solid #E85D2F" : "1.5px solid #F0F0F0", borderRadius: "8px", padding: "6px 12px", fontSize: "11px", fontWeight: 600, color: agentId === "orchestrator" ? "#E85D2F" : "#9CA3AF", cursor: "pointer" }}>@orch (auto)</button>
-                                {projectAgents.map(a => (
-                                    <button key={a.id} onClick={() => setAgentId(a.id)} style={{ background: agentId === a.id ? (a.color || "#6B7280") + "10" : "#F9FAFB", border: agentId === a.id ? `1.5px solid ${a.color || "#6B7280"}` : "1.5px solid #F0F0F0", borderRadius: "8px", padding: "6px 12px", fontSize: "11px", fontWeight: 600, color: agentId === a.id ? (a.color || "#6B7280") : "#9CA3AF", cursor: "pointer", fontFamily: "monospace" }}>@{a.handle}</button>
-                                ))}
-                                <button onClick={() => setAgentId(null)} style={{ background: !agentId ? "#F3F4F6" : "#FFFFFF", border: !agentId ? "1.5px solid #D1D5DB" : "1.5px solid #F0F0F0", borderRadius: "8px", padding: "6px 12px", fontSize: "11px", fontWeight: 600, color: !agentId ? "#4B5563" : "#9CA3AF", cursor: "pointer" }}>Limpar</button>
+                            <label style={{ fontSize: "12px", fontWeight: 600, color: "#374151", marginBottom: "8px", display: "block" }}>Responsáveis (Co-autores)</label>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                                {projectAgents.map(a => {
+                                    const isActive = task.assignees?.some(as => as.agent_id === a.id);
+                                    return (
+                                        <button 
+                                            key={a.id} 
+                                            onClick={() => onToggleAssignee?.(a.id)} 
+                                            style={{ 
+                                                display: "flex", alignItems: "center", gap: "6px",
+                                                background: isActive ? (a.color || "#6B7280") + "15" : "#F9FAFB", 
+                                                border: isActive ? `1.5px solid ${a.color || "#6B7280"}` : "1.5px solid #F0F0F0", 
+                                                borderRadius: "10px", padding: "6px 12px", fontSize: "11px", fontWeight: 700, 
+                                                color: isActive ? (a.color || "#6B7280") : "#9CA3AF", cursor: "pointer", 
+                                                transition: "all 0.1s", fontFamily: "monospace" 
+                                            }}
+                                        >
+                                            <div style={{ width: 14, height: 14, borderRadius: "50%", background: isActive ? (a.color || "#6B7280") : "#D1D5DB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "8px", color: "#FFF" }}>
+                                                {a.handle?.charAt(0).toUpperCase()}
+                                            </div>
+                                            @{a.handle}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                         <button onClick={handleSave} disabled={!title.trim()} style={{ width: "100%", marginTop: "10px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", background: title.trim() ? `linear-gradient(135deg, ${col.color}, ${col.color}CC)` : "#F3F4F6", color: title.trim() ? "#FFFFFF" : "#9CA3AF", border: "none", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: 700, cursor: title.trim() ? "pointer" : "default" }}>
@@ -877,10 +1068,10 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     // Group tasks by date
-    // Unique dates sorting descending
     const dateMap = new Map<string, Task[]>();
     tasks.forEach(t => {
-        if (t.type !== "done" && t.type !== "approved" && t.type !== "rework" && t.type !== "on_going") return; // Mostly completed/active ones
+        // Include relevant types requested by user
+        if (!["done", "approved", "rework", "on_going", "to_do"].includes(t.type)) return;
         const d = new Date(t.updated_at || t.created_at);
         const yyyyMmDd = d.toISOString().split("T")[0]; // YYYY-MM-DD
         if (!dateMap.has(yyyyMmDd)) dateMap.set(yyyyMmDd, []);
@@ -920,8 +1111,19 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
                     date_str: selectedDateStr,
                     force_regenerate: forceRegenerate,
                     tasks: reqTasks.map(t => {
-                        const agent = agents.find(a => a.id === t.agent_id);
-                        return { title: t.title, type: t.type, agent_handle: agent?.handle || "squad" };
+                        const handles = (t.assignees || []).map(as => {
+                            const ag = agents.find(a => a.id === as.agent_id);
+                            return ag?.handle || "agente";
+                        });
+                        if (handles.length === 0 && t.agent_id) {
+                            const ag = agents.find(a => a.id === t.agent_id);
+                            if (ag) handles.push(ag.handle);
+                        }
+                        return { 
+                            title: t.title, 
+                            type: t.type, 
+                            agent_handle: handles.length > 0 ? handles.join(", ") : "squad" 
+                        };
                     })
                 })
             });
@@ -1035,7 +1237,7 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
                             <button onClick={() => {
                                 if (!narrativeText) handleGenerate(false, true);
                                 else handlePlayPause();
-                            }} disabled={loading && !audioUrl && narrativeText} style={{ 
+                            }} disabled={!!(loading && !audioUrl && narrativeText)} style={{ 
                                 display: "flex", alignItems: "center", justifyContent: "center", flex: 1, gap: "8px", background: "linear-gradient(135deg, #10B981, #059669)", 
                                 color: "#FFFFFF", border: "none", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: 700, 
                                 cursor: (loading && !audioUrl && narrativeText) ? "not-allowed" : "pointer", transition: "all 0.2s", opacity: (loading && !audioUrl && narrativeText) ? 0.7 : 1
@@ -1071,25 +1273,63 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
                         )}
 
                         <div style={{ background: "#FAFAFA", border: "1.5px solid #F0F0F0", borderRadius: "16px", padding: "20px" }}>
-                            <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#374151", marginBottom: "16px" }}>Tarefas Trabalhadas ({dateMap.get(selectedDateStr)?.length || 0})</h3>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                                {dateMap.get(selectedDateStr)?.map(t => {
-                                    const agent = agents.find(a => a.id === t.agent_id);
-                                    const col = COLUMNS.find(c => c.id === t.type)! || COLUMNS[0];
-                                    return (
-                                        <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF", padding: "12px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, overflow: "hidden" }}>
-                                                <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: col.color, flexShrink: 0 }} />
-                                                <span style={{ fontSize: "13px", color: "#111827", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.title}</span>
+                            <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#374151", marginBottom: "16px" }}>Estrutura de Atividades ({dateMap.get(selectedDateStr)?.length || 0})</h3>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                                {(() => {
+                                    const dayTasks = dateMap.get(selectedDateStr) || [];
+                                    const ORDER: TaskType[] = ["approved", "done", "on_going", "rework", "to_do"];
+                                    
+                                    return ORDER.map(type => {
+                                        const typeTasks = dayTasks.filter(t => t.type === type);
+                                        if (typeTasks.length === 0) return null;
+                                        
+                                        const col = COLUMNS.find(c => c.id === type)!;
+                                        const isApprovalSection = type === "done";
+
+                                        return (
+                                            <div key={type} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2px" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                        <div style={{ width: 6, height: 6, borderRadius: "50%", background: col.color }} />
+                                                        <span style={{ fontSize: "11px", fontWeight: 800, color: col.color, textTransform: "uppercase", letterSpacing: "0.05em" }}>{col.label}</span>
+                                                    </div>
+                                                    {isApprovalSection && (
+                                                        <span style={{ fontSize: "10px", fontWeight: 700, background: "#FEE2E2", color: "#EF4444", padding: "2px 8px", borderRadius: "6px" }}>AGUARDANDO APROVAÇÃO</span>
+                                                    )}
+                                                </div>
+                                                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                                    {typeTasks.map(t => {
+                                                        const handles = (t.assignees || []).map(as => {
+                                                            const ag = agents.find(a => a.id === as.agent_id);
+                                                            return ag ? `@${ag.handle}` : null;
+                                                        }).filter(Boolean);
+
+                                                        return (
+                                                            <div key={t.id} style={{ 
+                                                                display: "flex", alignItems: "center", justifyContent: "space-between", 
+                                                                background: isApprovalSection ? "#FFF7F7" : "#FFFFFF", 
+                                                                padding: "10px 14px", borderRadius: "10px", 
+                                                                border: isApprovalSection ? "1px solid #FEE2E2" : "1px solid #E5E7EB",
+                                                                boxShadow: isApprovalSection ? "0 2px 4px rgba(239,68,68,0.05)" : "none"
+                                                            }}>
+                                                                <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, overflow: "hidden" }}>
+                                                                    <span style={{ fontSize: "13px", color: "#111827", fontWeight: 500 }}>{t.title}</span>
+                                                                </div>
+                                                                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0, marginLeft: "12px" }}>
+                                                                    {handles.length > 0 ? (
+                                                                        <span style={{ fontSize: "10px", fontWeight: 700, color: col.color, background: col.color + "10", padding: "3px 8px", borderRadius: "6px", fontFamily: "monospace" }}>
+                                                                            {handles.join(" ")}
+                                                                        </span>
+                                                                    ) : <span style={{ fontSize: "10px", color: "#D1D5DB" }}>squad</span>}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0, marginLeft: "12px" }}>
-                                                {agent ? (
-                                                    <span style={{ fontSize: "11px", fontWeight: 600, color: agent.color || "#6B7280", background: (agent.color || "#6B7280") + "15", padding: "2px 6px", borderRadius: "4px", fontFamily: "monospace" }}>@{agent.handle}</span>
-                                                ) : <span style={{ fontSize: "11px", color: "#D1D5DB" }}>sem agente</span>}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    });
+                                })()}
                             </div>
                         </div>
 

@@ -2,6 +2,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
+import hashlib
+import secrets
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 # Load .env first, then .env.dmz as fallback
@@ -1071,12 +1074,13 @@ async def explain_daily_report(req: DailyReportExplainRequest, authorization: st
         print(f"Error fetching report config: {e}. Using fallback prompt.")
         system_prompt = (
             f"Você é a inteligência e analista (copywriter) do DMZ OS. O seu objetivo é construir uma narrativa em formato de relatório de "
-            f"atividades. O gestor, {first_name_only}, pediu um resumo das tarefas do dia ({date_full}). "
-            f"Fale no plural em nome do 'squad DMZ' (nossa equipe). Comece EXATAMENTE com: 'Oi {first_name_only}, hoje o time trabalhou bastante, vou te contar o que rolou em nosso squad nesta {date_full.split(',')[0]}...' ou algo similar, amigável. "
-            f"Crie uma história fluida do que foi feito, falando de forma natural e amigável, não parecendo um robô. "
-            f"Não liste itens mecanicamente (com bullets). Conecte as tarefas executadas pelos agentes (fale os nomes deles: syd, orch, oliver, etc, mas SEMPRE sem o caractere @ para o áudio ficar perfeito). "
-            f"Exemplo: 'Hoje o Oliver corrigiu X, já a Sofia adicionou Y, e isso vai gerar mais estrutura'. "
-            f"Ao final, faça uma conclusão breve. O texto servirá como um relatório para reuniões."
+            f"atividades. O gestor, {first_name_only}, pediu um resumo das tarefas do dia ({date_full}).\n\n"
+            f"DIRETRIZES DE NARRATIVA:\n"
+            f"1. Fale no plural em nome do 'squad DMZ'. Comece de forma amigável: 'Oi {first_name_only}, hoje o time trabalhou bastante...'.\n"
+            f"2. PRIORIDADE: Primeiro destaque o que foi APROVADO (concluído de vez). Depois, dê ATENÇÃO ESPECIAL ao que está em 'done' (aguardando a aprovação dele). Em seguida, fale do que está em andamento (on_going), o que precisa de ajustes (rework) e o que está no radar para começar (to_do).\n"
+            f"3. ESTILO: Crie uma história fluida, falando de forma natural. Não use bullets. Mencione os agentes pelo nome (orch, syd, oliver, etc) SEM usar o @.\n"
+            f"4. FOCO EM RESULTADO: Explique o valor do que foi feito, não apenas o título da tarefa.\n"
+            f"5. CONCLUSÃO: Encerre com uma frase motivadora ou um 'estamos à disposição'."
         )
     
     tasks_text = "; ".join([f"[{t.get('type')}] {t.get('title')} (responsável: {t.get('agent_handle', 'squad')})" for t in req.tasks])
@@ -1108,6 +1112,66 @@ async def explain_daily_report(req: DailyReportExplainRequest, authorization: st
         print(f"Failed to save report to DB: {e}")
         
     return {"script": script, "audioUrl": None, "is_cached": False}
+
+# ─── API Key Management ─────────────────────────────────────────────────────
+
+class KeyValidateRequest(BaseModel):
+    api_key: str
+    project_slug: str
+
+class KeyGenerateRequest(BaseModel):
+    project_id: str
+    name: str
+
+@app.post("/api/validate-key")
+async def validate_key(req: KeyValidateRequest):
+    # Hash incoming key
+    key_hash = hashlib.sha256(req.api_key.encode()).hexdigest()
+    
+    # Check in DB
+    try:
+        res = supabase.table("dmz_agents_apikeys").select("*").eq("key_hash", key_hash).eq("project_id", req.project_slug).eq("is_active", True).execute()
+        
+        if not res.data:
+            # Fallback: check if the key is the project_slug itself (legacy/dev support for easy migration)
+            # Actually, better to strictly enforce keys now.
+            raise HTTPException(status_code=401, detail="Invalid API Key or Project Slug association")
+        
+        key_data = res.data[0]
+        
+        # Update last used
+        supabase.table("dmz_agents_apikeys").update({"last_used_at": datetime.utcnow().isoformat()}).eq("id", key_data["id"]).execute()
+        
+        return {"valid": True, "project_id": key_data["project_id"], "name": key_data["name"]}
+    except Exception as e:
+        print(f"Validation error: {e}")
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+@app.post("/api/keys/generate")
+async def generate_key(req: KeyGenerateRequest):
+    prefix = "dmz_pk_"
+    raw_key = prefix + secrets.token_urlsafe(32)
+    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+    
+    try:
+        new_key = {
+            "project_id": req.project_id,
+            "name": req.name,
+            "key_hash": key_hash,
+            "key_prefix": prefix,
+            "is_active": True,
+            "created_at": datetime.utcnow().isoformat()
+        }
+        
+        res = supabase.table("dmz_agents_apikeys").insert(new_key).execute()
+        
+        if not res.data:
+            raise HTTPException(status_code=500, detail="Failed to generate key")
+            
+        return {"api_key": raw_key, "id": res.data[0]["id"]}
+    except Exception as e:
+        print(f"Key generation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
