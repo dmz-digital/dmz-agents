@@ -6,7 +6,8 @@ import {
     ArrowLeft, Plus, Bot, Clock, CheckCircle2, AlertTriangle,
     RotateCcw, BookOpen, Activity, GripVertical,
     Brain, Key, Copy, Check, Settings, Terminal,
-    Users, X, FolderOpen, BadgeCheck, ListTodo, FileText, Play, Volume2, Square
+    Users, X, FolderOpen, BadgeCheck, ListTodo, FileText, Play, Volume2, Square,
+    ChevronLeft, ChevronRight
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import AppHeader from "@/components/AppHeader";
@@ -530,18 +531,29 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
             </div>{/* end kanban-scroll-x */}
             </div>{/* end board bg */}
 
-            {/* Task Detail Modal */}
-            {selectedTask && (
-                <TaskDetailModal
-                    task={selectedTask}
-                    agent={getAgent(selectedTask.agent_id)}
-                    projectAgents={agents.filter(a => projectAgents.some(pa => pa.agent_id === a.id))}
-                    onDelete={() => { deleteTask(selectedTask.id); setSelectedTask(null); }}
-                    onUpdate={(t, d, a, f, type) => updateTaskContent(selectedTask.id, t, d, a, f, type)}
-                    onClose={() => setSelectedTask(null)}
-                    confirmAction={confirmAction}
-                />
-            )}
+            {/* TaskDetailModal with navigation */}
+            {selectedTask && (() => {
+                const colTasks = getTasksByColumn(selectedTask.type);
+                const currentIndex = colTasks.findIndex(t => t.id === selectedTask.id);
+                const prevTask = currentIndex > 0 ? colTasks[currentIndex - 1] : null;
+                const nextTask = currentIndex !== -1 && currentIndex < colTasks.length - 1 ? colTasks[currentIndex + 1] : null;
+
+                return (
+                    <TaskDetailModal
+                        task={selectedTask}
+                        agent={getAgent(selectedTask.agent_id)}
+                        projectAgents={agents.filter(a => projectAgents.some(pa => pa.agent_id === a.id))}
+                        onDelete={() => { deleteTask(selectedTask.id); setSelectedTask(null); }}
+                        onUpdate={(t, d, a, f, type) => updateTaskContent(selectedTask.id, t, d, a, f, type)}
+                        onClose={() => setSelectedTask(null)}
+                        confirmAction={confirmAction}
+                        hasPrev={!!prevTask}
+                        hasNext={!!nextTask}
+                        onPrev={() => prevTask && setSelectedTask(prevTask)}
+                        onNext={() => nextTask && setSelectedTask(nextTask)}
+                    />
+                );
+            })()}
 
             {/* Add Task Modal */}
             {showAddTask && (
@@ -641,13 +653,21 @@ function formatInline(text: string): React.ReactNode[] {
     return parts;
 }
 
-function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClose, confirmAction }: { task: Task; agent: any; projectAgents: any[]; onDelete: () => void; onUpdate: (t: string, d: string, a: string | null, feedback: string | null, newType?: TaskType) => void; onClose: () => void; confirmAction: (t: string, m: string, isDanger?: boolean, confirmText?: string, cancelText?: string) => Promise<boolean> }) {
+function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClose, confirmAction, hasPrev, hasNext, onPrev, onNext }: { task: Task; agent: any; projectAgents: any[]; onDelete: () => void; onUpdate: (t: string, d: string, a: string | null, feedback: string | null, newType?: TaskType) => void; onClose: () => void; confirmAction: (t: string, m: string, isDanger?: boolean, confirmText?: string, cancelText?: string) => Promise<boolean>; hasPrev?: boolean; hasNext?: boolean; onPrev?: () => void; onNext?: () => void; }) {
     const col = COLUMNS.find(c => c.id === task.type)!;
     const [isEditing, setIsEditing] = useState(false);
     const [title, setTitle] = useState(task.title);
     const [description, setDescription] = useState(task.description || "");
     const [feedback, setFeedback] = useState(task.feedback || "");
     const [agentId, setAgentId] = useState<string | null>(task.agent_id);
+
+    useEffect(() => {
+        setTitle(task.title);
+        setDescription(task.description || "");
+        setFeedback(task.feedback || "");
+        setAgentId(task.agent_id);
+        setIsEditing(false);
+    }, [task]);
 
     function handleSave() {
         onUpdate(title, description, agentId, feedback, undefined);
@@ -664,7 +684,10 @@ function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClo
     }
 
     return (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)", padding: "24px" }} onClick={onClose}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", gap: "24px", zIndex: 100, backdropFilter: "blur(4px)", padding: "24px" }} onClick={onClose}>
+            {hasPrev && onPrev ? (
+                <button onClick={(e) => { e.stopPropagation(); onPrev(); }} style={{ background: "#FFFFFF", border: "none", width: 48, height: 48, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", color: "#4B5563", flexShrink: 0, transition: "transform 0.15s" }} onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.05)")} onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}><ChevronLeft size={24} /></button>
+            ) : <div style={{ width: 48, flexShrink: 0 }} />}
             <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: "24px", padding: "32px", width: "100%", maxWidth: 600, boxShadow: "0 20px 80px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", gap: "24px", maxHeight: "90vh", overflowY: "auto" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
@@ -791,6 +814,9 @@ function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onClo
                     </>
                 )}
             </div>
+            {hasNext && onNext ? (
+                <button onClick={(e) => { e.stopPropagation(); onNext(); }} style={{ background: "#FFFFFF", border: "none", width: 48, height: 48, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", color: "#4B5563", flexShrink: 0, transition: "transform 0.15s" }} onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.05)")} onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}><ChevronRight size={24} /></button>
+            ) : <div style={{ width: 48, flexShrink: 0 }} />}
         </div>
     );
 }
