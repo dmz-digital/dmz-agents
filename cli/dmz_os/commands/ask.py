@@ -41,14 +41,28 @@ def ask_command(prompt_text: str, project: str | None = None):
         title = prompt_text[:120] + "..." if len(prompt_text) > 120 else prompt_text
         desc = prompt_text if len(prompt_text) > 120 else "Task gerada automaticamente a partir da máquina local do cliente (CLI)."
 
+        # Tenta detectar um @agente na string para delegar direto
+        import re
+        target_agent = "orchestrator"
+        column_type = "master_plan"
+        
+        match = re.search(r'@([a-zA-Z0-9_-]+)', prompt_text)
+        if match:
+            # Pega o id do agente (ex: @cassandra -> cassandra)
+            target_agent = match.group(1).lower()
+            column_type = "to_do" # Se vai direto pra um agente operário, passa do Master Plan pro To Do
+            
+            # Formata o título para remover a tag do início se ela começou lá
+            title = re.sub(r'^@[a-zA-Z0-9_-]+\s+', '', title)
+
         # Insere a demanda diretamente no Kanban da plataforma remota!
         payload = {
             "project_id": slug,
-            "type": "master_plan",
+            "type": column_type,
             "title": title,
             "description": desc,
             "status": "pending",
-            "agent_id": "orchestrator",  # Orquestrador local/remoto irá pegar
+            "agent_id": target_agent,  # Pode ser @orch, ou o agente especifico detectado
             "assigned_by": "IDE Bridge",
             "priority": 800  # Alta prioridade pra aparecer no topo
         }
