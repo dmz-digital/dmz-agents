@@ -49,6 +49,84 @@ function Dot({ status }: { status: string }) {
     );
 }
 
+function ToolModal({ tool, onClose, onSave, onDelete }: { tool: any, onClose: () => void, onSave: (t: any) => void, onDelete: (id: string) => void }) {
+    const isNew = !tool;
+    const [formData, setFormData] = useState(tool || {
+        id: "", name: "", type: "Platform", icon: "Plug", description: "", docs_url: "", status: "not_configured"
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave(formData);
+    };
+
+    return (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)", padding: "16px" }}>
+            <div style={{ background: "#FFFFFF", borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "500px", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px", alignItems: "center" }}>
+                    <h2 style={{ fontSize: "18px", fontWeight: 700 }}>{isNew ? "Adicionar Integração/Ferramenta" : "Editar Ferramenta"}</h2>
+                    <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "#9CA3AF", fontSize: "20px" }}>&times;</button>
+                </div>
+                <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {isNew && (
+                        <div>
+                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#374151", marginBottom: "4px" }}>ID</label>
+                            <input required value={formData.id} onChange={e => setFormData({...formData, id: e.target.value})} style={{ width: "100%", padding: "8px", borderRadius: "8px", border: "1px solid #D1D5DB", fontSize: "14px", outline: "none" }} placeholder="ex: stripe_api" />
+                        </div>
+                    )}
+                    <div>
+                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#374151", marginBottom: "4px" }}>Nome</label>
+                        <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{ width: "100%", padding: "8px", borderRadius: "8px", border: "1px solid #D1D5DB", fontSize: "14px", outline: "none" }} />
+                    </div>
+                    <div>
+                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#374151", marginBottom: "4px" }}>Descrição</label>
+                        <textarea required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} style={{ width: "100%", padding: "8px", borderRadius: "8px", border: "1px solid #D1D5DB", fontSize: "14px", minHeight: "60px", outline: "none" }} />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                        <div>
+                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#374151", marginBottom: "4px" }}>Tipo</label>
+                            <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} style={{ width: "100%", padding: "8px", borderRadius: "8px", border: "1px solid #D1D5DB", fontSize: "14px", outline: "none" }}>
+                                <option value="MCP">MCP</option>
+                                <option value="Token">Token</option>
+                                <option value="API">API</option>
+                                <option value="Webhook">Webhook</option>
+                                <option value="UI">UI</option>
+                                <option value="Platform">Platform</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#374151", marginBottom: "4px" }}>Status</label>
+                            <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} style={{ width: "100%", padding: "8px", borderRadius: "8px", border: "1px solid #D1D5DB", fontSize: "14px", outline: "none" }}>
+                                <option value="connected">Connected</option>
+                                <option value="disconnected">Disconnected</option>
+                                <option value="not_configured">Not Configured</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#374151", marginBottom: "4px" }}>Ícone (Lucide Name ou URL da imagem)</label>
+                        <input value={formData.icon} onChange={e => setFormData({...formData, icon: e.target.value})} style={{ width: "100%", padding: "8px", borderRadius: "8px", border: "1px solid #D1D5DB", fontSize: "14px", outline: "none" }} placeholder="ex: Plug, Database, ou https://..." />
+                        <p style={{fontSize: "10px", color: "#9CA3AF", marginTop: "4px"}}>Dica: Você pode inserir a URL de uma logo real para ficar mais bonito!</p>
+                    </div>
+                    <div>
+                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#374151", marginBottom: "4px" }}>Docs URL (opcional)</label>
+                        <input value={formData.docs_url || ""} onChange={e => setFormData({...formData, docs_url: e.target.value})} style={{ width: "100%", padding: "8px", borderRadius: "8px", border: "1px solid #D1D5DB", fontSize: "14px", outline: "none" }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: "16px" }}>
+                        {!isNew ? (
+                            <button type="button" onClick={() => { if(window.confirm("Deseja excluir definitivamente esta plataforma/integração?")) onDelete(formData.id); }} style={{ padding: "8px 16px", borderRadius: "8px", background: "#FEE2E2", color: "#EF4444", fontWeight: 600, border: "none", cursor: "pointer", fontSize: "13px" }}>Excluir</button>
+                        ) : <div/>}
+                        <div style={{ display: "flex", gap: "8px" }}>
+                            <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: "8px", background: "#F3F4F6", color: "#374151", fontWeight: 600, border: "1px solid #D1D5DB", cursor: "pointer", fontSize: "13px" }}>Cancelar</button>
+                            <button type="submit" style={{ padding: "8px 16px", borderRadius: "8px", background: "#D8663E", color: "#FFF", fontWeight: 600, border: "none", cursor: "pointer", fontSize: "13px" }}>{isNew ? "Adicionar" : "Salvar"}</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 export default function ToolsPage() {
     const [tools, setTools] = useState<any[]>([]);
     const [assignments, setAssignments] = useState<any[]>([]);
@@ -56,18 +134,22 @@ export default function ToolsPage() {
     const [search, setSearch] = useState("");
     const [typeFilter, setTypeFilter] = useState("All");
 
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editTool, setEditTool] = useState<any>(null);
+
+    const loadData = async () => {
+        const [{ data: toolsData }, { data: assignData }] = await Promise.all([
+            supabase.from("dmz_agents_tools").select("*").order("name"),
+            supabase.from("dmz_agents_tool_assignments")
+                .select("tool_id, agent:dmz_agents_definitions(id, handle, name, icon, category)")
+        ]);
+        setTools(toolsData || []);
+        setAssignments(assignData || []);
+        if (loading) setLoading(false);
+    };
+
     useEffect(() => {
-        async function load() {
-            const [{ data: toolsData }, { data: assignData }] = await Promise.all([
-                supabase.from("dmz_agents_tools").select("*").order("name"),
-                supabase.from("dmz_agents_tool_assignments")
-                    .select("tool_id, agent:dmz_agents_definitions(id, handle, name, icon, category)")
-            ]);
-            setTools(toolsData || []);
-            setAssignments(assignData || []);
-            setLoading(false);
-        }
-        load();
+        loadData();
     }, []);
 
     const types = ["All", ...Array.from(new Set(tools.map(t => t.type)))];
@@ -80,6 +162,38 @@ export default function ToolsPage() {
 
     function getAgentsForTool(toolId: string) {
         return assignments.filter((a: any) => a.tool_id === toolId).map((a: any) => a.agent).filter(Boolean);
+    }
+
+    async function handleSaveTool(toolData: any) {
+        if (!editTool) {
+            await supabase.from("dmz_agents_tools").insert({
+                id: toolData.id,
+                name: toolData.name,
+                type: toolData.type,
+                description: toolData.description,
+                icon: toolData.icon,
+                status: toolData.status,
+                docs_url: toolData.docs_url
+            });
+        } else {
+            const { id, ...updates } = toolData;
+            await supabase.from("dmz_agents_tools").update({
+                name: updates.name,
+                type: updates.type,
+                description: updates.description,
+                icon: updates.icon,
+                status: updates.status,
+                docs_url: updates.docs_url
+            }).eq("id", id);
+        }
+        setIsModalOpen(false);
+        loadData();
+    }
+
+    async function handleDeleteTool(id: string) {
+        await supabase.from("dmz_agents_tools").delete().eq("id", id);
+        setIsModalOpen(false);
+        loadData();
     }
 
     const stats = {
@@ -130,14 +244,15 @@ export default function ToolsPage() {
                         }}
                     />
                 </div>
-                <div style={{ display: "flex", background: "#F3F4F6", borderRadius: "9px", padding: "3px", gap: "2px" }}>
+                <div style={{ display: "flex", background: "#F3F4F6", borderRadius: "9px", padding: "3px", gap: "2px", overflowX: "auto" }}>
                     {types.map(f => (
                         <button key={f} onClick={() => setTypeFilter(f)} style={{
                             background: typeFilter === f ? "#FFFFFF" : "none", border: "none",
                             borderRadius: "7px", padding: "5px 12px", cursor: "pointer",
                             fontSize: "11px", fontWeight: typeFilter === f ? 700 : 500,
                             color: typeFilter === f ? "#111827" : "#9CA3AF",
-                            boxShadow: typeFilter === f ? "0 1px 3px rgba(0,0,0,0.08)" : "none"
+                            boxShadow: typeFilter === f ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                            whiteSpace: "nowrap"
                         }}>
                             {f}
                         </button>
@@ -155,23 +270,38 @@ export default function ToolsPage() {
             ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
                     {filtered.map(tool => {
-                        const TIcon = TOOL_ICONS[tool.icon] || Plug;
+                        const isIconUrl = tool.icon && (tool.icon.startsWith("http") || tool.icon.startsWith("/"));
+                        const TIcon = !isIconUrl ? (TOOL_ICONS[tool.icon] || Plug) : null;
                         const tc = TYPE_COLORS[tool.type] || "#475569";
                         const agents = getAgentsForTool(tool.id);
                         return (
-                            <div key={tool.id} style={{
+                            <div key={tool.id} 
+                                onClick={(e) => {
+                                    // prevent opening modal if clicking docs url
+                                    if ((e.target as HTMLElement).closest('a')) return;
+                                    setEditTool(tool);
+                                    setIsModalOpen(true);
+                                }}
+                                style={{
                                 background: "#FFFFFF", border: "1.5px solid #F0F0F0",
                                 borderRadius: "14px", padding: "18px 20px",
                                 boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-                                transition: "all 0.15s"
-                            }}>
+                                transition: "all 0.15s",
+                                cursor: "pointer"
+                            }}
+                            className="hover:border-[#D8663E] hover:shadow-md"
+                            >
                                 <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
                                     <div style={{
                                         width: 42, height: 42, background: "#F3F4F6",
                                         borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center",
                                         flexShrink: 0
                                     }}>
-                                        <TIcon size={18} color="#6B7280" strokeWidth={1.75} />
+                                        {isIconUrl ? (
+                                            <img src={tool.icon} alt={tool.name} style={{ width: 24, height: 24, objectFit: "contain", borderRadius: "4px" }} />
+                                        ) : (
+                                            <TIcon size={18} color="#6B7280" strokeWidth={1.75} />
+                                        )}
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
@@ -194,13 +324,13 @@ export default function ToolsPage() {
                                             </p>
                                         )}
                                         {agents.length > 0 && (
-                                            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
-                                                <span style={{ fontSize: "10px", color: "#9CA3AF", marginRight: "2px" }}>Used by:</span>
+                                            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "8px" }}>
+                                                <span style={{ fontSize: "10px", color: "#9CA3AF", marginRight: "2px" }}>Servido para:</span>
                                                 {agents.map((a: any) => (
                                                     <span key={a.id} style={{
                                                         fontSize: "10px", fontWeight: 600,
                                                         color: "#E85D2F", fontFamily: "monospace",
-                                                        background: "#E85D2F10", padding: "1px 6px",
+                                                        background: "#E85D2F10", padding: "2px 6px",
                                                         borderRadius: "4px"
                                                     }}>
                                                         @{a.handle}
@@ -211,7 +341,7 @@ export default function ToolsPage() {
                                     </div>
                                     {tool.docs_url && (
                                         <a href={tool.docs_url} target="_blank" rel="noreferrer"
-                                            style={{ color: "#9CA3AF", flexShrink: 0 }}>
+                                            style={{ color: "#D8663E", flexShrink: 0, padding: "4px", background: "#D8663E10", borderRadius: "6px" }}>
                                             <ExternalLink size={14} />
                                         </a>
                                     )}
@@ -221,16 +351,29 @@ export default function ToolsPage() {
                     })}
 
                     {/* Add new tool card */}
-                    <div style={{
+                    <div 
+                        onClick={() => { setEditTool(null); setIsModalOpen(true); }}
+                        style={{
                         background: "#FFFFFF", border: "1.5px dashed #E5E7EB",
                         borderRadius: "14px", padding: "18px 20px",
                         display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
                         cursor: "pointer", color: "#9CA3AF", fontSize: "13px", fontWeight: 500,
-                        minHeight: 100
-                    }}>
-                        <Plus size={16} /> Adicionar nova tool
+                        minHeight: 100, transition: "background 0.2s"
+                    }}
+                        className="hover:bg-neutral-50"
+                    >
+                        <Plus size={16} /> Adicionar nova platforma/tool
                     </div>
                 </div>
+            )}
+
+            {isModalOpen && (
+                <ToolModal
+                    tool={editTool}
+                    onClose={() => setIsModalOpen(false)}
+                    onSave={handleSaveTool}
+                    onDelete={handleDeleteTool}
+                />
             )}
         </div>
     );
