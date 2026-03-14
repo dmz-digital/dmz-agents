@@ -58,19 +58,21 @@ fi
 PIP=$(command -v pip3 || command -v pip)
 echo -e "  ${GREEN}✓${RESET} pip encontrado"
 
-# ─── Instalar dmz-os ─────────────────────────────────────────
+# ─── Instalar dmz-os (Diretamente do GitHub para garantir Versão de Produção) ────
 echo ""
-echo -e "${CYAN}Instalando dmz-os...${RESET}"
+echo -e "${CYAN}Instalando/Atualizando dmz-os v0.2.1...${RESET}"
 
-if ! $PIP install dmz-os --quiet --upgrade 2>/dev/null; then
-    $PIP install dmz-os --quiet --upgrade --break-system-packages 2>/dev/null || true
+INSTALL_CMD="git+https://github.com/dmz-digital/dmz-agents.git#subdirectory=cli"
+
+if ! $PIP install "$INSTALL_CMD" --quiet --upgrade 2>/dev/null; then
+    $PIP install "$INSTALL_CMD" --quiet --upgrade --break-system-packages 2>/dev/null || true
 fi
 
 # Verifica se instalou
 if ! command -v dmz-os &>/dev/null; then
     # Tenta via python -m
-    if ! python3 -m pip install dmz-os --quiet --upgrade 2>/dev/null; then
-        python3 -m pip install dmz-os --quiet --upgrade --break-system-packages 2>/dev/null || true
+    if ! python3 -m pip install "$INSTALL_CMD" --quiet --upgrade 2>/dev/null; then
+        python3 -m pip install "$INSTALL_CMD" --quiet --upgrade --break-system-packages 2>/dev/null || true
     fi
 fi
 
