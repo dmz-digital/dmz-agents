@@ -72,6 +72,15 @@ Nada do "Motor DMZ" sobe para o Github final das agências ou projetos criados. 
 - Quando tudo estiver pronto, ele apenas diz `git status`. Ele rodará `git add .` e verá apenas seus maravilhosos novos componentes em React codados pelos Especialistas (nenhum rastro da mecânica dos Agentes, tudo invisível).
 - Ele faz deploy na Vercel e o projeto brilha!
 
+**Passo 5: Invocação Direta de Agentes pela IDE**
+- O cliente pode e **deve** interagir com agentes específicos diretamente de sua IDE através do nosso CLI.
+- Por padrão, rodar apenas `dmz-os ask "Cria uma landing page"` envia a demanda genérica para o painel Master Plan, acionando o nosso orquestrador-chefe (`@orch`), que então decide quem vai trabalhar.
+- Porém, caso o cliente já saiba quem ele quer acionar (por exemplo, pedir um texto direto para a Copy Chief), ele pode mencionar (taguear) o agente diretamente na linha de comando:
+   - `dmz-os ask "@cassandra escreve um e-mail persuasivo para vender meu curso"`
+   - `dmz-os ask "@syd como está o andamento da sprint? Faz um resumo"`
+   - `dmz-os ask "@alex analisa a arquitetura atual do meu banco Supabase"`
+- Nossa ponte local detecta a tag (`@nome`) e despacha o card **diretamente para a fila pessoal daquele agente** no Kanban, acelerando fluxos e isolando discussões extremamente técnicas da visão geral do Master Plan.
+
 ---
 
 Essa arquitetura assíncrona, de altíssima segurança (chaves em `.env` imutáveis que não são "commitadas") e que divide a "Nuvem de Inteligência/Painel UI" contra a "IDE Tática Operacional de Trabalho" confere credibilidade de nível Enterprise ao nosso Pack de Agentes!
