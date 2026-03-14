@@ -164,6 +164,27 @@ def _collect_credentials() -> dict:
     return creds
 
 
+def _secure_gitignore():
+    """Garante que .env.dmz e .agents/ não sejam commitados no repositório do cliente."""
+    gitignore_path = Path.cwd() / ".gitignore"
+    
+    entries_to_add = [".env.dmz", ".agents/"]
+    
+    if gitignore_path.exists():
+        content = gitignore_path.read_text()
+        missing = [entry for entry in entries_to_add if entry not in content]
+        if missing:
+            with open(gitignore_path, "a") as f:
+                f.write("\n\n# DMZ OS Security\n")
+                f.write("\n".join(missing) + "\n")
+            console.print("[green]✓[/] [bold].gitignore[/] atualizado para proteger credenciais DMZ")
+    else:
+        with open(gitignore_path, "w") as f:
+            f.write("# DMZ OS Security\n")
+            f.write("\n".join(entries_to_add) + "\n")
+        console.print("[green]✓[/] [bold].gitignore[/] criado para proteger credenciais DMZ")
+
+
 def _write_env_file(creds: dict):
     """Grava o arquivo .env.dmz na raiz do projeto."""
     env_path = Path.cwd() / ".env.dmz"
@@ -172,6 +193,8 @@ def _write_env_file(creds: dict):
         lines.append(f"{key}={value}\n")
     env_path.write_text("".join(lines))
     console.print(f"[green]✓[/] Credenciais salvas em [bold].env.dmz[/]")
+    
+    _secure_gitignore()
 
 
 def _create_agents_folder():

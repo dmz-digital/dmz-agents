@@ -10,6 +10,7 @@ from dmz_os.commands.install import install_command
 from dmz_os.commands.start import start_command
 from dmz_os.commands.status import status_command
 from dmz_os.commands.tasks import tasks_command
+from dmz_os.commands.ask import ask_command
 
 console = Console()
 app = typer.Typer(
@@ -34,6 +35,14 @@ def start(
     project: str = typer.Option(None, "--project", "-p", help="Slug do projeto"),
 ):
     start_command(project=project)
+
+
+@app.command("ask", help="💬 Envia uma demanda ou requerimento direto para o seu Kanban")
+def ask(
+    prompt: str = typer.Argument(..., help="Texto da demanda, ex: 'cria a tela de login'"),
+    project: str = typer.Option(None, "--project", "-p", help="Slug do projeto"),
+):
+    ask_command(prompt_text=prompt, project=project)
 
 
 @app.command("status", help="📊 Status dos agentes em execução")
