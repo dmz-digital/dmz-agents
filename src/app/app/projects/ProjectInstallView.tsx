@@ -263,33 +263,90 @@ export default function ProjectInstallView({ slug }: { slug: string }) {
                 </div>
             </div>
 
-            {/* API Key Box */}
+            {/* Credentials Panel — Slug + API Key + .env.dmz ready to copy */}
             <div style={{
                 background: "#FFFFFF", border: "1.5px solid #E5E7EB", borderRadius: "14px",
-                padding: "20px", marginBottom: "36px", display: "flex", alignItems: "center", gap: "16px",
+                padding: "24px", marginBottom: "36px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
             }}>
-                <div style={{ width: 42, height: 42, borderRadius: "10px", background: "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Key size={20} color="#DC2626" />
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+                    <div style={{ width: 38, height: 38, borderRadius: "10px", background: "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Key size={18} color="#DC2626" />
+                    </div>
+                    <div>
+                        <h3 style={{ fontSize: "15px", fontWeight: 800, color: "#111827", margin: 0 }}>Credenciais do Projeto</h3>
+                        <p style={{ fontSize: "12px", color: "#9CA3AF", margin: "2px 0 0" }}>Use estas informações quando o CLI pedir durante a instalação</p>
+                    </div>
                 </div>
-                <div style={{ flex: 1 }}>
-                    <h3 style={{ fontSize: "15px", fontWeight: 800, color: "#111827", marginBottom: "4px" }}>Chave de Acesso Local (CLI)</h3>
-                    <p style={{ fontSize: "13px", color: "#6B7280", margin: 0 }}>
-                        {apiKey ? "Sua chave está gerada e aparecerá nos blocos de configuração abaixo." : "Você precisa gerar uma chave para que o CLI consiga se conectar ao painel."}
-                    </p>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {/* Slug */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#F9FAFB", borderRadius: "10px", padding: "12px 16px", border: "1px solid #F3F4F6" }}>
+                        <div>
+                            <div style={{ fontSize: "10px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "4px" }}>Slug do Projeto</div>
+                            <code style={{ fontSize: "14px", fontWeight: 600, color: "#111827", fontFamily: "monospace" }}>{project.slug}</code>
+                        </div>
+                        <button
+                            onClick={() => { navigator.clipboard.writeText(project.slug); }}
+                            style={{ background: "rgba(0,0,0,0.04)", border: "1px solid #E5E7EB", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", color: "#6B7280", fontSize: "11px", fontWeight: 600, display: "flex", alignItems: "center", gap: "5px" }}
+                        >
+                            <Copy size={12} /> Copiar
+                        </button>
+                    </div>
+
+                    {/* API Key */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: apiKey ? "#F0FDF4" : "#FEF2F2", borderRadius: "10px", padding: "12px 16px", border: `1px solid ${apiKey ? "#BBF7D0" : "#FECACA"}` }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: "10px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "4px" }}>
+                                DMZ Security Key {apiKey && <span style={{ color: "#16A34A", fontWeight: 800 }}>[ATIVA]</span>}
+                            </div>
+                            <code style={{ fontSize: "13px", fontWeight: 600, color: apiKey ? "#166534" : "#DC2626", fontFamily: "monospace", wordBreak: "break-all" }}>
+                                {apiKey || "Nenhuma chave gerada — clique em Gerar Chave"}
+                            </code>
+                        </div>
+                        <div style={{ display: "flex", gap: "8px", flexShrink: 0, marginLeft: "12px" }}>
+                            {apiKey && (
+                                <button
+                                    onClick={() => { navigator.clipboard.writeText(apiKey); }}
+                                    style={{ background: "#16A34A10", border: "1px solid #BBF7D0", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", color: "#16A34A", fontSize: "11px", fontWeight: 600, display: "flex", alignItems: "center", gap: "5px" }}
+                                >
+                                    <Copy size={12} /> Copiar Chave
+                                </button>
+                            )}
+                            <button
+                                onClick={handleGenerateKey}
+                                disabled={generatingKey}
+                                style={{
+                                    background: generatingKey ? "#E5E7EB" : "#DC2626", color: generatingKey ? "#9CA3AF" : "#FFFFFF",
+                                    border: "none", borderRadius: "8px", padding: "8px 14px", cursor: generatingKey ? "not-allowed" : "pointer",
+                                    fontSize: "11px", fontWeight: 700, transition: "all 0.2s", whiteSpace: "nowrap"
+                                }}
+                            >
+                                {generatingKey ? "Gerando..." : (apiKey ? "Regerar" : "Gerar Chave")}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* .env.dmz block */}
+                    {apiKey && (
+                        <div style={{ background: "#0F172A", borderRadius: "10px", padding: "14px 18px", border: "1px solid rgba(255,255,255,0.06)" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                <span style={{ fontSize: "10px", fontWeight: 700, color: "#7DD3FC", textTransform: "uppercase", letterSpacing: "0.05em" }}>.env.dmz — copie e cole no seu projeto</span>
+                                <button
+                                    onClick={() => { navigator.clipboard.writeText(`DMZ_PROJECT_SLUG=${project.slug}\nDMZ_API_KEY=${apiKey}`); }}
+                                    style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: "6px", padding: "4px 10px", cursor: "pointer", color: "#94A3B8", fontSize: "11px", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}
+                                >
+                                    <Copy size={11} /> Copiar
+                                </button>
+                            </div>
+                            <code style={{ fontSize: "12px", color: "#CBD5E1", fontFamily: "monospace", lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
+                                {`DMZ_PROJECT_SLUG=${project.slug}\nDMZ_API_KEY=${apiKey}`}
+                            </code>
+                        </div>
+                    )}
                 </div>
-                <button
-                    onClick={handleGenerateKey}
-                    disabled={generatingKey}
-                    style={{
-                        background: generatingKey ? "#E5E7EB" : "#DC2626", color: generatingKey ? "#9CA3AF" : "#FFFFFF",
-                        border: "none", borderRadius: "8px", padding: "10px 16px", cursor: generatingKey ? "not-allowed" : "pointer",
-                        fontSize: "13px", fontWeight: 700, transition: "all 0.2s", whiteSpace: "nowrap"
-                    }}
-                >
-                    {generatingKey ? "Gerando..." : (apiKey ? "Regerar Chave" : "Gerar Nova Chave")}
-                </button>
             </div>
+
 
             {/* Scenario Selector */}
             {!scenario && (
