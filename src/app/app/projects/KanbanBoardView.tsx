@@ -391,9 +391,14 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
             });
             const data = await res.json();
             if (data.api_key) {
+                // Sincroniza com a tabela de projetos para o CLI
+                await supabase.from("dmz_agents_projects").update({ api_key: data.api_key }).eq("id", project.id);
+                setProject(prev => ({ ...prev, api_key: data.api_key }));
+
                 // Show the key once
                 confirmAction("API Key Gerada", `Anote sua chave (ela não será exibida novamente):\n\n${data.api_key}`, false, "Copiado", "Fechar");
                 if (typeof window !== "undefined") navigator.clipboard.writeText(data.api_key);
+                
                 // Refresh list
                 const { data: updatedKeys } = await supabase.from("dmz_agents_apikeys").select("*").eq("project_id", project.slug).eq("is_active", true);
                 setApiKeys(updatedKeys || []);
@@ -528,14 +533,22 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                         <div>
                             <div style={{ fontSize: "10px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", marginBottom: "6px" }}>API Keys</div>
                             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                                {apiKeys.length === 0 ? (
-                                    <div style={{ fontSize: "11px", color: "#9CA3AF" }}>Nenhuma chave ativa</div>
-                                ) : apiKeys.map(k => (
+                                {project.api_key && (
+                                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                        <code style={{ fontSize: "12px", color: "#E85D2F", fontFamily: "monospace" }}>{project.api_key.slice(0, 16)}...</code>
+                                        <span style={{ fontSize: "10px", color: "#10B981", fontWeight: 600 }}>[ATIVA]</span>
+                                        <CopyBtn text={project.api_key} />
+                                    </div>
+                                )}
+                                {apiKeys.map(k => (
                                     <div key={k.id} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                                         <code style={{ fontSize: "12px", color: "#E85D2F", fontFamily: "monospace" }}>{k.key_prefix}...hash</code>
                                         <span style={{ fontSize: "10px", color: "#9CA3AF" }}>({k.name})</span>
                                     </div>
                                 ))}
+                                {!project.api_key && apiKeys.length === 0 && (
+                                    <div style={{ fontSize: "11px", color: "#9CA3AF" }}>Nenhuma chave ativa</div>
+                                )}
                                 <button onClick={handleGenerateKey} disabled={isGeneratingKey} style={{ background: "none", border: "1px dashed #D1D5DB", borderRadius: "6px", padding: "4px 8px", fontSize: "11px", fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
                                     {isGeneratingKey ? "Gerando..." : "+ Gerar Nova Key"}
                                 </button>
@@ -543,7 +556,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                         </div>
                         <div>
                             <div style={{ fontSize: "10px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", marginBottom: "6px" }}>Setup .env.dmz</div>
-                            <CopyBtn text={`DMZ_PROJECT_SLUG=${project.slug}\nDMZ_API_KEY=SUA_CHAVE_AQUI`} />
+                            <CopyBtn text={`DMZ_PROJECT_SLUG=${project.slug}\nDMZ_API_KEY=${project.api_key || "SUA_CHAVE_AQUI"}`} />
                         </div>
                         <div style={{ display: "flex", alignItems: "flex-end", marginLeft: "auto" }}>
                             <button
