@@ -450,7 +450,8 @@ def install_command(project: str | None, yes: bool):
     _print_logo()
 
     console.print()
-    console.print("[bold]Bem-vindo ao DMZ OS![/] Vamos configurar seu squad em minutos.", justify="center")
+    console.print("[bold cyan]Bem-vindo ao DMZ OS v0.2.2 (Platform Connect)! 🔗[/]", justify="center")
+    console.print("[dim]Vamos configurar seu squad e o link com a plataforma em segundos.[/]", justify="center")
     console.print()
 
     # 1. Detectar tipo de projeto

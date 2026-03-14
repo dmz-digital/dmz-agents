@@ -60,7 +60,7 @@ echo -e "  ${GREEN}✓${RESET} pip encontrado"
 
 # ─── Instalar dmz-os (Diretamente do GitHub para garantir Versão de Produção) ────
 echo ""
-echo -e "${CYAN}Instalando/Atualizando dmz-os v0.2.1...${RESET}"
+echo -e "${CYAN}Instalando/Atualizando dmz-os v0.2.2 (Platform Connect)...${RESET}"
 
 INSTALL_CMD="git+https://github.com/dmz-digital/dmz-agents.git#subdirectory=cli"
 
