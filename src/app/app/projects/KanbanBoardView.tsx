@@ -161,16 +161,30 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                 .from('dmz_agents_definitions')
                 .select('*')
                 .or(`name.ilike.%${term}%,handle.ilike.%${term}%,category.ilike.%${term}%`)
-                .limit(5);
+                .limit(10);
 
             // Search Tasks
-            const { data: taskData } = await supabase
+            // We search title, description, id (prefix), status, type
+            // To search by agent handle, we'd need a more complex join or subquery, 
+            // but for now let's use the power of .or with related column if possible, 
+            // though Supabase JS client .or() on joined tables is tricky.
+            // Let's at least search by ID and the main fields.
+            const query = supabase
                 .from('dmz_agents_tasks')
                 .select('*, dmz_agents_definitions(name, handle, color)')
-                .or(`title.ilike.%${term}%,description.ilike.%${term}%,status.ilike.%${term}%,type.ilike.%${term}%`)
-                .eq('project_id', project.id)
+                .eq('project_id', project.id);
+
+            // If term starts with #, search ID specifically
+            if (term.startsWith('#')) {
+                const idTerm = term.slice(1).toLowerCase();
+                query.ilike('id', `${idTerm}%`);
+            } else {
+                query.or(`title.ilike.%${term}%,description.ilike.%${term}%,status.ilike.%${term}%,type.ilike.%${term}%,id.ilike.%${term}%`);
+            }
+
+            const { data: taskData } = await query
                 .order('created_at', { ascending: false })
-                .limit(10);
+                .limit(20);
 
             setSearchResults({ 
                 agents: agentData || [], 
