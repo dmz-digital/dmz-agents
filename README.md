@@ -17,7 +17,7 @@
 O DMZ OS agora conta com um setup interativo que configura tudo para você em segundos.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/eldanielsantos-git/dmz-agents/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/dmz-digital/dmz-agents/main/install.sh | bash
 ```
 
 </div>
@@ -90,24 +90,23 @@ A partir de agora o Orchestrator lerá as missões do Kanban da web e os especia
 
 ---
 
-## 🤖 O Squad Especializado (52 Agentes)
-O squad é organizado em categorias estratégicas para cobrir 100% do ciclo de vida de um produto digital e operações de negócio:
+## 🤖 O Squad Especializado (85 Agentes)
+O squad é organizado em categorias estratégicas para cobrir 100% do ciclo de vida de um produto digital e operações de negócio. Com 85 especialistas à disposição, o DMZ OS elimina gargalos operacionais:
 
 | Categoria | Família de Agentes | Papel Fundamental |
 |:---:|---|---|
-| **Orchestration** | `@formatting`, `@orch`, `@syd` | Orquestração do framework, Liderança Operacional e Validação. |
-| **Product** | `@david`, `@emma`, `@jose`, `@lucas` | Visão de Produto, Gestão Ágil (SM/PM) e Controle de Qualidade (QA). |
-| **Development** | `@alex`, `@oliver`, `@ryan` | Coding Full-Stack, Arquitetura de Software e Automação DevOps. |
-| **Security** | `@constantine`, `@theron` | Segurança Cibernética Ativa, Proteção de Dados e Conformidade Legal. |
-| **Design** | `@aurora`, `@victoria` | Estética Premium, Criação de Interfaces (UI) e Experiência do Usuário (UX). |
-| **Copy & Chat** | `@cassandra`, `@voice` | Copywriting Persuasivo, Narrativa de Marca e Interações Vocais. |
-| **Data & Strat** | `@kanya`, `@sofia` | Inteligência Estratégica, Modelagem e Extração Avançada de Dados. |
-| **Frameworks** | `@audio_analyzer`, `@code_expert`, `@image_gen`, `@martin`, `@pdf_analyzer`, `@quantum`, `@vision_analyzer`, `@web_search` | Especialistas de integração para OCR, Visão de Máquina, Deep Search e Gerador de SOPs. |
-| **Sales** | `@closer`, `@cra`, `@deck`, `@draft_chief`, `@ecvc`, `@emailcopy`, `@finmodel`, `@hunter`, `@intel`, `@ir`, `@lens`, `@mapper`, `@nurture`, `@oracle`, `@osint`, `@persona`, `@pitch`, `@push`, `@qualifier`, `@radar`, `@rebound`, `@revops`, `@scheduler`, `@social`, `@story`, `@vault` | Máquina massiva de Geração de Receita, Outbound, Prospecção C-Level, Inteligência de Mercado e RevOps. |
+| **Orchestration** | `@orch`, `@syd`, `@formatting` | Orquestração de workflows, Liderança Operacional e Governança de IA. |
+| **Product & Agile** | `@jose`, `@lucas`, `@david`, `@emma` | Gestão de Roadmap, Visão de Produto, Scrum e Controle de Qualidade (QA). |
+| **Development** | `@ryan`, `@alex`, `@oliver`, `@sofia` | Coding Full-Stack, Arquitetura de Software, DevOps e Engenharia de Dados. |
+| **Security & Legal** | `@constantine`, `@theron` | CyberSecurity Ativa, Pentesting, Compliance LGPD e Estratégia Jurídica. |
+| **Design & UX** | `@aurora`, `@victoria` | Design System, Interfaces Premium (UI) e Jornada do Usuário (UX). |
+| **Content & Strategy** | `@cassandra`, `@kanya`, `@martin` | Copywriting de Conversão, Análise de Mercado e Engenharia de SOPs. |
+| **Specialized Frameworks**| `@quantum`, `@voice`, `@vision_analyzer` | Integração de Visão Computacional, Análise de Áudio e Pesquisa em Deep Web. |
+| **Revenue Operations** | `@revops`, `@closer`, `@hunter` | Máquina massiva de Outbound, Prospecção C-Level e Escala de Vendas. |
 
 ---
 
-## 🏗️ Fluxo de Inteligência
+## 🏗️ Fluxo de Inteligência (Cloud to Local)
 
 ```mermaid
 graph TD

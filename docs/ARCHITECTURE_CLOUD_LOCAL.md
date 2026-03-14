@@ -3,9 +3,9 @@
 Este documento detalha o paradigma de **Backend as a Service para Agentes (BaaS AI)** utilizado pelo DMZ OS. O foco principal é esclarecer fronteiras: o que o DMZ opera na Nuvem (Cloud) e o que se instala na máquina/repositório local do desenvolvedor/cliente.
 
 ## 🌟 O Conceito Principal
-O DMZ OS funciona como um grande "Escritório em Nuvem" para sua agência de desenvolvimento movida a IA. Os agentes da DMZ "moram" nos servidores da DMZ e só enviam seus resultados para a máquina local do desenvolvedor através de uma ponte API.
+O DMZ OS funciona como um "Escritório em Nuvem" para sua agência de desenvolvimento movida a IA. Os agentes da DMZ "moram" nos servidores da nuvem e enviam seus resultados para a sua máquina local via ponte API.
 
-Nós **nunca** empacotamos o sistema do Kanban, Autenticação, Painel de Controle e Motor de IA no projeto do cliente. O projeto do cliente fica limpo! 
+**Zero Code Leak:** Nós **nunca** embutimos o motor central ou o sistema de gestão no seu código. O seu repositório permanece 100% limpo de códigos da plataforma DMZ. Somente os resultados e as tarefas aparecem na sua IDE.
 
 ---
 
@@ -39,13 +39,13 @@ Na IDE do cliente (Antigravivy, VS Code, Cursor, etc), ou seja, na pasta do proj
    - Pode possuir chaves primárias do OpenAI/Anthropic que o cliente deseja embutir.
    - Isso garante que a máquina inteja sem fricção com o banco Cloud do DMZ OS de onde os agentes estão baixando as demandas.
 
-### E O Repositório Git do Cliente? 
-A beleza do nosso sistema se encontra aqui. O desenvolvedor/gestor irá empurrar (Push/Deploy) para o GitHub/Vercel dele **APENAS OS RESULTADOS**: 
-   - Apenas o código do site ou aplicação (ex: Next.js).
-   - As imagens que o agente de UI criou.
-   - O Tailwind configurado pelo squad.
+### 🚩 O Requisito Crítico: Repositório Git Obrigatório
+O DMZ OS não opera em "pastas soltas". O Git é a espinha dorsal da nossa operação:
+1. **Rastreabilidade:** Cada alteração feita por um agente (ex: `@ryan`) é versionada. Você revisa via `git diff` antes de aceitar.
+2. **Segurança:** O Squad é travado no seu repositório. Sem uma URL válida (`repo_url`), a instalação é bloqueada para evitar confusão entre projetos.
+3. **Colaboração:** Os agentes usam branches para trabalhar em paralelo sem quebrar sua `main`.
 
-Nada do "Motor DMZ" sobe para o Github final das agências ou projetos criados. O DMZ é um "funcionário Invisível" que ajudou a construir a fundação via terminal.
+Nada do "Motor DMZ" sobe para o seu GitHub. O DMZ é um "funcionário invisível" que trabalha localmente.
 
 ---
 
@@ -60,7 +60,7 @@ Nada do "Motor DMZ" sobe para o Github final das agências ou projetos criados. 
 - Ele navega para a pasta local do seu projeto (ex: `~/Documentos/meu-app`).
 - **Instalação Instantânea (One-liner):** O cliente simplesmente copia e cola o comando oficial do README:
   ```bash
-  curl -fsSL https://raw.githubusercontent.com/eldanielsantos-git/dmz-agents/main/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/dmz-digital/dmz-agents/main/install.sh | bash
   ```
   *Nota: Não é necessário alterar nada na URL. Este comando baixa o instalador inteligente que configura o CLI `dmz-os` automaticamente no sistema.*
 - Após a instalação do CLI, ele roda: `dmz-os install`.

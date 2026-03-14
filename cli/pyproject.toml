@@ -30,8 +30,8 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://agents.dmzdigital.com.br"
-Repository = "https://github.com/eldanielsantos-git/dmz-agents"
-Documentation = "https://github.com/eldanielsantos-git/dmz-agents/blob/main/docs/GETTING_STARTED.md"
+Repository = "https://github.com/dmz-digital/dmz-agents"
+Documentation = "https://github.com/dmz-digital/dmz-agents/blob/main/docs/GETTING_STARTED.md"
 
 [project.scripts]
 dmz-os = "dmz_os.main:app"

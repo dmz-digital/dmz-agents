@@ -15,7 +15,7 @@ from dmz_os.commands.ask import ask_command
 console = Console()
 app = typer.Typer(
     name="dmz-os",
-    help="🤖 DMZ OS — Squad de 18 AI agents para o seu projeto",
+    help="🤖 DMZ OS — Squad de 85 AI agents para o seu projeto",
     rich_markup_mode="rich",
     no_args_is_help=True,
     pretty_exceptions_show_locals=False,

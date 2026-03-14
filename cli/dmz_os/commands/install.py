@@ -87,6 +87,11 @@ SQUAD_MEMBERS = [
     ("@cassandra",  "Copy Chief",          "nível 1"),
     ("@victoria",   "UX Designer",         "nível 2"),
     ("@theron",     "Legal Chief",         "nível 2"),
+    ("@revops",     "Revenue Operations",  "nível 1"),
+    ("@hunter",     "Sales Prospector",    "nível 2"),
+    ("@closer",     "Account Executive",   "nível 2"),
+    ("@cs",         "Customer Success",    "nível 1"),
+    ("@growth",     "Growth Hacker",       "nível 1"),
 ]
 
 
@@ -175,28 +180,54 @@ def _collect_credentials() -> dict:
             project_data = res.data
             console.print(f"\n[green]✓ Projeto '[bold]{project_data['name']}[/]' identificado com sucesso![/]")
             
-            # --- VALIDAÇÃO DE GIT (SEGURANÇA CONTRA INJEÇÃO) ---
+            # --- VALIDAÇÃO DE GIT (SEGURANÇA E REQUISITO) ---
             db_repo = project_data.get("repo_url")
             local_repo = _get_local_git_remote()
 
-            if db_repo:
-                db_repo_norm = re.sub(r"\.git$", "", db_repo).lower()
-                if local_repo and local_repo != db_repo_norm:
-                    console.print(Panel(
-                        f"[bold red]ALERTA DE SEGURANÇA: REPOSITÓRIO DIVERGENTE[/]\n\n"
-                        f"Este projeto está configurado para o repositório:\n"
-                        f"[cyan]{db_repo}[/]\n\n"
-                        f"Mas este diretório local está conectado a:\n"
-                        f"[yellow]{local_repo}[/]\n\n"
-                        "Executar agentes em um repositório diferente pode causar injeção de código indesejada.",
-                        border_style="red"
-                    ))
-                    if not Confirm.ask("[bold red]Deseja continuar mesmo assim?[/]", default=False):
-                        raise typer.Exit(1)
-                elif not local_repo:
-                    console.print("[yellow]⚠ Aviso: Este diretório não é um repositório Git. Os agentes podem ter dificuldade em versionar alterações.[/]")
-            else:
-                console.print("[dim]ℹ Nenhuma URL de repositório configurada no painel para este projeto.[/]")
+            if not db_repo:
+                console.print("\n[yellow]⚠ Este projeto ainda não tem um repositório Git vinculado.[/]")
+                console.print("[dim]Para operar com segurança, o Squad precisa saber onde o código será versionado.[/]")
+                
+                new_repo = Prompt.ask("[cyan]URL do Repositório Git (ex: https://github.com/user/repo)[/]")
+                if not new_repo:
+                    console.print("[red]✗ Erro: O repositório Git é obrigatório para ativar o Squad.[/]")
+                    raise typer.Exit(1)
+                
+                # Atualizar no Supabase
+                with console.status("[bold blue]Vinculando repositório ao projeto...[/]"):
+                    client.table("dmz_agents_projects").update({"repo_url": new_repo}).eq("id", project_data["id"]).execute()
+                
+                db_repo = new_repo
+                console.print(f"[green]✓ Repositório vinculado: [bold]{db_repo}[/][/]")
+
+            # Validar se o repositório local bate com o da plataforma
+            db_repo_norm = re.sub(r"\.git$", "", db_repo).lower()
+            if local_repo and local_repo != db_repo_norm:
+                console.print(Panel(
+                    f"[bold red]CONFLITO DE REPOSITÓRIO[/]\n\n"
+                    f"Este projeto está travado no repositório:\n"
+                    f"[cyan]{db_repo}[/]\n\n"
+                    f"Mas você está tentando instalar na pasta:\n"
+                    f"[yellow]{local_repo or 'Sem Git detectado'}[/]\n\n"
+                    "O Squad não pode operar em pastas divergentes para evitar injeção de código errada.",
+                    border_style="red"
+                ))
+                if not Confirm.ask("[bold red]Deseja SOBRESCREVER o repositório no banco com este local?[/]", default=False):
+                    console.print("[yellow]Instalação abortada por segurança.[/]")
+                    raise typer.Exit(1)
+                
+                # Atualiza com o local
+                client.table("dmz_agents_projects").update({"repo_url": local_repo}).eq("id", project_data["id"]).execute()
+                console.print(f"[green]✓ Repositório atualizado para:[/] {local_repo}")
+            
+            elif not local_repo:
+                console.print(Panel(
+                    "[bold red]GIT NÃO DETECTADO[/]\n\n"
+                    "Este diretório não parece ser um repositório Git.\n"
+                    "O DMZ OS requer o Git para que os agentes possam criar branches e versionar alterações.",
+                    border_style="red"
+                ))
+                raise typer.Exit(1)
 
         except Exception as e:
             if isinstance(e, typer.Exit): raise e
@@ -221,6 +252,12 @@ def _collect_credentials() -> dict:
     if not any([anthropic, openai, gemini]):
         console.print("[red]⚠ Pelo menos 1 API Key de LLM é necessária.[/]")
         raise typer.Exit(1)
+
+    # Git PAT (Opcional para operações avançadas)
+    console.print()
+    console.print("[dim]💡 Dica: Fornecer um Git PAT permite que os agentes criem Pull Requests e Branches para você.[/]")
+    git_pat = Prompt.ask("[cyan]Git Personal Access Token (PAT)[/] [dim](Enter para pular)[/]", default="", password=True)
+    if git_pat: creds["DMZ_GIT_PAT"] = git_pat
 
     creds["PROJECT_ID"] = project_data["id"]
     return creds
@@ -307,20 +344,22 @@ def _create_agents_folder():
             "Esta pasta contém o squad de AI agents do DMZ OS.\n\n"
             "- **Canal Prioritário:** Use o Chat da sua IDE mencionando @agente (ex: @orch)\n"
             "- Configurações em `.env.dmz` na raiz do projeto\n"
-            "- Docs completos: https://github.com/eldanielsantos-git/dmz-agents\n"
+            "- Docs completos: https://github.com/dmz-digital/dmz-agents\n"
         )
 
-    # Regras para IAs da IDE (Cursor, Windsurf, etc.)
+    # Regras Imperativas para IAs da IDE (Antigravity, Cursor, Windsurf, VS Code)
     rules_content = (
-        "# DMZ OS — INSTRUÇÕES DE SQUAD (CRÍTICO)\n\n"
-        "VOCÊ ESTÁ INTEGRADO AO SQUAD DMZ OS.\n"
-        "Sempre que o usuário mencionar um agente usando @ (ex: @orch, @cassandra, @syd),\n"
-        "você NÃO deve tentar realizar a tarefa sozinho. \n\n"
-        "**SUA ÚNICA RESPOSTA E AÇÃO DEVE SER:**\n"
-        "1. Usar sua ferramenta de TERMINAL/SHELL imediatamente.\n"
-        "2. Rodar o comando: `dmz-os ask \"@agente [mensagem do usuário]\"`.\n"
-        "3. Confirmar ao usuário: \"Enviado para o @agente no Kanban DMZ! 🚀\"\n\n"
-        "Isso é fundamental para a sincronia do projeto. O @orch é quem comanda a execução profunda via terminal. Repasse a bola sempre que houver um @.\n"
+        "# DMZ OS — REGRAS OBRIGATÓRIAS DE SQUAD (NÃO VIOLAR)\n\n"
+        "Você está operando em um ambiente com DMZ OS instalado. Este projeto é gerenciado por um Squad de 85 agentes de IA.\n\n"
+        "**REGRA DE OURO:**\n"
+        "Sempre que o usuário enviar uma mensagem contendo uma menção com '@agente' (ex: @orch, @syd, @ryan, @cassandra),\n"
+        "você NÃO tem permissão para tentar realizar a tarefa sozinho ou responder com seu próprio conhecimento.\n\n"
+        "**SUA AÇÃO OBRIGATÓRIA:**\n"
+        "1. Identifique o texto completo da demanda do usuário.\n"
+        "2. Execute imediatamente o comando shell: `dmz-os ask \"@agente [mensagem dele]\"`.\n"
+        "3. Sua única resposta no chat deve ser: \"Entendido. Delegando esta demanda para o @agente no Kanban DMZ OS! 🚀\".\n\n"
+        "**POR QUE ISSO É NECESSÁRIO?**\n"
+        "O DMZ OS orquestra execuções complexas em múltiplos arquivos, mantém a memória persistente no banco de dados e sincroniza o Kanban web. Responder diretamente na IDE causa perda de contexto e quebra a sincronia do Squad.\n"
     )
 
     for filename in [".cursorrules", ".windsurfrules", ".agents/IDE_RULES.md"]:
@@ -429,7 +468,7 @@ def _open_docs():
             subprocess.run(["open", str(repo_docs)], check=False)
         else:
             subprocess.run(
-                ["open", "https://github.com/eldanielsantos-git/dmz-agents/blob/main/docs/GETTING_STARTED.md"],
+                ["open", "https://github.com/dmz-digital/dmz-agents/blob/main/docs/GETTING_STARTED.md"],
                 check=False,
             )
     elif sys.platform.startswith("linux"):
