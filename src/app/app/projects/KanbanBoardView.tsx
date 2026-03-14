@@ -417,6 +417,22 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
         }
     }
 
+    async function handleToggleAllAgents(active: boolean) {
+        if (!project) return;
+        if (active) {
+            // Ativa todos que ainda não estão ativos
+            const toAdd = agents.filter(a => !projectAgents.some(pa => pa.agent_id === a.id));
+            if (toAdd.length === 0) return;
+            const inserts = toAdd.map(a => ({ project_id: project.id, agent_id: a.id, status: "active" }));
+            const { error } = await supabase.from("dmz_agents_project_agents").insert(inserts);
+            if (!error) setProjectAgents(prev => [...prev, ...inserts.map(i => ({ agent_id: i.agent_id, status: "active" }))]);
+        } else {
+            // Remove todos
+            const { error } = await supabase.from("dmz_agents_project_agents").delete().eq("project_id", project.id);
+            if (!error) setProjectAgents([]);
+        }
+    }
+
     if (loading) return (
         <div className="dmz-container pt-12 pb-24">
             <AppHeader />
@@ -871,6 +887,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                     agents={agents}
                     projectAgents={projectAgents}
                     onToggle={handleToggleProjectAgent}
+                    onToggleAll={handleToggleAllAgents}
                     onClose={() => setShowAddAgents(false)}
                 />
             )}
@@ -907,10 +924,12 @@ function TaskDetailModalWrapper({
     );
 }
 
-function AddAgentsModal({ agents, projectAgents, onToggle, onClose }: { agents: any[]; projectAgents: any[]; onToggle: (id: string) => void; onClose: () => void }) {
+function AddAgentsModal({ agents, projectAgents, onToggle, onToggleAll, onClose }: { agents: any[]; projectAgents: any[]; onToggle: (id: string) => void; onToggleAll: (active: boolean) => void; onClose: () => void }) {
+    const allActive = agents.length > 0 && agents.every(a => projectAgents.some(pa => pa.agent_id === a.id));
+
     return (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(4px)", padding: "24px" }} onClick={onClose}>
-            <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: "24px", padding: "32px", width: "100%", maxWidth: 500, boxShadow: "0 20px 80px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", gap: "24px" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: "24px", padding: "32px", width: "100%", maxWidth: 900, boxShadow: "0 20px 80px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", gap: "24px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <div style={{ width: 40, height: 40, borderRadius: "12px", background: "#E85D2F15", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -921,10 +940,15 @@ function AddAgentsModal({ agents, projectAgents, onToggle, onClose }: { agents: 
                             <p style={{ fontSize: "12px", color: "#6B7280", margin: 0 }}>Selecione os agentes que trabalharão neste projeto</p>
                         </div>
                     </div>
-                    <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF" }}><X size={20} /></button>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <button onClick={() => onToggleAll(!allActive)} style={{ background: allActive ? "#FEE2E2" : "#ECFDF5", color: allActive ? "#EF4444" : "#10B981", border: "none", borderRadius: "8px", padding: "8px 16px", fontSize: "12px", fontWeight: 700, cursor: "pointer", transition: "all 0.15s" }}>
+                            {allActive ? "Desativar Todos" : "Ativar Todos"}
+                        </button>
+                        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF" }}><X size={20} /></button>
+                    </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", maxHeight: "400px", overflowY: "auto", padding: "4px" }}>
+                <div className="kanban-scroll-y" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "10px", maxHeight: "60vh", overflowY: "auto", padding: "4px" }}>
                     {agents.map(agent => {
                         const isActive = projectAgents.some(pa => pa.agent_id === agent.id);
                         return (
