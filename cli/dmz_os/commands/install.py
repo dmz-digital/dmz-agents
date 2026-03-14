@@ -149,7 +149,7 @@ def _collect_credentials() -> dict:
     # Não perguntamos mais ao usuário para evitar confusão técnica.
     # O cliente só precisa do Slug e da DMZ_API_KEY.
     creds["SUPABASE_URL"] = "https://mqqiyyxcoutbmuszwejz.supabase.co"
-    creds["SUPABASE_ANON_KEY"] = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcWl5eXhjb3V0Ym11c3p3ZWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyNTIwNzcsImV4cCI6MjA1Njg0MDA3N30.C_shC-v_f_9zYV8k2zP9bXm9zYVYvU_zQ1e0-O5_Rkk"
+    creds["SUPABASE_ANON_KEY"] = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcWl5eXhjb3V0Ym11c3p3ZWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyOTk4OTUsImV4cCI6MjA2ODg3NTg5NX0.r3PmgpgoLndSp0mGueMDWKqF4NCv75xYMaIrSDTLEcI"
 
     creds["DMZ_PROJECT_SLUG"] = Prompt.ask("[cyan]Slug do projeto (ex: yvoo-studio)[/]")
     
@@ -291,7 +291,7 @@ def _write_env_file(creds: dict):
     if not creds.get("SUPABASE_URL"):
         creds["SUPABASE_URL"] = "https://mqqiyyxcoutbmuszwejz.supabase.co"
     if not creds.get("SUPABASE_ANON_KEY"):
-        creds["SUPABASE_ANON_KEY"] = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcWl5eXhjb3V0Ym11c3p3ZWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyNTIwNzcsImV4cCI6MjA1Njg0MDA3N30.C_shC-v_f_9zYV8k2zP9bXm9zYVYvU_zQ1e0-O5_Rkk"
+        creds["SUPABASE_ANON_KEY"] = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcWl5eXhjb3V0Ym11c3p3ZWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyOTk4OTUsImV4cCI6MjA2ODg3NTg5NX0.r3PmgpgoLndSp0mGueMDWKqF4NCv75xYMaIrSDTLEcI"
 
     lines = ["# DMZ OS — configurações do squad\n", f"# Gerado em {time.strftime('%Y-%m-%d %H:%M')}\n\n"]
     for key, value in creds.items():
