@@ -165,6 +165,13 @@ export default function ProjectInstallView({ slug }: { slug: string }) {
     const [loading, setLoading] = useState(true);
     const [generatingKey, setGeneratingKey] = useState(false);
     const [scenario, setScenario] = useState<"new" | "existing" | null>(null);
+    const [toast, setToast] = useState<string | null>(null);
+
+    function copyWithToast(text: string, label: string) {
+        navigator.clipboard.writeText(text);
+        setToast(label);
+        setTimeout(() => setToast(null), 2200);
+    }
 
     useEffect(() => {
         async function load() {
@@ -219,6 +226,24 @@ export default function ProjectInstallView({ slug }: { slug: string }) {
         <div className="dmz-container pt-12 pb-24">
             <AppHeader />
 
+            {/* Toast */}
+            {toast && (
+                <div style={{
+                    position: "fixed", top: 24, right: 24, zIndex: 9999,
+                    background: "#065F46", color: "#ECFDF5",
+                    padding: "12px 20px", borderRadius: "12px",
+                    display: "flex", alignItems: "center", gap: "8px",
+                    fontSize: "13px", fontWeight: 600,
+                    boxShadow: "0 8px 30px rgba(0,0,0,0.18)",
+                    animation: "toastSlideIn 0.3s ease-out",
+                    border: "1px solid #10B981"
+                }}>
+                    <Check size={15} />
+                    {toast}
+                </div>
+            )}
+            <style>{`@keyframes toastSlideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
+
             {/* Back + Title */}
             <button
                 onClick={() => router.push(`/app/projects?id=${slug}`)}
@@ -255,7 +280,7 @@ export default function ProjectInstallView({ slug }: { slug: string }) {
                         </code>
                     </div>
                     <button
-                        onClick={() => navigator.clipboard.writeText("git clone https://github.com/dmz-digital/dmz-agents.git")}
+                        onClick={() => copyWithToast("git clone https://github.com/dmz-digital/dmz-agents.git", "Comando git clone copiado!")}
                         style={{ background: "#16A34A10", border: "1px solid #BBF7D0", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", color: "#16A34A", fontSize: "12px", fontWeight: 600, display: "flex", alignItems: "center", gap: "5px" }}
                     >
                         <Copy size={12} /> git clone
@@ -287,7 +312,7 @@ export default function ProjectInstallView({ slug }: { slug: string }) {
                             <code style={{ fontSize: "14px", fontWeight: 600, color: "#111827", fontFamily: "monospace" }}>{project.slug}</code>
                         </div>
                         <button
-                            onClick={() => { navigator.clipboard.writeText(project.slug); }}
+                            onClick={() => copyWithToast(project.slug, "Slug copiado!")}
                             style={{ background: "rgba(0,0,0,0.04)", border: "1px solid #E5E7EB", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", color: "#6B7280", fontSize: "11px", fontWeight: 600, display: "flex", alignItems: "center", gap: "5px" }}
                         >
                             <Copy size={12} /> Copiar
@@ -307,7 +332,7 @@ export default function ProjectInstallView({ slug }: { slug: string }) {
                         <div style={{ display: "flex", gap: "8px", flexShrink: 0, marginLeft: "12px" }}>
                             {apiKey && (
                                 <button
-                                    onClick={() => { navigator.clipboard.writeText(apiKey); }}
+                                    onClick={() => copyWithToast(apiKey, "Chave copiada para a área de transferência!")}
                                     style={{ background: "#16A34A10", border: "1px solid #BBF7D0", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", color: "#16A34A", fontSize: "11px", fontWeight: 600, display: "flex", alignItems: "center", gap: "5px" }}
                                 >
                                     <Copy size={12} /> Copiar Chave
@@ -333,7 +358,7 @@ export default function ProjectInstallView({ slug }: { slug: string }) {
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
                                 <span style={{ fontSize: "10px", fontWeight: 700, color: "#7DD3FC", textTransform: "uppercase", letterSpacing: "0.05em" }}>.env.dmz — copie e cole no seu projeto</span>
                                 <button
-                                    onClick={() => { navigator.clipboard.writeText(`DMZ_PROJECT_SLUG=${project.slug}\nDMZ_API_KEY=${apiKey}`); }}
+                                    onClick={() => copyWithToast(`DMZ_PROJECT_SLUG=${project.slug}\nDMZ_API_KEY=${apiKey}`, "Bloco .env.dmz copiado!")}
                                     style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: "6px", padding: "4px 10px", cursor: "pointer", color: "#94A3B8", fontSize: "11px", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}
                                 >
                                     <Copy size={11} /> Copiar
