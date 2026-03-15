@@ -422,9 +422,59 @@ function AgentsContent() {
     });
 
 
+    const [viewMode, setViewMode] = useState<"grid" | "leaderboard">("grid");
+
+    const getStars = (score: number) => {
+        if (!score) return "⭐⭐";
+        if (score >= 90) return "⭐⭐⭐⭐⭐";
+        if (score >= 75) return "⭐⭐⭐⭐";
+        if (score >= 50) return "⭐⭐⭐";
+        if (score >= 25) return "⭐⭐";
+        return "⭐";
+    };
+
     return (
         <div className="dmz-container pt-12 pb-24">
             <AppHeader />
+
+            {/* Header + Mode Toggle */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px" }}>
+                <div>
+                    <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#111827", letterSpacing: "-0.03em" }}>Squad Experts</h1>
+                    <p style={{ color: "#6B7280", fontSize: "14px", marginTop: "4px" }}>Manage, explore and rank your AI active agents.</p>
+                </div>
+                
+                <div style={{ display: "flex", background: "#F3F4F6", borderRadius: "10px", padding: "4px" }}>
+                    <button
+                        onClick={() => { setViewMode("grid"); setSelected(null); }}
+                        style={{
+                            display: "flex", alignItems: "center", gap: "6px",
+                            background: viewMode === "grid" ? "#FFFFFF" : "transparent",
+                            color: viewMode === "grid" ? "#111827" : "#6B7280",
+                            border: "none", borderRadius: "8px", padding: "6px 14px", cursor: "pointer",
+                            fontSize: "13px", fontWeight: 600,
+                            boxShadow: viewMode === "grid" ? "0 1px 4px rgba(0,0,0,0.06)" : "none",
+                            transition: "all 0.2s"
+                        }}
+                    >
+                        <Blocks size={14} /> Explorar
+                    </button>
+                    <button
+                        onClick={() => { setViewMode("leaderboard"); setSelected(null); }}
+                        style={{
+                            display: "flex", alignItems: "center", gap: "6px",
+                            background: viewMode === "leaderboard" ? "#FFFFFF" : "transparent",
+                            color: viewMode === "leaderboard" ? "#E85D2F" : "#6B7280",
+                            border: "none", borderRadius: "8px", padding: "6px 14px", cursor: "pointer",
+                            fontSize: "13px", fontWeight: 700,
+                            boxShadow: viewMode === "leaderboard" ? "0 1px 4px rgba(0,0,0,0.06)" : "none",
+                            transition: "all 0.2s"
+                        }}
+                    >
+                        <Target size={14} /> Leaderboard
+                    </button>
+                </div>
+            </div>
 
             {/* Stats */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "12px", marginBottom: "28px" }}>
@@ -487,32 +537,96 @@ function AgentsContent() {
                 </div>
             </div>
 
-            {/* Grid + Panel */}
-            <div style={{ display: "grid", gridTemplateColumns: selected ? "1fr 420px" : "1fr", gap: "20px" }}>
-                <div>
-                    {loading ? (
-                        <div style={{ display: "grid", gridTemplateColumns: selected ? "repeat(2,1fr)" : "repeat(3,1fr)", gap: "10px" }}>
-                            {[1, 2, 3, 4, 5, 6].map(i => (
-                                <div key={i} style={{ height: "160px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "14px", animation: "pulse 1.5s infinite" }} />
-                            ))}
-                        </div>
-                    ) : (
-                        <div style={{ display: "grid", gridTemplateColumns: selected ? "repeat(2,1fr)" : "repeat(3,1fr)", gap: "10px" }}>
-                            {filtered.map(agent => (
-                                <AgentCard
-                                    key={agent.id}
-                                    agent={agent}
-                                    onClick={ag => setSelected(selected?.id === ag.id ? null : ag)}
-                                    selected={selected?.id === agent.id}
-                                />
-                            ))}
-                        </div>
+            {loading ? (
+                <div style={{ display: "grid", gridTemplateColumns: selected ? "repeat(2,1fr)" : "repeat(3,1fr)", gap: "10px" }}>
+                    {[1, 2, 3, 4, 5, 6].map(i => (
+                        <div key={i} style={{ height: "160px", background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "14px", animation: "pulse 1.5s infinite" }} />
+                    ))}
+                </div>
+            ) : viewMode === "grid" ? (
+                /* Grid + Panel */
+                <div style={{ display: "grid", gridTemplateColumns: selected ? "1fr 420px" : "1fr", gap: "20px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: selected ? "repeat(2,1fr)" : "repeat(3,1fr)", gap: "10px" }}>
+                        {filtered.map(agent => (
+                            <AgentCard
+                                key={agent.id}
+                                agent={agent}
+                                onClick={ag => setSelected(selected?.id === ag.id ? null : ag)}
+                                selected={selected?.id === agent.id}
+                            />
+                        ))}
+                    </div>
+                    {selected && (
+                        <AgentPanel agent={selected} onClose={() => setSelected(null)} />
                     )}
                 </div>
-                {selected && (
-                    <AgentPanel agent={selected} onClose={() => setSelected(null)} />
-                )}
-            </div>
+            ) : (
+                /* Leaderboard Table */
+                <div style={{ background: "#FFFFFF", border: "1.5px solid #F0F0F0", borderRadius: "16px", overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.03)" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                        <thead>
+                            <tr style={{ background: "#F9FAFB", borderBottom: "1.5px solid #F0F0F0" }}>
+                                <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Rank</th>
+                                <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Agente</th>
+                                <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Tasks Concluídas</th>
+                                <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Score</th>
+                                <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Patente (Estrelas)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {[...filtered].sort((a, b) => (b.ranking_score || 0) - (a.ranking_score || 0)).map((agent, index) => {
+                                const cc = CAT_COLORS[agent.category] || "#475569";
+                                const IconComponent = AGENT_ICONS[agent.icon] || Bot;
+                                const isTop3 = index < 3;
+                                
+                                return (
+                                    <tr key={agent.id} style={{ borderBottom: "1px solid #F3F4F6", transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#F9FAFB"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                        <td style={{ padding: "16px 24px", fontSize: "14px", fontWeight: 800, color: isTop3 ? "#E85D2F" : "#9CA3AF" }}>
+                                            #{index + 1}
+                                        </td>
+                                        <td style={{ padding: "16px 24px" }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                <div style={{ width: 36, height: 36, borderRadius: "10px", background: cc + "15", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                    <IconComponent size={18} color={cc} />
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: "14px", fontWeight: 700, color: "#111827", display: "flex", alignItems: "center", gap: "6px" }}>
+                                                        {agent.full_name || agent.name}
+                                                        {isTop3 && <span title="Top 3 Performer" style={{ cursor: "default" }}>🔥</span>}
+                                                    </div>
+                                                    <div style={{ fontSize: "12px", color: cc, fontWeight: 600 }}>@{agent.handle}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style={{ padding: "16px 24px", fontSize: "14px", fontWeight: 600, color: "#374151" }}>
+                                            {agent.tasks_completed || 0}
+                                        </td>
+                                        <td style={{ padding: "16px 24px" }}>
+                                            <span style={{ 
+                                                background: (agent.ranking_score || 0) > 80 ? "#ECFDF5" : "#F3F4F6", 
+                                                color: (agent.ranking_score || 0) > 80 ? "#059669" : "#4B5563",
+                                                padding: "4px 8px", borderRadius: "6px", fontSize: "12px", fontWeight: 700
+                                            }}>
+                                                {agent.ranking_score || 0}%
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: "16px 24px", fontSize: "15px", letterSpacing: "2px" }}>
+                                            {getStars(agent.ranking_score)}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            {filtered.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} style={{ padding: "40px", textAlign: "center", color: "#9CA3AF" }}>
+                                        Nenhum agente encontrado neste filtro.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </div>
     );
 }
