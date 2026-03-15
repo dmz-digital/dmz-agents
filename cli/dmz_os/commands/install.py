@@ -162,6 +162,8 @@ def _collect_credentials() -> dict:
     )
 
     # --- VALIDAÇÃO EM TEMPO REAL ---
+    project_data = None
+    client = None
     with console.status("[bold yellow]Validando credenciais e projeto...[/]"):
         try:
             # Setup temporário do client para validação
@@ -186,98 +188,119 @@ def _collect_credentials() -> dict:
                 raise typer.Exit(1)
             
             project_data = res.data
-            console.print(f"\n[green]✓ Projeto '[bold]{project_data['name']}[/]' identificado com sucesso![/]")
-            
-            # --- VALIDAÇÃO DE GIT (SEGURANÇA E REQUISITO) ---
-            db_repo = project_data.get("repo_url")
-            local_repo = _get_local_git_remote()
-
-            # Se não houver Git local, tentar detectar se é ao menos um diretório git (sem remote)
-            is_git_dir = False
-            try:
-                is_git_dir = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], capture_output=True, check=False).returncode == 0
-            except: pass
-
-            if not is_git_dir:
-                console.print(Panel(
-                    "[bold yellow]GIT NÃO DETECTADO[/]\n\n"
-                    "Este diretório não é um repositório Git. O DMZ OS precisa do Git para que possa versionar as alterações dos agentes.",
-                    border_style="yellow",
-                    title="⚠️ Atenção"
-                ))
-                if Confirm.ask("[cyan]Deseja inicializar o Git (git init) agora?[/]", default=True):
-                    try:
-                        subprocess.run(["git", "init"], check=True)
-                        is_git_dir = True
-                        console.print("[green]✓ Git inicializado com sucesso![/]")
-                    except Exception as e:
-                        console.print(f"[red]✗ Erro ao inicializar Git: {e}[/]")
-                        raise typer.Exit(1)
-                else:
-                    console.print("[red]✗ O Git é obrigatório. Instalação abortada.[/]")
-                    raise typer.Exit(1)
-
-            if not db_repo:
-                console.print("\n[yellow]⚠ Este projeto ainda não tem um repositório Git vinculado na plataforma.[/]")
-                console.print("[dim]O Squad precisa de um repositório para sincronizar as tarefas na nuvem.[/]")
-                
-                new_repo = Prompt.ask("[cyan]URL do Repositório Git (ex: https://github.com/user/repo)[/]")
-                if not new_repo:
-                    console.print("[red]✗ Erro: O repositório Git é obrigatório para ativar o Squad.[/]")
-                    raise typer.Exit(1)
-                
-                # Atualizar no Supabase
-                with console.status("[bold blue]Vinculando repositório ao projeto...[/]"):
-                    client.table("dmz_agents_projects").update({"repo_url": new_repo}).eq("id", project_data["id"]).execute()
-                
-                db_repo = new_repo
-                console.print(f"[green]✓ Repositório vinculado: [bold]{db_repo}[/][/]")
-
-            # Validar e sugerir remote origin se faltar
-            if not local_repo and db_repo:
-                console.print(f"\n[yellow]⚠ Repositório local sem 'origin' detectado.[/]")
-                if Confirm.ask(f"[cyan]Deseja configurar '{db_repo}' como origin automático?[/]", default=True):
-                    try:
-                        subprocess.run(["git", "remote", "add", "origin", db_repo], check=True)
-                        local_repo = db_repo
-                        console.print(f"[green]✓ Remote origin configurado: {db_repo}[/]")
-                    except Exception as e:
-                        console.print(f"[dim]Note: Não foi possível adicionar remote (pode já existir): {e}[/]")
-
-            # Validar se o repositório local bate com o da plataforma
-            def _normalize_repo(url):
-                """Remove credentials, .git suffix, trailing slashes and lowercase."""
-                if not url:
-                    return ""
-                url = re.sub(r"https?://[^@]+@", "https://", url)  # strip PAT/credentials
-                url = re.sub(r"\.git$", "", url)
-                return url.rstrip("/").lower()
-            
-            db_repo_norm = _normalize_repo(db_repo)
-            local_repo_norm = _normalize_repo(local_repo) if local_repo else None
-            
-            if local_repo_norm and local_repo_norm != db_repo_norm:
-                console.print(Panel(
-                    f"[bold red]CONFLITO DE REPOSITÓRIO[/]\n\n"
-                    f"Este projeto está travado no repositório:\n"
-                    f"[cyan]{db_repo}[/]\n\n"
-                    f"Mas você está tentando instalar na pasta:\n"
-                    f"[yellow]{local_repo or 'Sem Remote origin'}[/]\n\n"
-                    "O Squad não pode operar em pastas divergentes para evitar injeção de código errada.",
-                    border_style="red"
-                ))
-                if not Confirm.ask("[bold red]Deseja SOBRESCREVER o repositório na plataforma com este local?[/]", default=False):
-                    console.print("[yellow]Instalação abortada por segurança.[/]")
-                    raise typer.Exit(1)
-                
-                # Atualiza com o local
-                client.table("dmz_agents_projects").update({"repo_url": local_repo}).eq("id", project_data["id"]).execute()
-                console.print(f"[green]✓ Repositório atualizado na plataforma para:[/] {local_repo}")
-
         except Exception as e:
             if isinstance(e, typer.Exit): raise e
             console.print(f"\n[red]⚠ Falha na conexão/validação:[/] {e}")
             raise typer.Exit(1)
+
+    # Identificação bem-sucedida (Fora do status para evitar hang)
+    console.print(f"\n[green]✓ Projeto '[bold]{project_data['name']}[/]' identificado com sucesso![/]")
+    
+    # --- VALIDAÇÃO DE GIT (SEGURANÇA E REQUISITO) ---
+    db_repo = project_data.get("repo_url")
+    local_repo = _get_local_git_remote()
+
+    # Se não houver Git local, tentar detectar se é ao menos um diretório git (sem remote)
+    is_git_dir = False
+    try:
+        is_git_dir = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], capture_output=True, check=False).returncode == 0
+    except: pass
+
+    if not is_git_dir:
+        console.print(Panel(
+            "[bold yellow]GIT NÃO DETECTADO[/]\n\n"
+            "Este diretório não é um repositório Git. O DMZ OS precisa do Git para que possa versionar as alterações dos agentes.",
+            border_style="yellow",
+            title="⚠️ Atenção"
+        ))
+        if Confirm.ask("[cyan]Deseja inicializar o Git (git init) agora?[/]", default=True):
+            try:
+                subprocess.run(["git", "init"], check=True)
+                is_git_dir = True
+                console.print("[green]✓ Git inicializado com sucesso![/]")
+            except Exception as e:
+                console.print(f"[red]✗ Erro ao inicializar Git: {e}[/]")
+                raise typer.Exit(1)
+        else:
+            console.print("[red]✗ O Git é obrigatório. Instalação abortada.[/]")
+            raise typer.Exit(1)
+
+    if not db_repo:
+        console.print("\n[yellow]⚠ Este projeto ainda não tem um repositório Git vinculado na plataforma.[/]")
+        console.print("[dim]O Squad precisa de um repositório para sincronizar as tarefas na nuvem.[/]")
+        
+        new_repo = Prompt.ask("[cyan]URL do Repositório Git (ex: https://github.com/user/repo)[/]")
+        if not new_repo:
+            console.print("[red]✗ Erro: O repositório Git é obrigatório para ativar o Squad.[/]")
+            raise typer.Exit(1)
+        
+        # Atualizar no Supabase
+        with console.status("[bold blue]Vinculando repositório ao projeto...[/]"):
+            client.table("dmz_agents_projects").update({"repo_url": new_repo}).eq("id", project_data["id"]).execute()
+        
+        db_repo = new_repo
+        console.print(f"[green]✓ Repositório vinculado: [bold]{db_repo}[/][/]")
+
+    # Validar e sugerir remote origin se faltar
+    if not local_repo:
+        console.print(f"\n[yellow]⚠ Repositório local sem 'origin' detectado.[/]")
+        
+        choices = ["Configurar automático (" + (db_repo or "N/A") + ")", "Informar manualmente", "Pular (Não recomendado)"]
+        choice = Prompt.ask("[cyan]Como deseja configurar o repositório local?[/]", choices=["1", "2", "3"], default="1")
+        
+        if choice == "1" and db_repo:
+            try:
+                subprocess.run(["git", "remote", "add", "origin", db_repo], check=True)
+                local_repo = db_repo
+                console.print(f"[green]✓ Remote origin configurado automaticamente: {db_repo}[/]")
+            except Exception as e:
+                console.print(f"[dim]Note: Não foi possível adicionar remote automático: {e}[/]")
+        elif choice == "2":
+            manual_repo = Prompt.ask("[cyan]Cole a URL do seu Repositório Git (ex: https://github.com/user/repo)[/]")
+            if manual_repo:
+                try:
+                    # Se já tiver um remote origin, removemos para colocar o novo
+                    subprocess.run(["git", "remote", "remove", "origin"], capture_output=True, check=False)
+                    subprocess.run(["git", "remote", "add", "origin", manual_repo], check=True)
+                    local_repo = manual_repo
+                    console.print(f"[green]✓ Remote origin configurado manualmente: {manual_repo}[/]")
+                    
+                    # Opcional: Atualizar na plataforma se o usuário quiser sincronizar
+                    if db_repo and manual_repo.lower() != db_repo.lower():
+                        if Confirm.ask("[yellow]Deseja atualizar a URL do repositório também na plataforma DMZ?[/]", default=True):
+                            with console.status("[bold blue]Sincronizando plataforma...[/]"):
+                                client.table("dmz_agents_projects").update({"repo_url": manual_repo}).eq("id", project_data["id"]).execute()
+                            db_repo = manual_repo
+                            console.print("[green]✓ Plataforma sincronizada.[/]")
+                except Exception as e:
+                    console.print(f"[red]✗ Erro ao configurar repositório manual: {e}[/]")
+    
+    # Validar se o repositório local bate com o da plataforma
+    def _normalize_repo(url):
+        """Remove credentials, .git suffix, trailing slashes and lowercase."""
+        if not url:
+            return ""
+        url = re.sub(r"https?://[^@]+@", "https://", url)  # strip PAT/credentials
+        url = re.sub(r"\.git$", "", url)
+        return url.rstrip("/").lower()
+    
+    db_repo_norm = _normalize_repo(db_repo)
+    local_repo_norm = _normalize_repo(local_repo) if local_repo else None
+    
+    if local_repo_norm and db_repo_norm and local_repo_norm != db_repo_norm:
+        console.print(Panel(
+            f"[bold red]CONFLITO DE REPOSITÓRIO[/]\n\n"
+            f"Plataforma: [cyan]{db_repo}[/]\n"
+            f"Local:      [yellow]{local_repo}[/]\n\n"
+            "O Squad precisa que os repositórios estejam sincronizados.",
+            border_style="red"
+        ))
+        if Confirm.ask("[bold yellow]Deseja atualizar a plataforma para usar o repositório local?[/]", default=True):
+            with console.status("[bold blue]Atualizando plataforma...[/]"):
+                client.table("dmz_agents_projects").update({"repo_url": local_repo}).eq("id", project_data["id"]).execute()
+            console.print(f"[green]✓ Plataforma atualizada para:[/] {local_repo}")
+        else:
+            console.print("[yellow]Prosseguindo com divergência (não recomendado).[/]")
 
     # LLM
     console.print()
