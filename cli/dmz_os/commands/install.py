@@ -415,6 +415,35 @@ def _create_agents_folder():
         path.write_text(json.dumps(existing_config, indent=2))
 
     console.print(f"[green]✓[/] MCP Server local configurado para Cursor e Windsurf")
+    
+    # Atualiza .gitignore para não subir arquivos do DMZ OS
+    gitignore_path = Path.cwd() / ".gitignore"
+    dmz_ignores = [
+        "\n# DMZ OS",
+        ".agents/",
+        ".env.dmz",
+        ".env.dmz.bak",
+        ".cursor/mcp.json",
+        ".windsurf/mcp.json",
+        ".antigravity/mcp.json"
+    ]
+    
+    if gitignore_path.exists():
+        content = gitignore_path.read_text()
+        new_ignores = []
+        for line in dmz_ignores:
+            if line.strip() and line.strip() not in content:
+                new_ignores.append(line)
+        
+        if new_ignores:
+            with open(gitignore_path, "a") as f:
+                f.write("\n".join(new_ignores) + "\n")
+            console.print(f"[green]✓[/] [bold].gitignore[/] atualizado com proteções DMZ OS")
+    else:
+        with open(gitignore_path, "w") as f:
+            f.write("\n".join(dmz_ignores) + "\n")
+        console.print(f"[green]✓[/] [bold].gitignore[/] criado com proteções DMZ OS")
+
     console.print(f"[green]✓[/] Pasta [bold].agents/[/] configurada")
 
 
