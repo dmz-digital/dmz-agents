@@ -96,12 +96,12 @@ export default function AppDashboard() {
                             </Link>
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 relative z-10">
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 relative z-10">
                             {CATEGORIES.map((cat) => (
                                 <Link
                                     key={cat.name}
                                     href={`/app/agents?category=${cat.name}`}
-                                    className="flex flex-col gap-3 p-4 rounded-2xl border border-neutral-50 hover:border-dmz-accent/20 hover:bg-orange-50/20 transition-all group"
+                                    className="flex flex-col gap-2 p-3 rounded-2xl border border-neutral-50 hover:border-dmz-accent/20 hover:bg-orange-50/20 transition-all group"
                                 >
                                     <div className="w-8 h-8 rounded-xl flex items-center justify-center"
                                         style={{ backgroundColor: `${CAT_COLORS[cat.name]}10`, color: CAT_COLORS[cat.name] }}>
