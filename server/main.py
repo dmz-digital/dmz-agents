@@ -1319,13 +1319,15 @@ async def mcp_add_comment(req: MCPCommentRequest):
 
 
 # ─── Telegram Webhook ───────────────────────────────────────────────────────
-from fastapi import Request
+from fastapi import Request, BackgroundTasks
 from webhook_telegram import handle_telegram_webhook
 
 @app.post("/webhook/telegram")
-async def telegram_webhook(req: Request):
+async def telegram_webhook(req: Request, background_tasks: BackgroundTasks):
     """Webhook do Telegram para a Agente Yvi."""
-    return await handle_telegram_webhook(req, supabase, get_llm_response)
+    # Processamos em background para liberar o Telegram imediatamente
+    background_tasks.add_task(handle_telegram_webhook, req, supabase, get_llm_response)
+    return {"status": "accepted"}
 
 # ─── Background MCP Poller ──────────────────────────────────────────────────
 import asyncio

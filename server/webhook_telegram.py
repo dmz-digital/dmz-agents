@@ -21,6 +21,15 @@ async def handle_telegram_webhook(req: Request, supabase, get_llm_response):
         # Ignora mensagens sem texto
         if not text:
             return {"status": "ok"}
+
+        # Resposta imediata de "recebido" para evitar que o Daniel ache que travou
+        bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+        if bot_token:
+            async with httpx.AsyncClient() as client:
+                await client.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", json={
+                    "chat_id": chat_id,
+                    "text": "Claro, Daniel! Vou preparar o relatório agora mesmo e já te envio o áudio. Só um momento enquanto processo os dados do Kanban."
+                })
             
         # Puxa as tasks mais recentes (independente de hoje) para dar contexto à Yvi
         res = supabase.table("dmz_agents_tasks").select("title, status, agent_id, updated_at").eq("project_id", "dmz-agents").order("updated_at", desc=True).limit(20).execute()
