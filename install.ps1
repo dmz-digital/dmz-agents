@@ -82,16 +82,28 @@ Write-Host ("  $GREEN" + "✓$RESET Python $pyVer")
 
 # ─── Instalar dmz-os ──────────────────────────────────────────
 Write-Host ""
-Write-Host "$CYANInstalando/Atualizando dmz-os v0.4.3 (MCP Universal)...$RESET"
+Write-Host "$CYANInstalando/Atualizando dmz-os (MCP Universal)...$RESET"
 
 $INSTALL_URL = "https://github.com/dmz-digital/dmz-agents/archive/refs/heads/main.zip#subdirectory=cli"
 
-# Tenta instalar via pip
+# Tenta instalar via pip (Forçando upgrade e sem cache)
 Try {
-    & $pyCommand -m pip install $INSTALL_URL --quiet --upgrade --no-cache-dir
+    Write-Host "$DIM  Preparando ambiente e limpando cache...$RESET"
+    & $pyCommand -m pip uninstall dmz-os -y 2>$null | Out-Null
+    & $pyCommand -m pip install $INSTALL_URL --upgrade --no-cache-dir --quiet
+    Write-Host "  $GREEN✓$RESET Instalação concluída com sucesso."
 } Catch {
-    Write-Host ("$YELLOW" + "⚠ Falha na instalação automática. Tentando modo de compatibilidade...$RESET")
-    & $pyCommand -m pip install $INSTALL_URL --quiet --upgrade --no-cache-dir --user
+    Write-Host ("$YELLOW" + "⚠ Falha na instalação padrão. Tentando com permissões de usuário...$RESET")
+    & $pyCommand -m pip install $INSTALL_URL --upgrade --no-cache-dir --user --quiet
+}
+
+# Verificar se instalou mesmo
+try {
+    & $pyCommand -m dmz_os --help | Out-Null
+} catch {
+    Write-Host "$RED" + "✗ Falha crítica: O comando 'dmz-os' não foi reconhecido após a instalação.$RESET"
+    Write-Host "$DIM  Tente rodar manualmente: pip install dmz-os --upgrade$RESET"
+    exit 1
 }
 
 # ─── Chamar o install interativo ─────────────────────────────
