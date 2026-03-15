@@ -393,7 +393,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
             if (data.api_key) {
                 // Sincroniza com a tabela de projetos para o CLI
                 await supabase.from("dmz_agents_projects").update({ api_key: data.api_key }).eq("id", project.id);
-                setProject(prev => ({ ...prev, api_key: data.api_key }));
+                setProject((prev: any) => ({ ...prev, api_key: data.api_key }));
 
                 // Show the key once
                 confirmAction("API Key Gerada", `Anote sua chave (ela não será exibida novamente):\n\n${data.api_key}`, false, "Copiado", "Fechar");
@@ -683,21 +683,22 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                                 <div style={{ display: "flex", alignItems: "center" }}>
                                                     {task.assignees && task.assignees.length > 0 ? (
-                                                        <div style={{ display: "flex", alignItems: "center" }}>
+                                                        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px" }}>
                                                             {task.assignees.map((as, idx) => {
                                                                 const ag = getAgent(as.agent_id);
                                                                 if (!ag) return null;
                                                                 return (
-                                                                    <div key={as.agent_id} style={{ 
-                                                                        width: 22, height: 22, borderRadius: "50%", 
-                                                                        background: ag.color || "#6B7280", 
-                                                                        display: "flex", alignItems: "center", justifyContent: "center", 
-                                                                        fontSize: "9px", fontWeight: 800, color: "#FFF",
-                                                                        marginLeft: idx > 0 ? "-8px" : "0",
-                                                                        border: "2px solid #FFF",
-                                                                        zIndex: 10 - idx
-                                                                    }} title={`@${ag.handle}`}>
-                                                                        {ag.handle?.charAt(0).toUpperCase()}
+                                                                    <div key={as.agent_id} style={{ display: "flex", alignItems: "center", gap: "4px" }} title={`@${ag.handle}`}>
+                                                                        <div style={{ 
+                                                                            width: 18, height: 18, borderRadius: "50%", 
+                                                                            background: ag.color || "#6B7280", 
+                                                                            display: "flex", alignItems: "center", justifyContent: "center", 
+                                                                            fontSize: "8px", fontWeight: 800, color: "#FFF",
+                                                                            border: "1.5px solid #FFF",
+                                                                        }}>
+                                                                            {ag.handle?.charAt(0).toUpperCase()}
+                                                                        </div>
+                                                                        <span style={{ fontSize: "10px", color: "#6B7280", fontWeight: 600 }}>@{ag.handle}</span>
                                                                     </div>
                                                                 );
                                                             })}
@@ -705,13 +706,13 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                                                     ) : task.agent_id ? (() => {
                                                         const ag = getAgent(task.agent_id);
                                                         return ag ? (
-                                                            <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                                                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                                                                 <div style={{ 
-                                                                    width: 22, height: 22, borderRadius: "50%", 
+                                                                    width: 18, height: 18, borderRadius: "50%", 
                                                                     background: ag.color || "#6B7280", 
                                                                     display: "flex", alignItems: "center", justifyContent: "center", 
-                                                                    fontSize: "9px", fontWeight: 800, color: "#FFF",
-                                                                    border: "2px solid #FFF"
+                                                                    fontSize: "8px", fontWeight: 800, color: "#FFF",
+                                                                    border: "1.5px solid #FFF"
                                                                 }} title={`@${ag.handle}`}>
                                                                     {ag.handle?.charAt(0).toUpperCase()}
                                                                 </div>
@@ -1202,18 +1203,34 @@ function TaskDetailModal({ task, agent, projectAgents, onDelete, onUpdate, onTog
 
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", background: "#F9FAFB", padding: "20px", borderRadius: "16px", border: "1px solid #F0F0F0" }}>
                             <div style={{ flex: 1, minWidth: "200px" }}>
-                                <div style={{ fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", marginBottom: "8px" }}>Agente Responsável</div>
-                                {agent ? (
-                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                        <div style={{ width: 28, height: 28, borderRadius: "8px", background: (agent.color || "#6B7280") + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 800, color: agent.color || "#6B7280" }}>{agent.handle?.charAt(0).toUpperCase()}</div>
-                                        <div>
-                                            <div style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>{agent.name}</div>
-                                            <div style={{ fontSize: "12px", fontWeight: 600, color: agent.color || "#6B7280", fontFamily: "monospace" }}>@{agent.handle}</div>
+                                <div style={{ fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", marginBottom: "8px" }}>Agente(s) Responsável(is)</div>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
+                                    {task.assignees && task.assignees.length > 0 ? (
+                                        task.assignees.map(as => {
+                                            const ag = projectAgents.find((a: any) => a.id === as.agent_id);
+                                            if (!ag) return null;
+                                            return (
+                                                <div key={ag.id} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                    <div style={{ width: 28, height: 28, borderRadius: "8px", background: (ag.color || "#6B7280") + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 800, color: ag.color || "#6B7280" }}>{ag.handle?.charAt(0).toUpperCase()}</div>
+                                                    <div>
+                                                        <div style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>{ag.name}</div>
+                                                        <div style={{ fontSize: "12px", fontWeight: 600, color: ag.color || "#6B7280", fontFamily: "monospace" }}>@{ag.handle} <span style={{color: "#9CA3AF", fontSize: "10px"}}>({as.role})</span></div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    ) : agent ? (
+                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                            <div style={{ width: 28, height: 28, borderRadius: "8px", background: (agent.color || "#6B7280") + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 800, color: agent.color || "#6B7280" }}>{agent.handle?.charAt(0).toUpperCase()}</div>
+                                            <div>
+                                                <div style={{ fontSize: "14px", fontWeight: 600, color: "#111827" }}>{agent.name}</div>
+                                                <div style={{ fontSize: "12px", fontWeight: 600, color: agent.color || "#6B7280", fontFamily: "monospace" }}>@{agent.handle}</div>
+                                            </div>
                                         </div>
-                                    </div>
-                                ) : (
-                                    <span style={{ fontSize: "14px", color: "#9CA3AF" }}>Não atribuído</span>
-                                )}
+                                    ) : (
+                                        <span style={{ fontSize: "14px", color: "#9CA3AF" }}>Não atribuído</span>
+                                    )}
+                                </div>
                             </div>
                             <div style={{ flex: 1, minWidth: "150px" }}>
                                 <div style={{ fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", marginBottom: "8px" }}>Criado em</div>
