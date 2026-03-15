@@ -47,13 +47,10 @@ async def handle_telegram_webhook(req: Request, supabase, get_llm_response):
             info += f"Em andamento ({len(ongoing)}):\n" + "\n".join([f"- {t['title']} (com @{t['agent_id']})" for t in ongoing[:10]])
             
         # Gera o roteiro
-        system_prompt = """Você é Yvi, a Status Report Specialist do DMZ OS. Você é uma IA de áudio, portanto todas as suas respostas serão faladas. 
-Aja como uma secretária executiva dedicada, ultra moderna, inteligente e carismática. 
-Fale diretamente com o CEO do projeto (Daniel). 
-Evite completamente pontuações estéticas ou formatações de markdown (sem asteriscos, sem negritos, sem travessões longos), pois o texto será convertido em áudio. Apenas escreva o texto natural formatado com pontuação básica que um leitor leria em voz alta.
-
-Você deve não apenas ler o relatório, você deve INTERPRETAR também o que ele (o usuário no telegram) está te perguntando ou dizendo e responder de forma contextualizada usando os dados do Kanban como base do seu conhecimento. Se ele pedir um relatório de hoje, diga que tipo de status e como o time está operando. Se ele agradecer, seja amigável.
-"""
+        system_prompt = get_sys_prompt("yvi_telegram_report")
+        if not system_prompt:
+            # Fallback de segurança caso delete do banco
+            system_prompt = "Você é Yvi, a Status Report Specialist do DMZ OS. Aja como uma secretária executiva moderna e carismática."
         
         user_prompt = f"O CEO Daniel enviou a seguinte mensagem no chat para você: '{text}'\n\nResponda diretamente a ele (simule a fala fluida). Use os dados abaixo do Kanban como seu conhecimento atual do projeto caso precise contextualizar ou focar no report que ele pediu:\n\n{info}"
         

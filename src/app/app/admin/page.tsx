@@ -90,6 +90,15 @@ export default function AdminDashboard() {
             color: "bg-pink-500",
             href: "/app/admin/reports",
             features: ["Prompt do Relatório", "Parâmetros ElevenLabs", "Voice ID Management"]
+        },
+        {
+            id: "telegram",
+            title: "Prompt Telegram (Yvi)",
+            description: "Gerencie a lógica e a carisma da Agente Yvi diretamente no Telegram.",
+            icon: MessageSquare,
+            color: "bg-dmz-accent",
+            href: "/app/admin/telegram-prompts",
+            features: ["Prompt Master da Yvi", "Fluxo de Resumo", "Instruções de Áudio"]
         }
     ];
 
