@@ -1346,6 +1346,9 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
     const [loading, setLoading] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [playbackRate, setPlaybackRate] = useState(1);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     // Group tasks by date
@@ -1503,7 +1506,14 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
                 </div>
 
                 {audioUrl && (
-                    <audio ref={audioRef} src={audioUrl} onEnded={() => setIsPlaying(false)} />
+                    <audio 
+                        ref={audioRef} 
+                        src={audioUrl} 
+                        onEnded={() => setIsPlaying(false)} 
+                        onTimeUpdate={(e) => setCurrentTime((e.target as HTMLAudioElement).currentTime)}
+                        onLoadedMetadata={(e) => setDuration((e.target as HTMLAudioElement).duration)}
+                        onRateChange={(e) => setPlaybackRate((e.target as HTMLAudioElement).playbackRate)}
+                    />
                 )}
 
                 {selectedDateStr ? (
@@ -1533,17 +1543,52 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
                             </button>
                         </div>
                         
-                        {/* Audio Waveform Anim */}
-                        {isPlaying && (
-                            <div style={{ display: "flex", alignItems: "center", gap: "4px", height: "24px", alignSelf: "center", marginTop: "-8px", marginBottom: "8px" }}>
-                                {[1, 2, 3, 4, 5, 6].map(i => (
-                                    <div key={i} style={{
-                                        width: "4px", background: "#10B981", borderRadius: "2px",
-                                        animation: `equalizer ${0.5 + Math.random() * 0.5}s ease-in-out infinite alternate`,
-                                        height: `${Math.random() * 100}%`
-                                    }} />
-                                ))}
-                                <style>{`@keyframes equalizer { 0% { height: 2px; } 100% { height: 24px; } }`}</style>
+                        {/* Audio Waveform Anim & Controls */}
+                        {audioUrl && (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "4px", marginBottom: "8px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "#F9FAFB", padding: "8px 16px", borderRadius: "12px", border: "1px solid #E5E7EB" }}>
+                                    <button 
+                                        onClick={() => {
+                                            if (audioRef.current) {
+                                                const nextRate = playbackRate === 1 ? 1.5 : playbackRate === 1.5 ? 2 : playbackRate === 2 ? 0.5 : 1;
+                                                audioRef.current.playbackRate = nextRate;
+                                            }
+                                        }}
+                                        style={{ background: "#EEF2FF", color: "#4F46E5", border: "none", borderRadius: "8px", padding: "4px 8px", fontSize: "12px", fontWeight: 800, cursor: "pointer", width: "52px", transition: "all 0.2s" }}
+                                    >
+                                        {playbackRate}x
+                                    </button>
+                                    
+                                    <input 
+                                        type="range" 
+                                        min={0} 
+                                        max={duration || 100} 
+                                        value={currentTime} 
+                                        onChange={(e) => {
+                                            if (audioRef.current) {
+                                                audioRef.current.currentTime = Number(e.target.value);
+                                                setCurrentTime(Number(e.target.value));
+                                            }
+                                        }}
+                                        style={{ flex: 1, accentColor: "#10B981", height: "4px", cursor: "pointer" }}
+                                    />
+                                    <span style={{ fontSize: "12px", color: "#6B7280", minWidth: "40px", fontFamily: "monospace", textAlign: "right", fontWeight: 600 }}>
+                                        {Math.floor(currentTime / 60)}:{Math.floor(currentTime % 60).toString().padStart(2, '0')}
+                                    </span>
+                                </div>
+                                
+                                {isPlaying && (
+                                    <div style={{ display: "flex", alignItems: "center", gap: "4px", height: "24px", alignSelf: "center", marginTop: "4px" }}>
+                                        {[1, 2, 3, 4, 5, 6].map(i => (
+                                            <div key={i} style={{
+                                                width: "4px", background: "#10B981", borderRadius: "2px",
+                                                animation: `equalizer ${0.5 + Math.random() * 0.5}s ease-in-out infinite alternate`,
+                                                height: `${Math.random() * 100}%`
+                                            }} />
+                                        ))}
+                                        <style>{`@keyframes equalizer { 0% { height: 4px; } 100% { height: 24px; } }`}</style>
+                                    </div>
+                                )}
                             </div>
                         )}
 
