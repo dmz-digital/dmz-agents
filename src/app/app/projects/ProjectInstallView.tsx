@@ -229,20 +229,21 @@ export default function ProjectInstallView({ slug }: { slug: string }) {
             {/* Toast */}
             {toast && (
                 <div style={{
-                    position: "fixed", top: 24, right: 24, zIndex: 9999,
-                    background: "#065F46", color: "#ECFDF5",
-                    padding: "12px 20px", borderRadius: "12px",
+                    position: "fixed", top: "50%", left: "50%", zIndex: 9999,
+                    transform: "translate(-50%, -50%)",
+                    background: "#7C3AED", color: "#FFFFFF",
+                    padding: "12px 20px", borderRadius: "8px",
                     display: "flex", alignItems: "center", gap: "8px",
-                    fontSize: "13px", fontWeight: 600,
-                    boxShadow: "0 8px 30px rgba(0,0,0,0.18)",
-                    animation: "toastSlideIn 0.3s ease-out",
-                    border: "1px solid #10B981"
+                    fontSize: "14px", fontWeight: 600,
+                    boxShadow: "none",
+                    animation: "toastFadeIn 0.3s ease-out",
+                    border: "none"
                 }}>
-                    <Check size={15} />
+                    <Check size={16} color="#FFFFFF" />
                     {toast}
                 </div>
             )}
-            <style>{`@keyframes toastSlideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
+            <style>{`@keyframes toastFadeIn { from { opacity: 0; transform: translate(-50%, -40%); } to { opacity: 1; transform: translate(-50%, -50%); } }`}</style>
 
             {/* Back + Title */}
             <button
