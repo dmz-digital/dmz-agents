@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 load_dotenv(".env.dmz")
 
-async def handle_telegram_webhook(req: Request, supabase, get_llm_response):
+async def handle_telegram_webhook(req: Request, supabase, get_llm_response, get_sys_prompt):
     """Webhook do Telegram para a Agente Yvi."""
     data = await req.json()
     
@@ -17,6 +17,7 @@ async def handle_telegram_webhook(req: Request, supabase, get_llm_response):
         msg = data["message"]
         chat_id = msg.get("chat", {}).get("id")
         text = msg.get("text", "").lower()
+        user_first_name = msg.get("from", {}).get("first_name", "Daniel")
         
         # Ignora mensagens sem texto
         if not text:
@@ -28,7 +29,7 @@ async def handle_telegram_webhook(req: Request, supabase, get_llm_response):
             async with httpx.AsyncClient() as client:
                 await client.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", json={
                     "chat_id": chat_id,
-                    "text": "Claro, Daniel! Vou preparar o relatório agora mesmo e já te envio o áudio. Só um momento enquanto processo os dados do Kanban."
+                    "text": f"Claro, {user_first_name}! Vou preparar o relatório agora mesmo e já te envio o áudio. Só um momento enquanto processo os dados do Kanban."
                 })
             
         # Puxa as tasks mais recentes (independente de hoje) para dar contexto à Yvi
@@ -52,7 +53,16 @@ async def handle_telegram_webhook(req: Request, supabase, get_llm_response):
             # Fallback de segurança caso delete do banco
             system_prompt = "Você é Yvi, a Status Report Specialist do DMZ OS. Aja como uma secretária executiva moderna e carismática."
         
-        user_prompt = f"O CEO Daniel enviou a seguinte mensagem no chat para você: '{text}'\n\nResponda diretamente a ele (simule a fala fluida). Use os dados abaixo do Kanban como seu conhecimento atual do projeto caso precise contextualizar ou focar no report que ele pediu:\n\n{info}"
+        # Interpolação de variáveis no prompt do Daniel
+        now = datetime.now()
+        date_full = now.strftime("%d/%m/%Y %H:%M")
+        date_str = now.strftime("%d/%m/%Y")
+        
+        system_prompt = system_prompt.replace("{user_first_name}", user_first_name)
+        system_prompt = system_prompt.replace("{date_full}", date_full)
+        system_prompt = system_prompt.replace("{date_str}", date_str)
+        
+        user_prompt = f"O CEO {user_first_name} enviou a seguinte mensagem no chat para você: '{text}'\n\nResponda diretamente a ele (simule a fala fluida). Use os dados abaixo do Kanban como seu conhecimento atual do projeto caso precise contextualizar ou focar no report que ele pediu:\n\n{info}"
         
         resumo_texto = get_llm_response(system_prompt, user_prompt)
         
