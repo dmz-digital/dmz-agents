@@ -711,7 +711,13 @@ export default function ChatPage() {
     const openTaskModal = (msg: Message, selectedText?: string) => {
         const clean = (selectedText || stripMarkdown(msg.content)).trim();
         setTaskTitle(clean.substring(0, 60) + (clean.length > 60 ? "..." : ""));
-        setTaskDesc(selectedText ? `Trecho selecionado do chat:\n"${selectedText}"\n\n--- Contexto original ---\n${msg.content}` : msg.content);
+        // Remove artifacts from description as well to keep it clean, but keep formatted markdown
+        let baseDesc = msg.content;
+        if (!selectedText) {
+            // If no selection, we strip the heavy artifact tags but keep the rest
+            baseDesc = msg.content.replace(/<dmz_artifact[\s\S]*?(?:<\/dmz_artifact>|$)/gi, '').trim();
+        }
+        setTaskDesc(selectedText ? `Trecho selecionado do chat:\n"${selectedText}"\n\n--- Contexto original ---\n${baseDesc}` : baseDesc);
         setTaskAgent(msg.agent_id || "orchestrator");
         setIsTaskModalOpen(true);
         setTaskCreatedId(null);
@@ -1510,7 +1516,7 @@ export default function ChatPage() {
                             <div className="absolute inset-y-0 -left-[4px] -right-[4px]" style={{ cursor: 'col-resize' }} />
                         </div>
 
-                        <div className="h-full flex flex-col bg-white shrink-0 shadow-[-4px_0_24px_-12px_rgba(0,0,0,0.1)]" style={{ width: `${previewWidth}%` }}>
+                        <div className="h-full flex flex-col bg-white shrink-0 shadow-[-4px_0_24px_-12px_rgba(0,0,0,0.1)] z-[40]" style={{ width: `${previewWidth}%` }}>
                             <div className="h-16 border-b border-neutral-100 px-6 flex items-center justify-between bg-white shrink-0">
                                 <div className="flex items-center gap-6">
                                     <h3 className="text-sm font-black text-neutral-900 tracking-tight flex items-center gap-3">
@@ -1602,11 +1608,18 @@ export default function ChatPage() {
                 {/* Task Creation Modal */}
                 <AnimatePresence>
                     {isTaskModalOpen && (
-                        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm">
+                        <div 
+                            className="fixed inset-0 z-[150] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsTaskModalOpen(false);
+                            }}
+                        >
                             <motion.div
                                 initial={{ scale: 0.9, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.9, opacity: 0 }}
+                                onClick={(e) => e.stopPropagation()}
                                 className="w-full max-w-lg bg-white rounded-[32px] shadow-2xl overflow-hidden border border-neutral-100"
                             >
                                 <div className="p-6 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/50">
