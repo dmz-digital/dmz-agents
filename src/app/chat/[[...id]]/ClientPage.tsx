@@ -147,6 +147,8 @@ const AGENT_MAP: Record<string, any> = {
     cyber_chief: { name: "Constantine", handle: "constantine", color: "#DC2626", icon: ShieldCheck },
 };
 
+
+
 // Aliases for the frontend to handle legacy/backend handle names
 const AGENT_HANDLE_TO_ID: Record<string, string> = {
     orch: "orchestrator", orchestrator: "orchestrator",
@@ -285,6 +287,81 @@ function formatMessageBlocks(text: string): ContentBlock[] {
     return blocks;
 }
 
+function formatInline(text: string): React.ReactNode[] {
+    const parts: React.ReactNode[] = [];
+    const inlineRegex = /(\*\*(.+?)\*\*)|(`([^`]+)`)/gi;
+    let lastIndex = 0;
+    let match;
+    let key = 0;
+    while ((match = inlineRegex.exec(text)) !== null) {
+        if (match.index > lastIndex) parts.push(<span key={key++}>{text.slice(lastIndex, match.index)}</span>);
+        if (match[2]) parts.push(<strong key={key++} className="font-bold text-neutral-900">{match[2]}</strong>);
+        else if (match[4]) parts.push(<code key={key++} style={{ background: "#F3F4F6", padding: "1px 6px", borderRadius: "5px", fontSize: "12px", fontFamily: "monospace", color: "#D8663E" }}>{match[4]}</code>);
+        lastIndex = match.index + match[0].length;
+    }
+    // Simple fallback if regex complex
+    if (parts.length === 0) {
+        const p: React.ReactNode[] = [];
+        let t = text;
+        const boldParts = t.split('**');
+        boldParts.forEach((bp, i) => {
+            if (i % 2 === 1) p.push(<strong key={i} className="font-bold text-neutral-900">{bp}</strong>);
+            else p.push(<span key={i}>{bp}</span>);
+        });
+        return p;
+    }
+
+    if (lastIndex < text.length) parts.push(<span key={key++}>{text.slice(lastIndex)}</span>);
+    return parts;
+}
+
+function SimpleMarkdown({ text, className = "" }: { text: string, className?: string }) {
+    if (!text) return null;
+    const lines = text.split("\n");
+    const elements: React.ReactNode[] = [];
+    let listItems: React.ReactNode[] = [];
+    
+    const flushList = () => { 
+        if (listItems.length) { 
+            elements.push(<ul key={`ul-${elements.length}`} className="my-3 space-y-1.5 list-none pl-4">{listItems}</ul>); 
+            listItems = []; 
+        } 
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+        
+        if (!trimmed) { 
+            flushList(); 
+            elements.push(<div key={`br-${i}`} className="h-2" />); 
+            continue; 
+        }
+        
+        if (trimmed.startsWith("### ")) { 
+            flushList(); 
+            elements.push(<h4 key={`h3-${i}`} className="text-sm font-black text-neutral-900 mt-5 mb-2 uppercase tracking-widest border-b border-neutral-100 pb-1">{trimmed.slice(4)}</h4>); 
+            continue; 
+        }
+        if (trimmed.startsWith("## ")) { 
+            flushList(); 
+            elements.push(<h3 key={`h2-${i}`} className="text-base font-black text-neutral-900 mt-6 mb-3 border-b border-neutral-100 pb-1.5">{trimmed.slice(3)}</h3>); 
+            continue; 
+        }
+        
+        if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) { 
+            const content = trimmed.slice(2); 
+            listItems.push(<li key={`li-${i}`} className="text-[13px] text-neutral-600 leading-relaxed relative pl-4"><span className="absolute left-0 text-dmz-accent font-black">•</span>{formatInline(content)}</li>); 
+            continue; 
+        }
+        
+        flushList();
+        elements.push(<p key={`p-${i}`} className="text-[13px] text-neutral-600 leading-relaxed mb-1.5">{formatInline(trimmed)}</p>);
+    }
+    flushList();
+    return <div className={className}>{elements}</div>;
+}
+
 function ThinkingStatus() {
     const [step, setStep] = useState(0);
     const steps = [
@@ -408,6 +485,10 @@ export default function ChatPage() {
     const [taskAgent, setTaskAgent] = useState("orchestrator");
     const [isCreatingTask, setIsCreatingTask] = useState(false);
     const [taskCreatedId, setTaskCreatedId] = useState<string | null>(null);
+    const [isEditingDesc, setIsEditingDesc] = useState(false);
+    const [taskProject, setTaskProject] = useState("dmz-agents");
+    const [taskColumn, setTaskColumn] = useState("to_do");
+    const [availableProjects, setAvailableProjects] = useState<{ name: string, slug: string }[]>([]);
 
     // Selection State
     const [selection, setSelection] = useState<{ text: string, x: number, y: number, msgId: string } | null>(null);
@@ -502,6 +583,13 @@ export default function ChatPage() {
             .single();
         if (profile) setUserProfile(profile);
         loadSessions(user.id);
+
+        // Fetch projects
+        const { data: projects } = await supabase
+            .from('dmz_agents_projects')
+            .select('name, slug')
+            .order('name');
+        if (projects) setAvailableProjects(projects);
     };
 
     const loadSessions = async (userId: string) => {
@@ -643,9 +731,9 @@ export default function ChatPage() {
             const projectSlug = projects?.[0]?.slug || "default";
 
             const { data, error } = await supabase.from('dmz_agents_tasks').insert({
-                project_id: projectSlug,
+                project_id: taskProject,
                 agent_id: taskAgent,
-                type: 'to_do',
+                type: taskColumn,
                 title: taskTitle,
                 description: taskDesc,
                 status: 'pending',
@@ -1559,21 +1647,54 @@ export default function ChatPage() {
                                             </select>
                                         </div>
                                         <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Projeto</label>
+                                            <select
+                                                value={taskProject}
+                                                onChange={(e) => setTaskProject(e.target.value)}
+                                                className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-3.5 text-xs font-bold text-neutral-900 outline-none focus:border-dmz-accent/40 focus:bg-white transition-all shadow-sm appearance-none"
+                                            >
+                                                {availableProjects.length > 0 ? (
+                                                    availableProjects.map(p => <option key={p.slug} value={p.slug}>{p.name}</option>)
+                                                ) : (
+                                                    <option value="dmz-agents">DMZ Agents</option>
+                                                )}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
                                             <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Coluna</label>
-                                            <div className="w-full bg-neutral-100 border border-neutral-150 rounded-2xl px-5 py-3.5 text-xs font-bold text-neutral-400 cursor-not-allowed flex items-center gap-2">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-neutral-300" />
-                                                📝 To Do
-                                            </div>
+                                            <select
+                                                value={taskColumn}
+                                                onChange={(e) => setTaskColumn(e.target.value)}
+                                                className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-3.5 text-xs font-bold text-neutral-900 outline-none focus:border-dmz-accent/40 focus:bg-white transition-all shadow-sm appearance-none"
+                                            >
+                                                <option value="master_plan">📘 Master Plan</option>
+                                                <option value="to_do">📝 To Do</option>
+                                                <option value="on_going">⚡ Ongoing</option>
+                                                <option value="done">✅ Done</option>
+                                                <option value="rework">🔄 Rework</option>
+                                            </select>
                                         </div>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Descrição (Baseada no Chat)</label>
-                                        <textarea
-                                            value={taskDesc}
-                                            onChange={(e) => setTaskDesc(e.target.value)}
-                                            rows={4}
-                                            className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-4 text-xs font-medium text-neutral-600 outline-none focus:border-dmz-accent/40 focus:bg-white transition-all shadow-sm resize-none custom-scrollbar"
-                                        />
+                                        {isEditingDesc ? (
+                                            <textarea
+                                                autoFocus
+                                                value={taskDesc}
+                                                onChange={(e) => setTaskDesc(e.target.value)}
+                                                onBlur={() => setIsEditingDesc(false)}
+                                                rows={6}
+                                                className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-4 text-xs font-medium text-neutral-600 outline-none focus:border-dmz-accent/40 focus:bg-white transition-all shadow-sm resize-none custom-scrollbar"
+                                            />
+                                        ) : (
+                                            <div 
+                                                onClick={() => setIsEditingDesc(true)}
+                                                className="w-full bg-neutral-50 border border-neutral-100 rounded-2xl px-5 py-4 min-h-[120px] cursor-text hover:bg-neutral-100/50 transition-colors"
+                                            >
+                                                <SimpleMarkdown text={taskDesc} />
+                                            </div>
+                                        )}
+                                        <p className="text-[9px] text-neutral-400 px-1 italic">Clique no texto para editar manualmente.</p>
                                     </div>
                                 </div>
                                 <div className="p-6 bg-neutral-50 border-t border-neutral-100 flex items-center justify-end gap-3">
