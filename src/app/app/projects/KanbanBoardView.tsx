@@ -21,6 +21,7 @@ type Task = {
     metadata: any; created_at: string; updated_at: string;
     feedback?: string | null;
     assignees?: { agent_id: string; role: string }[];
+    rework_count?: number;
 };
 
 const COLUMNS: { id: TaskType; label: string; color: string; icon: any; description: string }[] = [
@@ -281,6 +282,9 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
             }
         }
 
+        if (newType === "rework" && taskObj.type !== "rework") {
+            taskObj.rework_count = (taskObj.rework_count || 0) + 1;
+        }
         taskObj.type = newType;
         if (newType === "done" || newType === "approved") { taskObj.status = "completed"; taskObj.completed_at = new Date().toISOString(); }
         else if (newType === "on_going" || newType === "rework") { taskObj.status = "in_progress"; taskObj.completed_at = null; }
@@ -318,7 +322,8 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
             status: taskObj.status, 
             completed_at: taskObj.completed_at, 
             updated_at: taskObj.updated_at,
-            priority: newPriority 
+            priority: newPriority,
+            rework_count: taskObj.rework_count
         }).eq("id", taskId);
     }
 
@@ -358,9 +363,13 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     }
 
     async function updateTaskContent(taskId: string, title: string, description: string, agentId: string | null, feedback: string | null, newType?: TaskType) {
+        const taskObj = tasks.find(t => t.id === taskId);
         let updateData: any = { title, description: description || null, agent_id: agentId, feedback: feedback || null };
         if (newType) {
             updateData.type = newType;
+            if (newType === "rework" && taskObj && taskObj.type !== "rework") {
+                updateData.rework_count = (taskObj.rework_count || 0) + 1;
+            }
             if (newType === "done" || newType === "approved") { updateData.status = "completed"; updateData.completed_at = new Date().toISOString(); }
             else if (newType === "on_going" || newType === "rework") { updateData.status = "in_progress"; updateData.completed_at = null; }
             else { updateData.status = "pending"; updateData.completed_at = null; }
@@ -370,10 +379,8 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
             else if (newType === "on_going" && audioOngoingRef.current) { audioOngoingRef.current.currentTime = 0; audioOngoingRef.current.play().catch(() => {}); }
         }
         await supabase.from("dmz_agents_tasks").update(updateData).eq("id", taskId);
-        
+
         if (newType) {
-            // Re-fetch all tasks if moving columns so priority and ordering remains consistent 
-            // but for simplicity we can just update local state:
             setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updateData } : t));
         } else {
             setTasks(prev => prev.map(t => t.id === taskId ? { ...t, title, description: description || null, agent_id: agentId, feedback: feedback || null } : t));
@@ -678,7 +685,14 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                                             onMouseLeave={e => { (e.currentTarget).style.boxShadow = "0 2px 8px rgba(0,0,0,0.03)"; }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px", pointerEvents: "none" }}>
                                                 <div style={{ flex: 1 }}>
-                                                    <div style={{ fontSize: "9px", fontWeight: 800, color: col.color, background: col.color + "12", padding: "1px 5px", borderRadius: "4px", display: "inline-block", marginBottom: "4px", letterSpacing: "0.02em" }}>#{task.id.slice(0, 4).toUpperCase()}</div>
+                                                    <div style={{ display: "flex", gap: "4px", marginBottom: "4px" }}>
+                                                        <div style={{ fontSize: "9px", fontWeight: 800, color: col.color, background: col.color + "12", padding: "1px 5px", borderRadius: "4px", display: "inline-block", letterSpacing: "0.02em" }}>#{task.id.slice(0, 4).toUpperCase()}</div>
+                                                        {(task.rework_count || 0) > 0 && (
+                                                            <div style={{ fontSize: "10px", fontWeight: 800, color: "#EF4444", background: "#FEE2E2", padding: "1px 5px", borderRadius: "4px", display: "inline-flex", alignItems: "center", gap: "3px" }} title={`${task.rework_count} Reworks`}>
+                                                                <RotateCcw size={8} /> {task.rework_count}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                     <h4 style={{ fontSize: "13px", fontWeight: 700, color: "#111827", lineHeight: 1.4, margin: 0 }}>{task.title}</h4>
                                                 </div>
                                                 <button onClick={e => { e.stopPropagation(); deleteTask(task.id); }} style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "#D1D5DB", marginLeft: "8px", pointerEvents: "auto" }}><X size={13} /></button>
