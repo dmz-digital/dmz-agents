@@ -96,7 +96,7 @@ export default function AppLayout({
         { href: "/app", icon: LayoutDashboard, title: "Dashboard" },
         { href: "/app/agents", icon: Bot, title: "Squad Experts" },
         { href: "/app/projects", icon: FolderOpen, title: "Projects" },
-        { href: "/app/chat", icon: MessageSquare, title: "Chat" },
+        { href: "/chat", icon: MessageSquare, title: "Chat" },
         { href: "/app/tools", icon: Wrench, title: "Tools" },
         {
             href: "/app/profile",
@@ -115,7 +115,7 @@ export default function AppLayout({
             {/* Floating Navigation Pill */}
             <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 p-2 bg-white/80 backdrop-blur-md border border-neutral-200 shadow-xl rounded-full z-50 transition-all hover:bg-white">
                 {navItems.map((item) => {
-                    const isActive = pathname === item.href;
+                    const isActive = item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href);
                     const Icon = item.icon;
 
                     return (
