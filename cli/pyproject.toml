@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dmz-os"
-version = "0.3.0"
+version = "0.3.1"
 description = "Squad de 85 AI agents que se integra ao seu projeto"
 readme = "README.md"
 license = "MIT"

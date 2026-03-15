@@ -382,21 +382,24 @@ def _create_agents_folder():
 
     # Configuração MCP local
     import json
+    import sys
+    
+    # No Windows, o comando 'dmz-os' pode não estar no PATH global. 
+    # Usar sys.executable garante que a IDE chame o servidor usando o mesmo python da instalação.
     mcp_config = {
         "mcpServers": {
             "dmz-os": {
-                "command": "dmz-os",
-                "args": ["mcp-server"],
+                "command": sys.executable,
+                "args": ["-m", "dmz_os.mcp_server"],
                 "env": {}
             }
         }
     }
     
-    for mcp_path in [".cursor/mcp.json", ".windsurf/mcp.json"]:
+    for mcp_path in [".cursor/mcp.json", ".windsurf/mcp.json", ".antigravity/mcp.json"]:
         path = Path.cwd() / mcp_path
         path.parent.mkdir(exist_ok=True, parents=True)
-        # Lê existência para fazer merge e não sobrescrever coisas do user?
-        # Para simplificar na versão inicial, vamos sobrescrever o nosso ou formatar JSON
+        # Lê existência para fazer merge e não sobrescrever coisas do user
         existing_config = {}
         if path.exists():
             try:

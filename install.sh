@@ -60,12 +60,12 @@ echo -e "  ${GREEN}✓${RESET} pip encontrado"
 
 # ─── Instalar dmz-os (Diretamente do GitHub para garantir Versão de Produção) ────
 echo ""
-echo -e "${CYAN}Instalando/Atualizando dmz-os v0.2.2 (Platform Connect)...${RESET}"
+echo -e "${CYAN}Instalando/Atualizando dmz-os v0.3.1 (Platform Connect)...${RESET}"
 
-INSTALL_CMD="git+https://github.com/dmz-digital/dmz-agents.git#subdirectory=cli"
+INSTALL_CMD="https://github.com/dmz-digital/dmz-agents/archive/refs/heads/main.zip#subdirectory=cli"
 
-if ! $PIP install "$INSTALL_CMD" --quiet --upgrade 2>/dev/null; then
-    $PIP install "$INSTALL_CMD" --quiet --upgrade --break-system-packages 2>/dev/null || true
+if ! $PIP install "$INSTALL_CMD" --quiet --upgrade --no-cache-dir 2>/dev/null; then
+    $PIP install "$INSTALL_CMD" --quiet --upgrade --no-cache-dir --break-system-packages 2>/dev/null || true
 fi
 
 # Verifica se instalou
