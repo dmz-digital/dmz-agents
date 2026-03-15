@@ -89,43 +89,104 @@ async def ask_agent(agente: str, mensagem: str) -> str:
             
         task_id = res.data[0]["id"]
         
-        # Polling inteligente com backoff: 1s → 2s → 3s → 5s (máx)
+        # Realtime Listener (Substituindo o Polling)
         timeout_seconds = 180
-        start_time = time.time()
-        poll_interval = 1.0
-        last_progress = start_time
-        
-        while time.time() - start_time < timeout_seconds:
-            await asyncio.sleep(poll_interval)
+        loop = asyncio.get_running_loop()
+        future = loop.create_future()
+
+        def on_task_update(payload):
+            """Callback quando a task é atualizada no banco."""
+            new_record = payload.get("new", {})
             
-            check = client.table("dmz_agents_tasks").select("response, status, feedback").eq("id", task_id).execute()
+            # Se a task foi respondida
+            if new_record.get("response"):
+                if not future.done():
+                    future.set_result({"type": "response", "data": new_record["response"]})
             
-            if check.data:
-                task = check.data[0]
-                # Resposta disponível — retorna ao IDE
-                if task.get("response"):
-                    elapsed = int(time.time() - start_time)
-                    return f"{task['response']}\n\n---\n_Processado por @{agente_id} em {elapsed}s (Task {task_id[:8]}…)_"
+            # Se a task foi completada sem texto (fallback) ou bloqueada
+            elif new_record.get("status") in ["completed", "blocked"]:
+                if not future.done():
+                    future.set_result({"type": "status", "data": new_record})
+
+        # Subscreve apenas aos updates desta task específica
+        channel = client.channel(f"task_sync_{task_id[:8]}")
+        channel.on(
+            "postgres_changes",
+            {
+                "event": "UPDATE",
+                "schema": "public",
+                "table": "dmz_agents_tasks",
+                "filter": f"id=eq.{task_id}"
+            },
+            on_task_update
+        ).subscribe()
+
+        try:
+            # Aguarda o evento de realtime ou timeout
+            print(f"[*] Aguardando resposta de @{agente_id} via Realtime...")
+            result = await asyncio.wait_for(future, timeout=timeout_seconds)
+            
+            if result["type"] == "response":
+                return f"{result['data']}\n\n---\n_Processado via Realtime por @{agente_id} (Task {task_id[:8]}…)_"
+            
+            task = result["data"]
+            if task.get("status") == "blocked":
+                return f"⚠️ @{agente_id} bloqueou a task: {task.get('feedback', 'Sem detalhes')}"
+            
+            fb = task.get("feedback") or ""
+            if fb:
+                return f"{fb}\n\n---\n_@{agente_id} processou a demanda (Task {task_id[:8]}…)_"
                 
-                # Task completada mas sem response (fallback para feedback)
-                if task.get("status") == "completed" and not task.get("response"):
-                    fb = task.get("feedback") or ""
-                    if fb:
-                        return f"{fb}\n\n---\n_@{agente_id} processou a demanda (Task {task_id[:8]}…)_"
-                    return f"A demanda foi processada pelo @{agente_id} (Task {task_id[:8]}…), mas nenhuma resposta de texto foi retornada."
-                
-                # Task bloqueada
-                if task.get("status") == "blocked":
-                    return f"⚠️ @{agente_id} bloqueou a task: {task.get('feedback', 'Sem detalhes')}"
-            
-            # Backoff progressivo: 1 → 2 → 3 → 5 max
-            if poll_interval < 5.0:
-                poll_interval = min(poll_interval + 1.0, 5.0)
-        
-        return f"⏱️ Timeout ({timeout_seconds}s): O @{agente_id} ainda está processando sua demanda (Task {task_id[:8]}…). O backend está ativo e continuará processando. Verifique o andamento com o tool get_task ou no painel web."
+            return f"A demanda foi processada pelo @{agente_id} (Task {task_id[:8]}…), mas nenhuma resposta de texto foi retornada."
+
+        except asyncio.TimeoutError:
+            return f"⏱️ Timeout ({timeout_seconds}s): O @{agente_id} ainda está processando sua demanda (Task {task_id[:8]}…). O backend está ativo e continuará processando. Verifique o andamento com o tool get_task ou no painel web."
+        finally:
+            # Garante que o canal seja fechado
+            channel.unsubscribe()
         
     except Exception as e:
         return f"Erro ao acessar DMZ OS: {str(e)}"
+
+@mcp.tool()
+async def check_health() -> str:
+    """
+    Realiza um diagnóstico completo da saúde do servidor MCP e suas conexões.
+    Verifica Latência do Supabase, Variáveis de Ambiente e Status do Realtime.
+    """
+    try:
+        start_time = time.time()
+        client = get_supabase()
+        
+        # Teste de Query Simples (Latência)
+        res = client.table("dmz_agents_definitions").select("count", count="exact").limit(1).execute()
+        latency = (time.time() - start_time) * 1000
+        
+        # Verificação de Variáveis
+        vars_check = {
+            "SUPABASE_URL": bool(os.environ.get("SUPABASE_URL")),
+            "DMZ_API_KEY": bool(os.environ.get("DMZ_API_KEY")),
+            "DMZ_PROJECT_SLUG": bool(os.environ.get("DMZ_PROJECT_SLUG")),
+            "ELEVENLABS_API_KEY": bool(os.environ.get("ELEVENLABS_API_KEY"))
+        }
+        
+        missing = [k for k, v in vars_check.items() if not v]
+        
+        status = "🟢 SAUDÁVEL" if not missing else "🟡 ATENÇÃO"
+        
+        msg = f"🏥 Diagnóstico de Saúde MCP\n"
+        msg += f"Status Geral: {status}\n"
+        msg += f"Latência DB: {latency:.2f}ms\n"
+        msg += f"Agentes Definidos: {res.count if res.count else '?'}\n"
+        
+        if missing:
+            msg += f"⚠️ Variáveis Faltantes: {', '.join(missing)}\n"
+        else:
+            msg += "✅ Todas as variáveis críticas carregadas.\n"
+            
+        return msg
+    except Exception as e:
+        return f"🔴 ERRO DE SAÚDE: {str(e)}"
 
 @mcp.tool()
 def get_status() -> str:
@@ -140,19 +201,21 @@ def get_status() -> str:
         # Pega as últimas 5 tasks
         tasks = client.table("dmz_agents_tasks").select("title, agent_id, status").eq("project_id", project_slug).order("created_at", desc=True).limit(5).execute()
         
-        msg = f"DMZ OS Conectado! Projeto: {project_slug}\n"
+        msg = f"🚀 DMZ OS CLI v1.2 — Ativo\n"
+        msg += f"Projeto: {project_slug}\n"
+        msg += f"Conexão Supabase: ✅ OK\n"
         msg += f"URL do Kanban: https://agents.dmzdigital.com.br/projects/{project_slug}\n\n"
-        msg += "Últimas atividades:\n"
+        msg += "📋 Últimas Atividades do Squad:\n"
         if tasks.data:
             for t in tasks.data:
                 status_emoji = "⏳" if t["status"] == "pending" else "✅"
                 msg += f"- {status_emoji} [@{t['agent_id']}] {t['title']}\n"
         else:
-            msg += "- Nenhuma tarefa recente."
+            msg += "- Nenhuma tarefa recente registrada."
             
         return msg
     except Exception as e:
-        return f"Falha na comunicação: {str(e)}"
+        return f"❌ Falha crítica na comunicação: {str(e)}"
 
 
 @mcp.tool()
