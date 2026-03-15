@@ -702,7 +702,25 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                                                                 );
                                                             })}
                                                         </div>
-                                                    ) : (
+                                                    ) : task.agent_id ? (() => {
+                                                        const ag = getAgent(task.agent_id);
+                                                        return ag ? (
+                                                            <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                                                                <div style={{ 
+                                                                    width: 22, height: 22, borderRadius: "50%", 
+                                                                    background: ag.color || "#6B7280", 
+                                                                    display: "flex", alignItems: "center", justifyContent: "center", 
+                                                                    fontSize: "9px", fontWeight: 800, color: "#FFF",
+                                                                    border: "2px solid #FFF"
+                                                                }} title={`@${ag.handle}`}>
+                                                                    {ag.handle?.charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <span style={{ fontSize: "10px", color: "#6B7280", fontWeight: 600 }}>@{ag.handle}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span style={{ fontSize: "10px", color: "#9CA3AF", fontWeight: 500 }}>@{task.agent_id}</span>
+                                                        );
+                                                    })() : (
                                                         <span style={{ fontSize: "11px", color: "#D1D5DB" }}>sem agente</span>
                                                     )}
                                                 </div>
