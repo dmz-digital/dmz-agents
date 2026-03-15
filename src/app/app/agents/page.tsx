@@ -402,11 +402,19 @@ function AgentsContent() {
     useEffect(() => {
         document.title = "Explore Agents | DMZ - OS Agents";
         async function fetchAgents() {
-            const { data } = await supabase
-                .from("dmz_agents_definitions")
-                .select("*")
-                .order("active", { ascending: false });
-            if (data) setAgents(data);
+            // Usa a nova query robusta (View/RPC) que varre todo db se existir, senao fallback
+            const { data, error } = await supabase.rpc('get_agents_leaderboard');
+            
+            if (data && !error) {
+                setAgents(data);
+            } else {
+                // Fallback de seguranca caso RPC falhe
+                const { data: fallbackD } = await supabase
+                    .from("dmz_agents_definitions")
+                    .select("*")
+                    .order("active", { ascending: false });
+                if (fallbackD) setAgents(fallbackD);
+            }
             setLoading(false);
         }
         fetchAgents();
@@ -417,15 +425,14 @@ function AgentsContent() {
     const filtered = agents.filter(a => {
         const mc = catFilter === "All" || a.category === catFilter;
         const ma = activeFilter === "All" || (activeFilter === "Active" ? a.active : !a.active);
-        const ms = !search || a.name.toLowerCase().includes(search.toLowerCase()) || a.handle.toLowerCase().includes(search.toLowerCase()) || a.category.toLowerCase().includes(search.toLowerCase());
+        const ms = !search || String(a.name || '').toLowerCase().includes(search.toLowerCase()) || String(a.handle || '').toLowerCase().includes(search.toLowerCase()) || String(a.category || '').toLowerCase().includes(search.toLowerCase());
         return mc && ma && ms;
     });
-
 
     const [viewMode, setViewMode] = useState<"grid" | "leaderboard">("grid");
 
     const getStars = (score: number) => {
-        if (!score) return "⭐⭐";
+        if (!score || score <= 20) return "⭐";
         if (score >= 90) return "⭐⭐⭐⭐⭐";
         if (score >= 75) return "⭐⭐⭐⭐";
         if (score >= 50) return "⭐⭐⭐";
@@ -569,8 +576,9 @@ function AgentsContent() {
                                 <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Rank</th>
                                 <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Agente</th>
                                 <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Tasks Concluídas</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Score</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Patente (Estrelas)</th>
+                                <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Reworks Gerados</th>
+                                <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Score de Qualidade</th>
+                                <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Patente</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -598,16 +606,19 @@ function AgentsContent() {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td style={{ padding: "16px 24px", fontSize: "14px", fontWeight: 600, color: "#374151" }}>
-                                            {agent.tasks_completed || 0}
+                                        <td style={{ padding: "16px 24px", fontSize: "14px", fontWeight: 700, color: "#059669" }}>
+                                            {agent.total_concluded ?? agent.tasks_completed ?? 0}
+                                        </td>
+                                        <td style={{ padding: "16px 24px", fontSize: "14px", fontWeight: 600, color: "#EF4444" }}>
+                                            {agent.total_reworks ?? 0}
                                         </td>
                                         <td style={{ padding: "16px 24px" }}>
                                             <span style={{ 
-                                                background: (agent.ranking_score || 0) > 80 ? "#ECFDF5" : "#F3F4F6", 
-                                                color: (agent.ranking_score || 0) > 80 ? "#059669" : "#4B5563",
+                                                background: (agent.ranking_score || 0) > 80 ? "#ECFDF5" : (agent.ranking_score || 0) > 40 ? "#FEF3C7" : "#FEE2E2", 
+                                                color: (agent.ranking_score || 0) > 80 ? "#059669" : (agent.ranking_score || 0) > 40 ? "#D97706" : "#DC2626",
                                                 padding: "4px 8px", borderRadius: "6px", fontSize: "12px", fontWeight: 700
                                             }}>
-                                                {agent.ranking_score || 0}%
+                                                {(agent.ranking_score || 0).toFixed(1)}%
                                             </span>
                                         </td>
                                         <td style={{ padding: "16px 24px", fontSize: "15px", letterSpacing: "2px" }}>
@@ -618,7 +629,7 @@ function AgentsContent() {
                             })}
                             {filtered.length === 0 && (
                                 <tr>
-                                    <td colSpan={5} style={{ padding: "40px", textAlign: "center", color: "#9CA3AF" }}>
+                                    <td colSpan={6} style={{ padding: "40px", textAlign: "center", color: "#9CA3AF" }}>
                                         Nenhum agente encontrado neste filtro.
                                     </td>
                                 </tr>
