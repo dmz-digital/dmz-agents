@@ -1273,6 +1273,14 @@ async def mcp_update_task(req: MCPUpdateTaskRequest):
         STATUS_MAP = {"master_plan": "pending", "to_do": "pending", "on_going": "in_progress", "done": "completed", "rework": "in_progress", "approved": "completed"}
         
         if req.coluna:
+            # Lógica de Gamificação: Incrementar rework_count se a task estava Done/Approved e voltou para refação
+            if req.coluna in ("rework", "on_going"):
+                task_res = supabase.table("dmz_agents_tasks").select("type, rework_count").eq("id", req.task_id).single().execute()
+                if task_res.data:
+                    old_type = task_res.data.get("type")
+                    if old_type in ("done", "approved"):
+                        update_data["rework_count"] = (task_res.data.get("rework_count") or 0) + 1
+
             update_data["type"] = req.coluna
             update_data["status"] = STATUS_MAP.get(req.coluna, "pending")
             if req.coluna in ("done", "approved"):
