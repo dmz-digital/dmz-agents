@@ -409,6 +409,9 @@ export default function ChatPage() {
     const [isCreatingTask, setIsCreatingTask] = useState(false);
     const [taskCreatedId, setTaskCreatedId] = useState<string | null>(null);
 
+    // Selection State
+    const [selection, setSelection] = useState<{ text: string, x: number, y: number, msgId: string } | null>(null);
+
     // Initial effect for basic setup
     useEffect(() => {
         document.title = "Chat de Projetos | DMZ - OS Agents";
@@ -600,13 +603,31 @@ export default function ChatPage() {
         }
     };
 
-    const openTaskModal = (msg: Message) => {
-        const clean = stripMarkdown(msg.content);
-        setTaskTitle(clean.substring(0, 50) + (clean.length > 50 ? "..." : ""));
-        setTaskDesc(msg.content);
+    const handleMouseUp = (e: React.MouseEvent, msgId: string) => {
+        const sel = window.getSelection();
+        const text = sel?.toString().trim();
+
+        if (text && text.length > 2) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            setSelection({
+                text,
+                x: e.clientX,
+                y: e.clientY - 40,
+                msgId
+            });
+        } else {
+            setSelection(null);
+        }
+    };
+
+    const openTaskModal = (msg: Message, selectedText?: string) => {
+        const clean = (selectedText || stripMarkdown(msg.content)).trim();
+        setTaskTitle(clean.substring(0, 60) + (clean.length > 60 ? "..." : ""));
+        setTaskDesc(selectedText ? `Trecho selecionado do chat:\n"${selectedText}"\n\n--- Contexto original ---\n${msg.content}` : msg.content);
         setTaskAgent(msg.agent_id || "orchestrator");
         setIsTaskModalOpen(true);
         setTaskCreatedId(null);
+        setSelection(null);
     };
 
     const handleCreateTask = async () => {
@@ -1075,7 +1096,7 @@ export default function ChatPage() {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         key={msg.id}
-                                        className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
+                                        className={`flex flex-col ${isUser ? "items-end" : "items-start"} group`}
                                     >
                                         <div className={`flex gap-3 sm:gap-4 max-w-[92%] sm:max-w-[85%] ${isUser ? "flex-row-reverse" : "flex-row"}`}>
                                             {isUser ? (
@@ -1143,8 +1164,8 @@ export default function ChatPage() {
                                                                     if (block.type === 'text') {
                                                                         const lines = block.text.split('\n').filter(l => l.trim().length > 0);
                                                                         return (
-                                                                            <div key={bi} className="space-y-3">
-                                                                                {lines.map((l, li) => <p key={li} className="leading-relaxed text-[13px] sm:text-[14px]">{l}</p>)}
+                                                                            <div key={bi} className="space-y-3" onMouseUp={(e) => handleMouseUp(e, msg.id)}>
+                                                                                {lines.map((l, li) => <p key={li} className="leading-relaxed text-[13px] sm:text-[14px] select-text">{l}</p>)}
                                                                             </div>
                                                                         );
                                                                     }
@@ -1259,7 +1280,21 @@ export default function ChatPage() {
                                                                 <Copy size={12} className="text-neutral-400 hover:text-neutral-600" />
                                                             )}
                                                         </button>
-                                                        {(formatMessageBlocks(msg.content).some(b => b.type === 'artifact' || b.type === 'image') || msg.file_url) ? (
+                                                        <button
+                                                            onClick={() => openTaskModal(msg)}
+                                                            className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer group/task"
+                                                            title="Criar Task no Kanban"
+                                                        >
+                                                            <ClipboardList size={12} className="text-neutral-400 group-hover/task:text-dmz-accent transition-colors" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => replyToMessage(msg)}
+                                                            className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
+                                                            title="Responder"
+                                                        >
+                                                            <Reply size={12} className="text-neutral-400 hover:text-neutral-600" />
+                                                        </button>
+                                                        {(formatMessageBlocks(msg.content).some(b => b.type === 'artifact' || b.type === 'image') || msg.file_url) && (
                                                             <button
                                                                 onClick={async () => {
                                                                     if (msg.file_url) {
@@ -1288,23 +1323,6 @@ export default function ChatPage() {
                                                             >
                                                                 <Download size={12} className="text-neutral-400 hover:text-neutral-600" />
                                                             </button>
-                                                        ) : (
-                                                            <div className="flex items-center gap-1">
-                                                                <button
-                                                                    onClick={() => openTaskModal(msg)}
-                                                                    className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer group/task"
-                                                                    title="Criar Task no Kanban"
-                                                                >
-                                                                    <ClipboardList size={12} className="text-neutral-400 group-hover/task:text-dmz-accent transition-colors" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => replyToMessage(msg)}
-                                                                    className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
-                                                                    title="Responder"
-                                                                >
-                                                                    <Reply size={12} className="text-neutral-400 hover:text-neutral-600" />
-                                                                </button>
-                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>
@@ -1469,6 +1487,29 @@ export default function ChatPage() {
                         </div>
                     </>
                 )}
+
+                {/* Floating Selection Action */}
+                <AnimatePresence>
+                    {selection && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                            style={{ position: 'fixed', left: selection.x, top: selection.y, zIndex: 200 }}
+                        >
+                            <button
+                                onClick={() => {
+                                    const msg = messages.find(m => m.id === selection.msgId);
+                                    if (msg) openTaskModal(msg, selection.text);
+                                }}
+                                className="bg-neutral-900 text-white px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 text-[11px] font-black uppercase tracking-widest hover:bg-black transition-all hover:scale-105 active:scale-95 border border-white/20 cursor-pointer"
+                            >
+                                <Plus size={14} className="text-dmz-accent" />
+                                Criar Task desse trecho
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* Task Creation Modal */}
                 <AnimatePresence>

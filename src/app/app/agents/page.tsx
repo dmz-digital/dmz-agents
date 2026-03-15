@@ -131,7 +131,8 @@ function AgentPanel({ agent, onClose }: { agent: any; onClose: () => void }) {
     const [skills, setSkills] = useState<any[]>([]);
     const [tools, setTools] = useState<any[]>([]);
     const [memory, setMemory] = useState<any[]>([]);
-    const [prompt, setPrompt] = useState<string>("");
+    const [prompts, setPrompts] = useState<any[]>([]);
+    const [activePrompt, setActivePrompt] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     const cc = CAT_COLORS[agent.category] || "#475569";
@@ -141,23 +142,38 @@ function AgentPanel({ agent, onClose }: { agent: any; onClose: () => void }) {
         async function load() {
             setLoading(true);
 
-            const [{ data: skillsData }, { data: toolsData }, { data: memData }, { data: promptData }] = await Promise.all([
+            const [{ data: skillsData }, { data: toolsData }, { data: memData }, { data: promptsData }] = await Promise.all([
                 supabase.from("dmz_agents_skills").select("*").eq("agent_id", agent.id).order("sort_order"),
                 supabase.from("dmz_agents_tool_assignments")
                     .select("*, tool:dmz_agents_tools(*)")
                     .eq("agent_id", agent.id),
                 supabase.from("dmz_agents_memory").select("*").eq("agent_id", agent.id).order("created_at", { ascending: false }).limit(10),
-                supabase.from("dmz_agents_prompts").select("content").eq("agent_id", agent.id).eq("active", true).maybeSingle(),
+                supabase.from("dmz_agents_prompts").select("*").eq("agent_id", agent.id).order("version", { ascending: false }),
             ]);
 
             setSkills(skillsData || []);
             setTools((toolsData || []).map((ta: any) => ta.tool).filter(Boolean));
             setMemory(memData || []);
-            setPrompt(promptData?.content || "⚠️ Prompt não configurado.\n\nEste agente ainda não tem um prompt definido no painel admin.\n\nVá em Admin → Prompts do Chat para configurar.");
+            setPrompts(promptsData || []);
+            setActivePrompt(promptsData?.find((p: any) => p.active) || promptsData?.[0] || null);
             setLoading(false);
         }
         load();
     }, [agent.id]);
+
+    const handleRestorePrompt = async (promptId: string) => {
+        setLoading(true);
+        // Primeiro desativar todos
+        await supabase.from("dmz_agents_prompts").update({ active: false }).eq("agent_id", agent.id);
+        // Ativar o escolhido
+        await supabase.from("dmz_agents_prompts").update({ active: true }).eq("id", promptId);
+        
+        // Reload
+        const { data: newPrompts } = await supabase.from("dmz_agents_prompts").select("*").eq("agent_id", agent.id).order("version", { ascending: false });
+        setPrompts(newPrompts || []);
+        setActivePrompt(newPrompts?.find((p: any) => p.active) || null);
+        setLoading(false);
+    };
 
     const typeColors: Record<string, string> = {
         context: "#2563EB", artifact: "#E85D2F", report: "#059669", decision: "#7C3AED"
@@ -368,12 +384,63 @@ function AgentPanel({ agent, onClose }: { agent: any; onClose: () => void }) {
             {/* Prompt tab */}
             {
                 tab === "prompt" && (
-                    <div style={{
-                        background: "#F9FAFB", borderRadius: "10px", padding: "14px",
-                        fontFamily: "monospace", fontSize: "11.5px", color: "#6B7280",
-                        lineHeight: "1.8", whiteSpace: "pre-wrap", maxHeight: "400px", overflowY: "auto"
-                    }}>
-                        {loading ? "Loading..." : prompt}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                        {loading ? (
+                            <div style={{ color: "#9CA3AF", fontSize: "12px" }}>Loading Prompts...</div>
+                        ) : prompts.length === 0 ? (
+                            <div style={{
+                                background: "#F9FAFB", borderRadius: "10px", padding: "14px",
+                                border: "1.5px dashed #E5E7EB", color: "#9CA3AF", fontSize: "12px", textAlign: "center"
+                            }}>
+                                No prompts registered for this agent.
+                            </div>
+                        ) : (
+                            <>
+                                {/* Active Prompt Preview */}
+                                <div style={{
+                                    background: "#F9FAFB", borderRadius: "12px", border: "1px solid #F0F0F0",
+                                    padding: "16px", maxHeight: "200px", overflowY: "auto", position: "relative"
+                                }}>
+                                    <div style={{ position: "sticky", top: 0, right: 0, float: "right", background: "#E85D2F", color: "#FFF", fontSize: "10px", fontWeight: 900, padding: "2px 6px", borderRadius: "4px", textTransform: "uppercase" }}>Active</div>
+                                    <div style={{ fontSize: "11.5px", color: "#6B7280", fontFamily: "monospace", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                                        {activePrompt?.content}
+                                    </div>
+                                </div>
+
+                                {/* History List */}
+                                <div style={{ borderTop: "1px solid #F0F0F0", paddingTop: "14px" }}>
+                                    <h4 style={{ fontSize: "11px", fontWeight: 800, color: "#111827", textTransform: "uppercase", marginBottom: "10px", letterSpacing: "0.05em" }}>Versões do Prompt</h4>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                        {prompts.map((p) => (
+                                            <div key={p.id} style={{
+                                                background: p.active ? "#F9FAFB" : "#FFF",
+                                                border: "1px solid #F0F0F0",
+                                                borderRadius: "10px", padding: "10px 14px",
+                                                display: "flex", alignItems: "center", justifyContent: "space-between"
+                                            }}>
+                                                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                                                    <div style={{ fontSize: "12px", fontWeight: 700, color: p.active ? "#E85D2F" : "#111827" }}>v{p.version}</div>
+                                                    <div>
+                                                        <div style={{ fontSize: "11px", color: "#6B7280" }}>{new Date(p.created_at).toLocaleDateString()}</div>
+                                                        {p.change_notes && <div style={{ fontSize: "10px", color: "#9CA3AF" }}>{p.change_notes}</div>}
+                                                    </div>
+                                                </div>
+                                                {!p.active && (
+                                                    <button 
+                                                        onClick={() => handleRestorePrompt(p.id)}
+                                                        style={{ background: "#F3F4F6", border: "none", padding: "4px 10px", borderRadius: "6px", fontSize: "10px", fontWeight: 700, cursor: "pointer", color: "#6B7280", transition: "all 0.1s" }}
+                                                        onMouseEnter={e => e.currentTarget.style.background = "#E85D2F10"}
+                                                        onMouseLeave={e => e.currentTarget.style.background = "#F3F4F6"}
+                                                    >
+                                                        Restaurar
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 )
             }

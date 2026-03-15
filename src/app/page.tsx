@@ -49,7 +49,7 @@ function PricingCard({ tier, price, features, recommended = false }: { tier: str
         ))}
       </ul>
       <Link
-        href="/sign-up"
+        href={tier === "Free" || tier === "Gratuito" ? "/sign-up" : `/checkout?plan=${tier.toLowerCase().includes("pro") ? "pro" : "elite"}`}
         className={`w-full py-4 rounded-2xl font-bold text-center transition-all ${recommended
           ? 'bg-dmz-accent text-white hover:bg-orange-500'
           : 'bg-white/10 text-white hover:bg-white/20'

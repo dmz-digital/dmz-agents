@@ -13,11 +13,17 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "DMZ - OS Agents | AI-Native Operating System",
-  description: "A camada de inteligência organizacional que torna seu repositório vivo. Gerencie squads de agentes autônomos para escalar seu desenvolvimento com proatividade.",
-  keywords: ["AI Agents", "Operating System", "SaaS", "Product Squads", "Automated Development", "DMZ OS", "Orchestrator"],
+  title: {
+    default: "DMZ - OS Agents | AI-Native Operating System",
+    template: "%s | DMZ OS Agents"
+  },
+  description: "A camada de inteligência organizacional que torna seu repositório vivo. Gerencie squads de agentes autônomos como @orch, @ryan e @emma para escalar seu desenvolvimento com proatividade.",
+  keywords: ["AI Agents", "Operating System", "SaaS", "Product Squads", "Automated Development", "DMZ OS", "Orchestrator", "Task Management", "Kanban AI"],
   authors: [{ name: "DMZ Digital" }],
   metadataBase: new URL("https://agents.dmzdigital.com.br"),
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
     title: "DMZ - OS Agents | Squads de Especialistas Autônomos",
     description: "Injete inteligência proativa no seu desenvolvimento com squads de especialistas autônomos treinados para performar.",
@@ -28,7 +34,7 @@ export const metadata: Metadata = {
         url: "/ogg.png",
         width: 1200,
         height: 630,
-        alt: "DMZ OS Agents Preview",
+        alt: "DMZ OS Agents Preview - Gestão de Squads de IA",
       },
     ],
     locale: "pt_BR",
@@ -53,8 +59,33 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "DMZ - OS Agents",
+    "operatingSystem": "Web, Windows, macOS, Linux",
+    "applicationCategory": "BusinessApplication",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "description": "AI-Native Operating System for managing squads of autonomous agents.",
+    "publisher": {
+      "@type": "Organization",
+      "name": "DMZ Digital",
+      "url": "https://agents.dmzdigital.com.br"
+    }
+  };
+
   return (
     <html lang="pt-BR" className={cn("font-sans", geist.variable)}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className={`${jakarta.variable} font-jakarta antialiased bg-dmz-bg text-dmz-text`}>
         <Suspense fallback={null}>
           <GoogleAnalytics gaId="G-587SEN9VDC" />
