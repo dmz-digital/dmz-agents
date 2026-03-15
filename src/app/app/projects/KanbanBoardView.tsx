@@ -150,6 +150,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     }, []);
 
     const performSearch = useCallback(async (term: string) => {
+        if (!project?.id) return;
         if (!term.trim()) {
             setSearchResults({ agents: [], tasks: [] });
             return;
@@ -164,12 +165,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                 .limit(10);
 
             // Search Tasks
-            // We search title, description, id (prefix), status, type
-            // To search by agent handle, we'd need a more complex join or subquery, 
-            // but for now let's use the power of .or with related column if possible, 
-            // though Supabase JS client .or() on joined tables is tricky.
-            // Let's at least search by ID and the main fields.
-            const query = supabase
+            let query = supabase
                 .from('dmz_agents_tasks')
                 .select('*, dmz_agents_definitions(name, handle, color)')
                 .eq('project_id', project.id);
@@ -177,14 +173,18 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
             // If term starts with #, search ID specifically
             if (term.startsWith('#')) {
                 const idTerm = term.slice(1).toLowerCase();
-                query.ilike('id', `${idTerm}%`);
+                query = query.ilike('id', `${idTerm}%`);
             } else {
-                query.or(`title.ilike.%${term}%,description.ilike.%${term}%,status.ilike.%${term}%,type.ilike.%${term}%,id.ilike.%${term}%`);
+                query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%,status.ilike.%${term}%,type.ilike.%${term}%,id.ilike.%${term}%`);
             }
 
-            const { data: taskData } = await query
+            const { data: taskData, error } = await query
                 .order('created_at', { ascending: false })
                 .limit(20);
+                
+            if (error) {
+                console.error("Search tasks error:", error);
+            }
 
             setSearchResults({ 
                 agents: agentData || [], 
