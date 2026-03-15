@@ -395,11 +395,22 @@ def _create_agents_folder():
             }
         }
     }
+    # ─── Configuração MCP Universal (Multi-IDE) ─────────────────────────────────
+    # Suporte: Cursor, Windsurf, Antigravity, VS Code, Zed, e fallback genérico
+    IDE_MCP_PATHS = [
+        (".cursor/mcp.json",       "Cursor"),
+        (".windsurf/mcp.json",     "Windsurf"),
+        (".antigravity/mcp.json",  "Antigravity"),
+        (".vscode/mcp.json",       "VS Code"),
+        (".zed/mcp.json",          "Zed"),
+        (".mcp.json",              "Genérico (fallback)"),
+    ]
     
-    for mcp_path in [".cursor/mcp.json", ".windsurf/mcp.json", ".antigravity/mcp.json"]:
+    configured_ides = []
+    for mcp_path, ide_name in IDE_MCP_PATHS:
         path = Path.cwd() / mcp_path
         path.parent.mkdir(exist_ok=True, parents=True)
-        # Lê existência para fazer merge e não sobrescrever coisas do user
+        # Merge inteligente: não sobrescreve configs existentes do usuário
         existing_config = {}
         if path.exists():
             try:
@@ -413,20 +424,24 @@ def _create_agents_folder():
             existing_config = mcp_config
             
         path.write_text(json.dumps(existing_config, indent=2))
+        configured_ides.append(ide_name)
 
-    console.print(f"[green]✓[/] MCP Server local configurado para Cursor e Windsurf")
+    ide_list = ", ".join(configured_ides)
+    console.print(f"[green]✓[/] MCP Server configurado para [bold]{ide_list}[/]")
     
-    # Atualiza .gitignore para não subir arquivos do DMZ OS
+    # ─── Atualização do .gitignore (dinâmico com base nas IDEs) ───────────────
     gitignore_path = Path.cwd() / ".gitignore"
     dmz_ignores = [
-        "\n# DMZ OS",
+        "\n# DMZ OS — Arquivos locais (não versionar)",
         ".agents/",
         ".env.dmz",
         ".env.dmz.bak",
-        ".cursor/mcp.json",
-        ".windsurf/mcp.json",
-        ".antigravity/mcp.json"
+        ".mcp.json",
     ]
+    # Adiciona cada path de IDE ao .gitignore
+    for mcp_path, _ in IDE_MCP_PATHS:
+        if mcp_path not in [".mcp.json"]:  # .mcp.json já está acima
+            dmz_ignores.append(mcp_path)
     
     if gitignore_path.exists():
         content = gitignore_path.read_text()

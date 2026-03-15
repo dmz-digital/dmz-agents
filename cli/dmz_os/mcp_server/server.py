@@ -130,5 +130,213 @@ def get_status() -> str:
     except Exception as e:
         return f"Falha na comunicação: {str(e)}"
 
+
+@mcp.tool()
+def list_tasks(status: str = "", coluna: str = "") -> str:
+    """
+    Lista as tarefas do projeto no Kanban do DMZ OS.
+    
+    Args:
+        status: Filtro opcional por status (pending, in_progress, completed, blocked).
+        coluna: Filtro opcional por coluna do Kanban (master_plan, to_do, on_going, rework, done, approved).
+    """
+    try:
+        project_slug = os.environ.get("DMZ_PROJECT_SLUG")
+        if not project_slug:
+            return "Erro: DMZ_PROJECT_SLUG não encontrado no .env.dmz"
+        
+        client = get_supabase()
+        query = client.table("dmz_agents_tasks").select("id, title, agent_id, type, status, priority, feedback, created_at, updated_at").eq("project_id", project_slug)
+        
+        if status:
+            query = query.eq("status", status)
+        if coluna:
+            query = query.eq("type", coluna)
+        
+        res = query.order("priority", desc=True).order("created_at", desc=True).limit(30).execute()
+        
+        if not res.data:
+            filtro = f" (filtro: status={status}, coluna={coluna})" if status or coluna else ""
+            return f"Nenhuma tarefa encontrada{filtro}."
+        
+        COLUMN_LABELS = {"master_plan": "📋 Master Plan", "to_do": "📝 To Do", "on_going": "🔄 On Going", "rework": "🔁 Rework", "done": "✅ Done", "approved": "🏆 Approved"}
+        STATUS_EMOJI = {"pending": "⏳", "in_progress": "🔄", "completed": "✅", "blocked": "🚫", "cancelled": "❌"}
+        
+        msg = f"📊 Kanban — {project_slug} ({len(res.data)} tasks)\n\n"
+        
+        # Agrupa por coluna
+        by_col: dict = {}
+        for t in res.data:
+            col = t["type"]
+            if col not in by_col:
+                by_col[col] = []
+            by_col[col].append(t)
+        
+        for col_id in ["master_plan", "to_do", "on_going", "rework", "done", "approved"]:
+            if col_id not in by_col:
+                continue
+            tasks = by_col[col_id]
+            msg += f"{COLUMN_LABELS.get(col_id, col_id)} ({len(tasks)})\n"
+            for t in tasks:
+                emoji = STATUS_EMOJI.get(t["status"], "❓")
+                agent = f"@{t['agent_id']}" if t["agent_id"] else "sem agente"
+                msg += f"  {emoji} [{agent}] {t['title']}\n"
+                msg += f"     ID: {t['id'][:8]}…  Prioridade: {t['priority']}\n"
+            msg += "\n"
+        
+        return msg
+    except Exception as e:
+        return f"Erro ao listar tasks: {str(e)}"
+
+
+@mcp.tool()
+def get_task(task_id: str) -> str:
+    """
+    Retorna os detalhes completos de uma tarefa específica do Kanban.
+    
+    Args:
+        task_id: O ID (UUID) da tarefa. Aceita IDs parciais (mínimo 8 caracteres).
+    """
+    try:
+        client = get_supabase()
+        project_slug = os.environ.get("DMZ_PROJECT_SLUG")
+        
+        # Suporta ID parcial
+        if len(task_id) < 36:
+            res = client.table("dmz_agents_tasks").select("*").eq("project_id", project_slug).like("id", f"{task_id}%").limit(1).execute()
+        else:
+            res = client.table("dmz_agents_tasks").select("*").eq("id", task_id).execute()
+        
+        if not res.data:
+            return f"Tarefa não encontrada: {task_id}"
+        
+        t = res.data[0]
+        
+        # Busca assignees
+        assignees = client.table("dmz_agents_task_assignees").select("agent_id, role").eq("task_id", t["id"]).execute()
+        
+        msg = f"📋 Detalhes da Tarefa\n\n"
+        msg += f"Título: {t['title']}\n"
+        msg += f"ID: {t['id']}\n"
+        msg += f"Coluna: {t['type']}\n"
+        msg += f"Status: {t['status']}\n"
+        msg += f"Agente Principal: @{t['agent_id'] or 'nenhum'}\n"
+        msg += f"Prioridade: {t['priority']}\n"
+        msg += f"Criada em: {t['created_at']}\n"
+        msg += f"Atualizada em: {t['updated_at']}\n"
+        
+        if t.get("description"):
+            msg += f"\n📝 Descrição:\n{t['description']}\n"
+        
+        if t.get("feedback"):
+            msg += f"\n💬 Feedback:\n{t['feedback']}\n"
+        
+        if t.get("response"):
+            msg += f"\n🤖 Resposta do Agente:\n{t['response']}\n"
+        
+        if assignees.data:
+            msg += f"\n👥 Responsáveis:\n"
+            for a in assignees.data:
+                msg += f"  - @{a['agent_id']} ({a['role']})\n"
+        
+        return msg
+    except Exception as e:
+        return f"Erro ao buscar tarefa: {str(e)}"
+
+
+@mcp.tool()
+def create_task(titulo: str, descricao: str = "", agente: str = "", coluna: str = "to_do") -> str:
+    """
+    Cria uma nova tarefa no Kanban do DMZ OS.
+    
+    Args:
+        titulo: Título da tarefa.
+        descricao: Descrição detalhada (opcional).
+        agente: Handle do agente responsável (ex: orch, architect, devops). Opcional.
+        coluna: Coluna do Kanban onde criar (master_plan, to_do, on_going). Padrão: to_do.
+    """
+    try:
+        project_slug = os.environ.get("DMZ_PROJECT_SLUG")
+        if not project_slug:
+            return "Erro: DMZ_PROJECT_SLUG não encontrado no .env.dmz"
+        
+        VALID_TYPES = ["master_plan", "to_do", "on_going", "rework", "done", "approved"]
+        STATUS_MAP = {"master_plan": "pending", "to_do": "pending", "on_going": "in_progress", "done": "completed", "rework": "in_progress", "approved": "completed"}
+        
+        if coluna not in VALID_TYPES:
+            return f"Coluna inválida: '{coluna}'. Use: {', '.join(VALID_TYPES)}"
+        
+        agent_id = None
+        if agente:
+            agent_id = AGENT_ALIASES.get(agente.lower().replace("@", ""), agente.lower().replace("@", ""))
+        
+        client = get_supabase()
+        
+        res = client.table("dmz_agents_tasks").insert({
+            "project_id": project_slug,
+            "agent_id": agent_id,
+            "type": coluna,
+            "title": titulo,
+            "description": descricao or None,
+            "status": STATUS_MAP[coluna],
+            "priority": 0,
+            "assigned_by": "mcp_server",
+            "metadata": {"source": "mcp_server"}
+        }).select().single().execute()
+        
+        if not res.data:
+            return "Erro ao criar tarefa."
+        
+        t = res.data
+        agent_str = f"@{agent_id}" if agent_id else "sem agente"
+        return f"✅ Tarefa criada com sucesso!\n\nTítulo: {t['title']}\nColuna: {coluna}\nAgente: {agent_str}\nID: {t['id']}\n\nVisualize no Kanban: https://agents.dmzdigital.com.br/app/projects?id={project_slug}"
+    except Exception as e:
+        return f"Erro ao criar tarefa: {str(e)}"
+
+
+@mcp.tool()
+def get_memory(topico: str = "") -> str:
+    """
+    Consulta a memória técnica do projeto no DMZ OS.
+    
+    Args:
+        topico: Termo de busca opcional para filtrar memórias por chave ou tags.
+    """
+    try:
+        project_slug = os.environ.get("DMZ_PROJECT_SLUG")
+        if not project_slug:
+            return "Erro: DMZ_PROJECT_SLUG não encontrado no .env.dmz"
+        
+        client = get_supabase()
+        query = client.table("dmz_agents_memory").select("*").eq("project_id", project_slug)
+        
+        if topico:
+            query = query.ilike("key", f"%{topico}%")
+        
+        res = query.order("created_at", desc=True).limit(10).execute()
+        
+        if not res.data:
+            filtro = f" sobre '{topico}'" if topico else ""
+            return f"Nenhuma memória encontrada{filtro} para o projeto {project_slug}."
+        
+        msg = f"🧠 Memória do Projeto — {project_slug}\n\n"
+        for m in res.data:
+            msg += f"📌 {m['key']}\n"
+            msg += f"   Agente: @{m.get('agent_id', 'sistema')}\n"
+            msg += f"   Tipo: {m.get('memory_type', 'geral')}\n"
+            content = m.get("content", "")
+            if isinstance(content, dict):
+                import json
+                content = json.dumps(content, ensure_ascii=False, indent=2)
+            if len(str(content)) > 500:
+                content = str(content)[:500] + "…"
+            msg += f"   Conteúdo: {content}\n"
+            msg += f"   Data: {m.get('created_at', '?')}\n\n"
+        
+        return msg
+    except Exception as e:
+        return f"Erro ao consultar memória: {str(e)}"
+
+
 if __name__ == "__main__":
     mcp.run()
