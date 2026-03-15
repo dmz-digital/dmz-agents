@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Bot, FolderOpen, Brain, Wrench, Users, LayoutDashboard, User } from "lucide-react";
+import { Bot, FolderOpen, Brain, Wrench, Users, LayoutDashboard, User, MessageSquare } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -96,6 +96,7 @@ export default function AppLayout({
         { href: "/app", icon: LayoutDashboard, title: "Dashboard" },
         { href: "/app/agents", icon: Bot, title: "Squad Experts" },
         { href: "/app/projects", icon: FolderOpen, title: "Projects" },
+        { href: "/app/chat", icon: MessageSquare, title: "Chat" },
         { href: "/app/tools", icon: Wrench, title: "Tools" },
         {
             href: "/app/profile",

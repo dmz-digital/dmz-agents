@@ -1318,6 +1318,15 @@ async def mcp_add_comment(req: MCPCommentRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ─── Telegram Webhook ───────────────────────────────────────────────────────
+from fastapi import Request
+from webhook_telegram import handle_telegram_webhook
+
+@app.post("/webhook/telegram")
+async def telegram_webhook(req: Request):
+    """Webhook do Telegram para a Agente Yvi."""
+    return await handle_telegram_webhook(req, supabase, get_llm_response)
+
 # ─── Background MCP Poller ──────────────────────────────────────────────────
 import asyncio
 import threading

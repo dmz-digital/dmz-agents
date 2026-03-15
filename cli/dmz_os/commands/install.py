@@ -154,8 +154,10 @@ def _collect_credentials() -> dict:
     creds["DMZ_PROJECT_SLUG"] = Prompt.ask("[cyan]Slug do projeto (ex: yvoo-studio)[/]")
     
     # DMZ Security Key
+    console.print()
+    console.print("[dim]🔑 Gere sua chave em:[/] [link=https://agents.dmzdigital.com.br/settings/keys]https://agents.dmzdigital.com.br/settings/keys[/link]")
     creds["DMZ_API_KEY"] = Prompt.ask(
-        "[cyan]DMZ Security Key (obtida no Painel Web)[/]",
+        "[cyan]DMZ Security Key[/]",
         password=True,
     )
 
@@ -174,7 +176,13 @@ def _collect_credentials() -> dict:
             res = client.table("dmz_agents_projects").select("*").eq("slug", creds["DMZ_PROJECT_SLUG"]).single().execute()
             
             if not res.data:
-                console.print(f"\n[red]⚠ Erro: Projeto '[bold]{creds['DMZ_PROJECT_SLUG']}[/]' não encontrado ou Security Key inválida.[/]")
+                console.print(Panel(
+                    f"[bold red]Ops! Não conseguimos conectar.[/]\n\n"
+                    f"Verifique se o slug [bold cyan]'{creds['DMZ_PROJECT_SLUG']}'[/] está digitado corretamente\n"
+                    f"e se a sua [bold]DMZ Security Key[/] ainda é válida.\n\n"
+                    f"[dim]Dica: Você pode gerar uma nova chave no painel web.[/]",
+                    border_style="red"
+                ))
                 raise typer.Exit(1)
             
             project_data = res.data
