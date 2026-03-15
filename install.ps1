@@ -56,7 +56,7 @@ Write-Host "  $GREEN" + "✓$RESET Python $pyVer"
 
 # ─── Instalar dmz-os ──────────────────────────────────────────
 Write-Host ""
-Write-Host "$CYANInstalando/Atualizando dmz-os v0.4.0 (MCP Universal)...$RESET"
+Write-Host "$CYANInstalando/Atualizando dmz-os v0.4.2 (MCP Universal)...$RESET"
 
 $INSTALL_URL = "https://github.com/dmz-digital/dmz-agents/archive/refs/heads/main.zip#subdirectory=cli"
 

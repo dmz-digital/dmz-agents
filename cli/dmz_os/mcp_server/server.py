@@ -54,7 +54,7 @@ async def ask_agent(agente: str, mensagem: str) -> str:
     Aguarde a resposta do agente, pois ele processará sua task e responderá diretamente para você.
     
     Args:
-        agente: O nome ou handle do agente (ex: orch, architect, devops)
+        agente: O nome ou handle do agente (ex: orch, architect, devops, ryan, emma, lucas, aurora)
         mensagem: A solicitação, demanda ou dúvida detalhada para o agente analisar.
     """
     try:
@@ -68,13 +68,19 @@ async def ask_agent(agente: str, mensagem: str) -> str:
         
         column_type = "to_do" if agente_id != "orchestrator" else "master_plan"
         
+        # Gera título inteligente (primeiras palavras da mensagem)
+        title_preview = mensagem[:80].replace("\n", " ").strip()
+        if len(mensagem) > 80:
+            title_preview += "…"
+        
         # Cria a task
         res = client.table("dmz_agents_tasks").insert({
             "project_id": project_slug,
             "agent_id": agente_id,
             "type": column_type,
-            "title": f"Conversa MCP com @{agente_id}",
+            "title": f"[MCP] @{agente_id}: {title_preview}",
             "description": mensagem,
+            "status": "pending",
             "metadata": {"source": "mcp_server", "status_message": "Aguardando resposta..."}
         }).execute()
         
@@ -83,22 +89,40 @@ async def ask_agent(agente: str, mensagem: str) -> str:
             
         task_id = res.data[0]["id"]
         
-        # Poll pela resposta
+        # Polling inteligente com backoff: 1s → 2s → 3s → 5s (máx)
         timeout_seconds = 180
         start_time = time.time()
+        poll_interval = 1.0
+        last_progress = start_time
         
         while time.time() - start_time < timeout_seconds:
-            await asyncio.sleep(2)
-            check = client.table("dmz_agents_tasks").select("response, status").eq("id", task_id).execute()
+            await asyncio.sleep(poll_interval)
+            
+            check = client.table("dmz_agents_tasks").select("response, status, feedback").eq("id", task_id).execute()
             
             if check.data:
                 task = check.data[0]
+                # Resposta disponível — retorna ao IDE
                 if task.get("response"):
-                    return str(task["response"])
+                    elapsed = int(time.time() - start_time)
+                    return f"{task['response']}\n\n---\n_Processado por @{agente_id} em {elapsed}s (Task {task_id[:8]}…)_"
+                
+                # Task completada mas sem response (fallback para feedback)
                 if task.get("status") == "completed" and not task.get("response"):
-                    return f"A demanda foi processada pelo @{agente_id} (Task {task_id}), mas nenhuma resposta de texto foi retornada."
+                    fb = task.get("feedback") or ""
+                    if fb:
+                        return f"{fb}\n\n---\n_@{agente_id} processou a demanda (Task {task_id[:8]}…)_"
+                    return f"A demanda foi processada pelo @{agente_id} (Task {task_id[:8]}…), mas nenhuma resposta de texto foi retornada."
+                
+                # Task bloqueada
+                if task.get("status") == "blocked":
+                    return f"⚠️ @{agente_id} bloqueou a task: {task.get('feedback', 'Sem detalhes')}"
+            
+            # Backoff progressivo: 1 → 2 → 3 → 5 max
+            if poll_interval < 5.0:
+                poll_interval = min(poll_interval + 1.0, 5.0)
         
-        return f"Timeout ({timeout_seconds}s): O @{agente_id} ainda está processando sua demanda na sua esteira do Kanban (Task {task_id}). Verifique o andamento no painel web."
+        return f"⏱️ Timeout ({timeout_seconds}s): O @{agente_id} ainda está processando sua demanda (Task {task_id[:8]}…). O backend está ativo e continuará processando. Verifique o andamento com o tool get_task ou no painel web."
         
     except Exception as e:
         return f"Erro ao acessar DMZ OS: {str(e)}"
