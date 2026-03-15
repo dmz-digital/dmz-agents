@@ -175,7 +175,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                 const idTerm = term.slice(1).toLowerCase();
                 query = query.ilike('id', `${idTerm}%`);
             } else {
-                query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%,status.ilike.%${term}%,type.ilike.%${term}%,id.ilike.%${term}%`);
+                query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%,status.ilike.%${term}%,type.ilike.%${term}%`);
             }
 
             const { data: taskData, error } = await query

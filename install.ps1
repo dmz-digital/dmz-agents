@@ -60,6 +60,11 @@ Write-Host "$CYANInstalando/Atualizando dmz-os v0.4.2 (MCP Universal)...$RESET"
 
 $INSTALL_URL = "https://github.com/dmz-digital/dmz-agents/archive/refs/heads/main.zip#subdirectory=cli"
 
+# ─── Forçar UTF-8 para evitar erros de stdout no Windows ────────
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+$env:PYTHONIOENCODING = "utf-8"
+
 # Tenta instalar via pip
 Try {
     & $pyCommand -m pip install $INSTALL_URL --quiet --upgrade --no-cache-dir
