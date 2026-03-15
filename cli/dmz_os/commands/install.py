@@ -453,7 +453,7 @@ def _create_onboarding_task(creds: dict):
                 "agent_id": "orchestrator",
                 "type": "to_do",
                 "title": "🚩 Verificação de Instalação: Squad DMZ Pronto!",
-                "description": "### Parabéns! 🚀\nSe você está lendo esta tarefa, o link entre seu ambiente local e a Nuvem DMZ foi estabelecido com sucesso.\n\n**O que isso significa?**\n- Seus comandos via terminal (CLI) estão chegando até nós.\n- Seus agentes agora podem ler e escrever códigos no seu repositório local.\n- O Kanban Web está em sincronia total com sua IDE.\n\n**Próximo Passo:**\nRode `dmz-os start` no seu terminal e veja o **@orch** assumir esta tarefa!",
+                "description": "Parabéns! 🚀\nSe você está lendo esta tarefa, o link entre seu ambiente local e a Nuvem DMZ foi estabelecido com sucesso.\n\nO que isso significa?\n● Seus comandos via terminal (CLI) estão chegando até nós.\n● Seus agentes agora podem ler e escrever códigos no seu repositório local.\n● O Kanban Web está em sincronia total com sua IDE.\n\nPróximo Passo:\nRode dmz-os start no seu terminal e veja o @orch assumir esta tarefa!",
                 "status": "pending",
                 "priority": 100,
                 "metadata": {"onboarding": True}
