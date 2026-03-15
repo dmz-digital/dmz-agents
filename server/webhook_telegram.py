@@ -70,7 +70,8 @@ Você deve não apenas ler o relatório, você deve INTERPRETAR também o que el
         try:
             print(f"[Telegram Webhook] Gerando TTS ElevenLabs para Yvi...")
             
-            url = "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM" # Base Voice
+            voice_id = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
+            url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
             headers = {
                 "Accept": "audio/mpeg",
                 "Content-Type": "application/json",
