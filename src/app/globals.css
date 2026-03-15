@@ -101,25 +101,11 @@ body {
 
 /* ── DMZ Container: 90% width on large screens ──────────────────────────── */
 .dmz-container {
-  width: 95%;
+  width: 92%;
   margin-left: auto;
   margin-right: auto;
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-}
-
-@media (min-width: 1280px) {
-  .dmz-container {
-    width: 92%;
-    max-width: 1800px;
-  }
-}
-
-@media (min-width: 1920px) {
-  .dmz-container {
-    width: 90%;
-    max-width: 2000px;
-  }
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
 /* ── Kanban horizontal scroll – no visible scrollbar ────────────────────── */

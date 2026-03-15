@@ -257,7 +257,7 @@ export default function ProfilePage() {
     return (
         <div className="min-h-screen bg-[#FDFDFD] pb-32">
             <header className="px-8 pt-12 pb-8 border-b border-neutral-100 mb-10 bg-white/50 backdrop-blur-md sticky top-0 z-20">
-                <div className="max-w-3xl mx-auto flex items-center justify-between">
+                <div className="dmz-container flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                         <div className="w-10 h-10 bg-white border border-neutral-100 rounded-xl flex items-center justify-center p-2 shadow-sm">
                             <img src="/logo.svg" alt="DMZ OS Logo" className="w-full h-full" />
@@ -274,7 +274,7 @@ export default function ProfilePage() {
                 </div>
             </header>
 
-            <main className="px-8 max-w-3xl mx-auto">
+            <main className="px-8 dmz-container">
                 <div className="bg-white border border-neutral-100 rounded-[32px] p-8 shadow-sm">
 
                     {/* Avatar Section */}

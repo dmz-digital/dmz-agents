@@ -581,7 +581,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
             {/* Kanban Board */}
             <div style={{ background: "#F1F3F5", borderRadius: "18px", padding: "16px 12px", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
             <div className="kanban-scroll-x" style={{ flex: 1, overflowX: "auto", overflowY: "hidden", minHeight: 0 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(280px, 1fr))", gap: "10px", alignItems: "stretch", height: "100%" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(240px, 1fr))", gap: "5px", alignItems: "stretch", height: "100%" }}>
                 {COLUMNS.map(col => {
                     const colTasks = getTasksByColumn(col.id);
                     const Icon = col.icon;
