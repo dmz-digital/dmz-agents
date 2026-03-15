@@ -27,37 +27,37 @@ async def handle_telegram_webhook(data: dict, supabase, get_llm_response, get_sy
         
         # 1. Recupera o projeto atual desta sessão (metadata nas chats antigas)
         current_project_id = "dmz-agents" # Default
-        chat_res = supabase.table("dmz_agents_chat").select("metadata").eq("session_id", session_id).order("created_at", desc=True).limit(1).execute()
-        if chat_res.data and chat_res.data[0].get("metadata"):
-            current_project_id = chat_res.data[0]["metadata"].get("project_id", "dmz-agents")
+        chat_res = supabase.table("dmz_agents_chat").select("metadata").eq("session_id", session_id).order("created_at", desc=True).limit(5).execute()
+        for c in chat_res.data:
+            if c.get("metadata") and c["metadata"].get("project_id"):
+                current_project_id = c["metadata"]["project_id"]
+                break
 
-        # 2. Lógica de troca de projeto se o usuário mandar um SLUG novo
-        # Padrão: "slug: xxxx" ou "projeto: xxxx"
-        new_slug = None
-        if text.lower().startswith("slug:") or text.lower().startswith("projeto:"):
-            new_slug = text.split(":")[-1].strip().lower()
-        elif len(text.split()) == 1 and "-" in text and "." not in text: 
-            # Heurística: se for uma palavra só com hífen, pode ser um slug
-            new_slug = text.lower()
-
-        if new_slug:
-            # Valida se o projeto existe
-            proj_check = supabase.table("dmz_agents_projects").select("id, name").eq("slug", new_slug).single().execute()
-            if proj_check.data:
-                current_project_id = proj_check.data["id"]
-                msg_confirm = f"Perfeito, {user_first_name}! Conectei você ao projeto **{proj_check.data['name']}**. Agora tenho acesso aos relatórios e Kanban dele. O que deseja saber?"
+        # 2. Busca projetos ativos para bater contra o texto
+        all_proj_res = supabase.table("dmz_agents_projects").select("id, slug, name").execute()
+        projects_list = all_proj_res.data or []
+        
+        # Tenta encontrar um slug no texto (mesmo que no meio da frase)
+        new_project_found = None
+        text_lower = text.lower()
+        for p in projects_list:
+            slug = p['slug'].lower()
+            # Procura por "slug: xxxx", "projeto: xxxx" ou o slug puro cercado por espaços/início/fim
+            if slug in text_lower:
+                # Verificação extra para não pegar slug dentro de outra palavra
+                start_idx = text_lower.find(slug)
+                end_idx = start_idx + len(slug)
+                is_start = (start_idx == 0 or not text_lower[start_idx-1].isalnum())
+                is_end = (end_idx == len(text_lower) or not text_lower[end_idx].isalnum())
                 
-                # Salva log de troca no chat
-                supabase.table("dmz_agents_chat").insert({
-                    "session_id": session_id, "role": "assistant", "content": msg_confirm, "agent_id": "yvi", "metadata": {"project_id": current_project_id}
-                }).execute()
-
-                bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-                async with httpx.AsyncClient() as client:
-                    await client.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", json={
-                        "chat_id": chat_id, "text": msg_confirm, "parse_mode": "Markdown"
-                    })
-                return {"status": "ok"}
+                if is_start and is_end:
+                    new_project_found = p
+                    break
+        
+        if new_project_found:
+            current_project_id = new_project_found["id"]
+            # Opcional: Avisar no log que trocou (opcional remover o return para já dar o report)
+            print(f"[Telegram] Switch projeto detectado: {current_project_id}")
 
         # Puxa as tasks do projeto ATUAL
         res = supabase.table("dmz_agents_tasks").select("title, status, agent_id, updated_at").eq("project_id", current_project_id).order("updated_at", desc=True).limit(20).execute()
