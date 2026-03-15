@@ -1043,18 +1043,68 @@ function AddAgentsModal({ agents, projectAgents, onToggle, onToggleAll, onClose 
 import { Edit2, Save } from "lucide-react";
 
 function SimpleMarkdown({ text }: { text: string }) {
-    const lines = text.split("\n");
+    if (!text) return null;
+    // Fix literal \n escaping that might come from DB/LLM
+    const processedText = text.replaceAll('\\n', '\n');
+    const lines = processedText.split("\n");
+    
     const elements: React.ReactNode[] = [];
     let listItems: React.ReactNode[] = [];
-    const flushList = () => { if (listItems.length) { elements.push(<ul key={`ul-${elements.length}`} style={{ margin: "6px 0 10px 0", paddingLeft: "20px", listStyle: "none" }}>{listItems}</ul>); listItems = []; } };
+    
+    const flushList = () => { 
+        if (listItems.length) { 
+            elements.push(<ul key={`ul-${elements.length}`} style={{ margin: "10px 0 16px 0", paddingLeft: "18px", listStyle: "none" }}>{listItems}</ul>); 
+            listItems = []; 
+        } 
+    };
+
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const trimmed = line.trim();
-        if (!trimmed) { flushList(); elements.push(<div key={`br-${i}`} style={{ height: "8px" }} />); continue; }
-        if (trimmed.startsWith("## ")) { flushList(); elements.push(<h3 key={`h-${i}`} style={{ fontSize: "14px", fontWeight: 800, color: "#111827", margin: "14px 0 6px 0", textTransform: "uppercase", letterSpacing: "0.04em", borderBottom: "1px solid #F0F0F0", paddingBottom: "6px" }}>{trimmed.slice(3)}</h3>); continue; }
-        if (trimmed.startsWith("- ")) { const content = trimmed.slice(2); listItems.push(<li key={`li-${i}`} style={{ fontSize: "14px", color: "#4B5563", lineHeight: 1.7, marginBottom: "4px", position: "relative", paddingLeft: "14px" }}><span style={{ position: "absolute", left: 0, color: "#9CA3AF", fontWeight: 700 }}>•</span>{formatInline(content)}</li>); continue; }
+        
+        if (!trimmed) { 
+            flushList(); 
+            elements.push(<div key={`br-${i}`} style={{ height: "12px" }} />); 
+            continue; 
+        }
+        
+        // Headers
+        if (trimmed.startsWith("### ")) { 
+            flushList(); 
+            elements.push(<h4 key={`h3-${i}`} style={{ fontSize: "14px", fontWeight: 900, color: "#111827", margin: "20px 0 8px 0", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #F3F4F6", paddingBottom: "4px" }}>{trimmed.slice(4)}</h4>); 
+            continue; 
+        }
+        if (trimmed.startsWith("## ")) { 
+            flushList(); 
+            elements.push(<h3 key={`h2-${i}`} style={{ fontSize: "16px", fontWeight: 900, color: "#111827", margin: "24px 0 10px 0", borderBottom: "1.5px solid #F3F4F6", paddingBottom: "6px" }}>{trimmed.slice(3)}</h3>); 
+            continue; 
+        }
+
+        // Blockquotes
+        if (trimmed.startsWith("> ")) {
+            flushList();
+            elements.push(
+                <blockquote key={`bq-${i}`} style={{ borderLeft: "4px solid #E5E7EB", paddingLeft: "16px", margin: "12px 0", color: "#6B7280", fontStyle: "italic", fontSize: "14px" }}>
+                    {formatInline(trimmed.slice(2))}
+                </blockquote>
+            );
+            continue;
+        }
+        
+        // Lists
+        if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) { 
+            const content = trimmed.slice(2); 
+            listItems.push(
+                <li key={`li-${i}`} style={{ fontSize: "14px", color: "#4B5563", lineHeight: 1.7, marginBottom: "6px", position: "relative", paddingLeft: "16px" }}>
+                    <span style={{ position: "absolute", left: 0, color: "#4F46E5", fontWeight: 900 }}>•</span>
+                    {formatInline(content)}
+                </li>
+            ); 
+            continue; 
+        }
+        
         flushList();
-        elements.push(<p key={`p-${i}`} style={{ fontSize: "14px", color: "#4B5563", lineHeight: 1.7, margin: "2px 0" }}>{formatInline(trimmed)}</p>);
+        elements.push(<p key={`p-${i}`} style={{ fontSize: "14px", color: "#4B5563", lineHeight: 1.7, margin: "4px 0" }}>{formatInline(trimmed)}</p>);
     }
     flushList();
     return <div>{elements}</div>;
@@ -1062,14 +1112,22 @@ function SimpleMarkdown({ text }: { text: string }) {
 
 function formatInline(text: string): React.ReactNode[] {
     const parts: React.ReactNode[] = [];
-    const regex = /(\*\*(.+?)\*\*)|(`([^`]+)`)/g;
+    // Bold, Code, and basic Link detection
+    const regex = /(\*\*(.+?)\*\*)|(`([^`]+)`)|(\[([^\]]+)\]\(([^)]+)\))/g;
     let lastIndex = 0;
     let match;
     let key = 0;
     while ((match = regex.exec(text)) !== null) {
         if (match.index > lastIndex) parts.push(<span key={key++}>{text.slice(lastIndex, match.index)}</span>);
-        if (match[2]) parts.push(<strong key={key++} style={{ fontWeight: 700, color: "#111827" }}>{match[2]}</strong>);
-        else if (match[4]) parts.push(<code key={key++} style={{ background: "#F3F4F6", padding: "1px 6px", borderRadius: "5px", fontSize: "12px", fontFamily: "monospace", color: "#7C3AED" }}>{match[4]}</code>);
+        
+        if (match[2]) { // Bold
+            parts.push(<strong key={key++} style={{ fontWeight: 800, color: "#111827" }}>{match[2]}</strong>);
+        } else if (match[4]) { // Code
+            parts.push(<code key={key++} style={{ background: "#F3F4F6", padding: "2px 6px", borderRadius: "6px", fontSize: "12px", fontFamily: "monospace", color: "#4F46E5", fontWeight: 600 }}>{match[4]}</code>);
+        } else if (match[6]) { // Link
+            parts.push(<a key={key++} href={match[7]} target="_blank" rel="noopener noreferrer" style={{ color: "#4F46E5", textDecoration: "underline", fontWeight: 600 }}>{match[6]}</a>);
+        }
+        
         lastIndex = match.index + match[0].length;
     }
     if (lastIndex < text.length) parts.push(<span key={key++}>{text.slice(lastIndex)}</span>);

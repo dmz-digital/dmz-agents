@@ -286,38 +286,14 @@ function formatMessageBlocks(text: string): ContentBlock[] {
 
     return blocks;
 }
-
-function formatInline(text: string): React.ReactNode[] {
-    const parts: React.ReactNode[] = [];
-    const inlineRegex = /(\*\*(.+?)\*\*)|(`([^`]+)`)/gi;
-    let lastIndex = 0;
-    let match;
-    let key = 0;
-    while ((match = inlineRegex.exec(text)) !== null) {
-        if (match.index > lastIndex) parts.push(<span key={key++}>{text.slice(lastIndex, match.index)}</span>);
-        if (match[2]) parts.push(<strong key={key++} className="font-bold text-neutral-900">{match[2]}</strong>);
-        else if (match[4]) parts.push(<code key={key++} style={{ background: "#F3F4F6", padding: "1px 6px", borderRadius: "5px", fontSize: "12px", fontFamily: "monospace", color: "#D8663E" }}>{match[4]}</code>);
-        lastIndex = match.index + match[0].length;
-    }
-    // Simple fallback if regex complex
-    if (parts.length === 0) {
-        const p: React.ReactNode[] = [];
-        let t = text;
-        const boldParts = t.split('**');
-        boldParts.forEach((bp, i) => {
-            if (i % 2 === 1) p.push(<strong key={i} className="font-bold text-neutral-900">{bp}</strong>);
-            else p.push(<span key={i}>{bp}</span>);
-        });
-        return p;
-    }
-
-    if (lastIndex < text.length) parts.push(<span key={key++}>{text.slice(lastIndex)}</span>);
-    return parts;
-}
+// Utility to render inline markdown (bold, code, links)
 
 function SimpleMarkdown({ text, className = "" }: { text: string, className?: string }) {
     if (!text) return null;
-    const lines = text.split("\n");
+    // Fix literal \n escaping that might come from DB/LLM
+    const processedText = text.replaceAll('\\n', '\n');
+    const lines = processedText.split("\n");
+    
     const elements: React.ReactNode[] = [];
     let listItems: React.ReactNode[] = [];
     
@@ -349,6 +325,17 @@ function SimpleMarkdown({ text, className = "" }: { text: string, className?: st
             continue; 
         }
         
+        // Blockquotes
+        if (trimmed.startsWith("> ")) {
+            flushList();
+            elements.push(
+                <blockquote key={`bq-${i}`} className="border-l-4 border-neutral-200 pl-4 my-4 italic text-[13px] text-neutral-500">
+                    {formatInline(trimmed.slice(2))}
+                </blockquote>
+            );
+            continue;
+        }
+
         if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) { 
             const content = trimmed.slice(2); 
             listItems.push(<li key={`li-${i}`} className="text-[13px] text-neutral-600 leading-relaxed relative pl-4"><span className="absolute left-0 text-dmz-accent font-black">•</span>{formatInline(content)}</li>); 
@@ -362,6 +349,42 @@ function SimpleMarkdown({ text, className = "" }: { text: string, className?: st
     return <div className={className}>{elements}</div>;
 }
 
+function formatInline(text: string): React.ReactNode[] {
+    const parts: React.ReactNode[] = [];
+    // Bold, Code, and basic Link detection
+    const regex = /(\*\*(.+?)\*\*)|(`([^`]+)`)|(\[([^\]]+)\]\(([^)]+)\))/gi;
+    let lastIndex = 0;
+    let match;
+    let key = 0;
+    while ((match = regex.exec(text)) !== null) {
+        if (match.index > lastIndex) parts.push(<span key={key++}>{text.slice(lastIndex, match.index)}</span>);
+        
+        if (match[2]) { // Bold
+            parts.push(<strong key={key++} className="font-bold text-neutral-900">{match[2]}</strong>);
+        } else if (match[4]) { // Code
+            parts.push(<code key={key++} style={{ background: "#F3F4F6", padding: "1px 6px", borderRadius: "5px", fontSize: "12px", fontFamily: "monospace", color: "#D8663E" }}>{match[4]}</code>);
+        } else if (match[6]) { // Link
+            parts.push(<a key={key++} href={match[7]} target="_blank" rel="noopener noreferrer" className="text-dmz-accent font-bold underline decoration-dmz-accent/30 underline-offset-2">{match[6]}</a>);
+        }
+        
+        lastIndex = match.index + match[0].length;
+    }
+    
+    // Simple fallback if regex complex
+    if (parts.length === 0) {
+        const p: React.ReactNode[] = [];
+        let t = text;
+        const boldParts = t.split('**');
+        boldParts.forEach((bp, i) => {
+            if (i % 2 === 1) p.push(<strong key={i} className="font-bold text-neutral-900">{bp}</strong>);
+            else p.push(<span key={i}>{bp}</span>);
+        });
+        return p;
+    }
+
+    if (lastIndex < text.length) parts.push(<span key={key++}>{text.slice(lastIndex)}</span>);
+    return parts;
+}
 function ThinkingStatus() {
     const [step, setStep] = useState(0);
     const steps = [
