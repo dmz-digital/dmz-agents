@@ -88,8 +88,9 @@ async def handle_telegram_webhook(data: dict, supabase, get_llm_response, get_sy
         if not system_prompt:
             system_prompt = "Você é Yvi, a Status Report Specialist do DMZ OS. Aja como uma secretária executiva moderna e carismática."
         
-        # Interpolação
-        now = datetime.now()
+        # Interpolação (Forçando GMT-3 Brasil/SP)
+        tz_sp = timezone(timedelta(hours=-3))
+        now = datetime.now(tz_sp)
         date_full = now.strftime("%d/%m/%Y %H:%M")
         date_str = now.strftime("%d/%m/%Y")
         
