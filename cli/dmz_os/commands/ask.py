@@ -43,14 +43,29 @@ def ask_command(prompt_text: str, project: str | None = None):
 
         # Tenta detectar um @agente na string para delegar direto
         import re
+        
+        # Aliases comuns → IDs reais na tabela dmz_agents_definitions
+        AGENT_ALIASES = {
+            "orch": "orchestrator", "orq": "orchestrator",
+            "arch": "architect", "alex": "architect",
+            "dev": "developer", "frontend": "developer",
+            "qa": "qa_engineer", "tester": "qa_engineer",
+            "design": "ux_designer", "ux": "ux_designer",
+            "ops": "devops", "infra": "devops",
+            "sec": "security", "seguranca": "security",
+            "doc": "tech_writer", "docs": "tech_writer",
+            "data": "data_engineer", "dados": "data_engineer",
+            "copy": "copywriter", "redator": "copywriter",
+        }
+        
         target_agent = "orchestrator"
         column_type = "master_plan"
         
         match = re.search(r'@([a-zA-Z0-9_-]+)', prompt_text)
         if match:
-            # Pega o id do agente (ex: @cassandra -> cassandra)
-            target_agent = match.group(1).lower()
-            column_type = "to_do" # Se vai direto pra um agente operário, passa do Master Plan pro To Do
+            raw_agent = match.group(1).lower()
+            target_agent = AGENT_ALIASES.get(raw_agent, raw_agent)  # Resolve alias ou usa direto
+            column_type = "to_do" if target_agent != "orchestrator" else "master_plan"
             
             # Formata o título para remover a tag do início se ela começou lá
             title = re.sub(r'^@[a-zA-Z0-9_-]+\s+', '', title)
