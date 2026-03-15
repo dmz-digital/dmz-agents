@@ -436,6 +436,40 @@ def update_task(task_id: str, coluna: str = "", agente: str = "", prioridade: in
     except Exception as e:
         return f"Erro ao atualizar tarefa: {str(e)}"
 
+@mcp.tool()
+def remove_task(task_id: str) -> str:
+    """
+    Remove (deleta) uma tarefa do Kanban. OBRIGATÓRIO usar esta ferramenta para limpar um card da coluna 'master_plan' após concluir seu desmembramento em subtarefas (Auto-cleanup).
+    
+    Args:
+        task_id: O ID (UUID) da tarefa. Aceita IDs parciais (mínimo 8 caracteres).
+    """
+    try:
+        project_slug = os.environ.get("DMZ_PROJECT_SLUG")
+        if not project_slug:
+            return "Erro: DMZ_PROJECT_SLUG não encontrado no .env.dmz"
+        
+        client = get_supabase()
+        
+        # Resolve ID parcial
+        if len(task_id) < 36:
+            res = client.table("dmz_agents_tasks").select("id, title").eq("project_id", project_slug).like("id", f"{task_id}%").limit(1).execute()
+            if not res.data:
+                return f"Tarefa não encontrada: {task_id}"
+            task_id = res.data[0]["id"]
+            task_title = res.data[0]["title"]
+        else:
+            res = client.table("dmz_agents_tasks").select("title").eq("id", task_id).execute()
+            task_title = res.data[0]["title"] if res.data else "?"
+            if not res.data:
+                return f"Tarefa não encontrada: {task_id}"
+                
+        # Deleta a tarefa
+        del_res = client.table("dmz_agents_tasks").delete().eq("id", task_id).execute()
+        return f"🔥 Tarefa \"{task_title}\" deletada (Auto-cleanup) com sucesso do Kanban do projeto!"
+    except Exception as e:
+        return f"Erro ao deletar tarefa: {str(e)}"
+
 
 @mcp.tool()
 def add_comment(task_id: str, comentario: str, autor: str = "mcp") -> str:
