@@ -137,7 +137,7 @@ def _collect_credentials() -> dict:
     console.print(Panel(
         "[bold]Conexão com a Plataforma DMZ OS[/]\n\n"
         "Configurando o link seguro entre seu ambiente local e a nuvem.\n"
-        "[dim]Siga as orientações para ativar seu squad de 85 agentes.[/]",
+        "[dim]Siga as orientações para ativar seu squad de 86+ agentes.[/]",
         border_style="blue",
         title="[bold blue]🔗 Onboarding Local[/]",
     ))
@@ -367,7 +367,7 @@ def _create_agents_folder():
     # Regras Imperativas para IAs da IDE (Antigravity, Cursor, Windsurf, VS Code)
     rules_content = (
         "# DMZ OS — REGRAS OBRIGATÓRIAS DE SQUAD (NÃO VIOLAR)\n\n"
-        "Você está operando em um ambiente com DMZ OS instalado. Este projeto é gerenciado por um Squad de 85 agentes de IA.\n\n"
+        "Você está operando em um ambiente com DMZ OS instalado. Este projeto é gerenciado por um Squad de 86 agentes de IA.\n\n"
         "**REGRA DE OURO:**\n"
         "Sempre que o usuário enviar uma mensagem contendo uma menção com '@agente' (ex: @orch, @syd, @ryan, @cassandra),\n"
         "você NÃO tem permissão para tentar realizar a tarefa sozinho ou responder com seu próprio conhecimento.\n\n"
@@ -411,6 +411,7 @@ def _create_agents_folder():
         (".antigravity/mcp.json",  "Antigravity"),
         (".vscode/mcp.json",       "VS Code"),
         (".zed/mcp.json",          "Zed"),
+        (".junie/mcp/mcp.json",    "JetBrains (Junie)"),
         (".mcp.json",              "Genérico (fallback)"),
     ]
     
@@ -551,6 +552,21 @@ def _create_onboarding_task(creds: dict):
         # Silencioso para não quebrar o install se falhar apenas a task
         console.print(f"[dim]  [yellow]⚠[/] Nota: Não foi possível criar a task automática ({e})[/]")
 
+def _notify_server_install(creds: dict):
+    """Notifica o servidor central sobre a nova instalação para ativar o Fator Uau."""
+    import requests
+    try:
+        # Tenta pegar URL da env se existir, senao vai pra prod
+        api_url = os.getenv("NEXT_PUBLIC_API_URL", "https://dmz-agents-production.up.railway.app")
+        payload = {
+            "project_slug": creds["PROJECT_ID"],
+            "user_email": creds.get("USER_EMAIL", "CLI User"),
+            "machine_id": "CLI-Install"
+        }
+        requests.post(f"{api_url}/mcp/install", json=payload, timeout=5)
+    except:
+        pass
+
 
 def _open_docs():
     """Abre o GETTING_STARTED.md no terminal."""
@@ -625,6 +641,9 @@ def install_command(project: str | None, yes: bool):
 
     # 7. Criar Task de Verificação
     _create_onboarding_task(creds)
+    
+    # 7.1 Ativar Fator Uau (Notificação de Admin)
+    _notify_server_install(creds)
 
     # 8. Abrir documentação
     console.print()

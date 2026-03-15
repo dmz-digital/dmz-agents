@@ -37,6 +37,11 @@ export default function AuthCallbackPage() {
                 }
             }
 
+            if (typeof window !== 'undefined' && (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery'))) {
+                router.push("/reset-password");
+                return;
+            }
+
             router.push("/app");
         };
 

@@ -8,7 +8,7 @@ import {
     Volume2, StopCircle, Play, Pause, Loader2,
     MessageSquare, Plus, Search, ChevronRight,
     Clock, Trash2, Menu, Heart, Copy, Reply,
-    Check, Pencil, BookOpen, Target, Brain, Scale, Activity,
+    Check, Pencil, BookOpen, Target, Brain, Scale, Activity, ClipboardList,
     CloudUpload, Maximize, X, FileCode, PanelLeftClose, PanelLeftOpen, Download, Layout
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -401,6 +401,14 @@ export default function ChatPage() {
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
+    // Task Creation Modal State
+    const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+    const [taskTitle, setTaskTitle] = useState("");
+    const [taskDesc, setTaskDesc] = useState("");
+    const [taskAgent, setTaskAgent] = useState("orchestrator");
+    const [isCreatingTask, setIsCreatingTask] = useState(false);
+    const [taskCreatedId, setTaskCreatedId] = useState<string | null>(null);
+
     // Initial effect for basic setup
     useEffect(() => {
         document.title = "Chat de Projetos | DMZ - OS Agents";
@@ -589,6 +597,50 @@ export default function ChatPage() {
         if (inputRef.current) {
             (inputRef.current as any).value = `> ${quote}\n\n`;
             inputRef.current.focus();
+        }
+    };
+
+    const openTaskModal = (msg: Message) => {
+        const clean = stripMarkdown(msg.content);
+        setTaskTitle(clean.substring(0, 50) + (clean.length > 50 ? "..." : ""));
+        setTaskDesc(msg.content);
+        setTaskAgent(msg.agent_id || "orchestrator");
+        setIsTaskModalOpen(true);
+        setTaskCreatedId(null);
+    };
+
+    const handleCreateTask = async () => {
+        if (!taskTitle.trim() || !currentSessionId) return;
+        setIsCreatingTask(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("Usuário não autenticado");
+
+            // No MVP usaremos 'default' ou tentaremos pegar o slug do projeto vinculado ao user/chat
+            // Por simplicidade, usaremos o projeto default ou buscaremos o primeiro projeto do user
+            const { data: projects } = await supabase.from('dmz_agents_projects').select('slug').limit(1);
+            const projectSlug = projects?.[0]?.slug || "default";
+
+            const { data, error } = await supabase.from('dmz_agents_tasks').insert({
+                project_id: projectSlug,
+                agent_id: taskAgent,
+                type: 'to_do',
+                title: taskTitle,
+                description: taskDesc,
+                status: 'pending',
+                priority: 0,
+                metadata: { source: 'chat_ui', session_id: currentSessionId }
+            }).select().single();
+
+            if (error) throw error;
+            setTaskCreatedId(data.id);
+            setTimeout(() => {
+                setIsTaskModalOpen(false);
+                setIsCreatingTask(false);
+            }, 1500);
+        } catch (err) {
+            console.error("Erro ao criar task:", err);
+            setIsCreatingTask(false);
         }
     };
 
@@ -1237,13 +1289,22 @@ export default function ChatPage() {
                                                                 <Download size={12} className="text-neutral-400 hover:text-neutral-600" />
                                                             </button>
                                                         ) : (
-                                                            <button
-                                                                onClick={() => replyToMessage(msg)}
-                                                                className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
-                                                                title="Responder"
-                                                            >
-                                                                <Reply size={12} className="text-neutral-400 hover:text-neutral-600" />
-                                                            </button>
+                                                            <div className="flex items-center gap-1">
+                                                                <button
+                                                                    onClick={() => openTaskModal(msg)}
+                                                                    className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer group/task"
+                                                                    title="Criar Task no Kanban"
+                                                                >
+                                                                    <ClipboardList size={12} className="text-neutral-400 group-hover/task:text-dmz-accent transition-colors" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => replyToMessage(msg)}
+                                                                    className="p-1 rounded-md hover:bg-neutral-100 transition-all cursor-pointer"
+                                                                    title="Responder"
+                                                                >
+                                                                    <Reply size={12} className="text-neutral-400 hover:text-neutral-600" />
+                                                                </button>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>
@@ -1335,7 +1396,6 @@ export default function ChatPage() {
                 {/* Draggable Splitter + Preview Panel */}
                 {previewHtml && (
                     <>
-                        {/* Splitter Handle */}
                         <div
                             onMouseDown={handleSplitterMouseDown}
                             className="w-[2px] h-full shrink-0 bg-neutral-200 relative group z-50"
@@ -1344,7 +1404,6 @@ export default function ChatPage() {
                             <div className="absolute inset-y-0 -left-[4px] -right-[4px]" style={{ cursor: 'col-resize' }} />
                         </div>
 
-                        {/* Preview Panel */}
                         <div className="h-full flex flex-col bg-white shrink-0 shadow-[-4px_0_24px_-12px_rgba(0,0,0,0.1)]" style={{ width: `${previewWidth}%` }}>
                             <div className="h-16 border-b border-neutral-100 px-6 flex items-center justify-between bg-white shrink-0">
                                 <div className="flex items-center gap-6">
@@ -1410,6 +1469,107 @@ export default function ChatPage() {
                         </div>
                     </>
                 )}
+
+                {/* Task Creation Modal */}
+                <AnimatePresence>
+                    {isTaskModalOpen && (
+                        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm">
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                className="w-full max-w-lg bg-white rounded-[32px] shadow-2xl overflow-hidden border border-neutral-100"
+                            >
+                                <div className="p-6 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/50">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-2xl bg-dmz-accent/10 flex items-center justify-center text-dmz-accent">
+                                            <ClipboardList size={22} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-black text-neutral-900 tracking-tight">Criar Tarefa</h3>
+                                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Enviar para o Kanban</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setIsTaskModalOpen(false)} className="p-2 hover:bg-neutral-100 rounded-xl text-neutral-400 transition-all">
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                                <div className="p-8 space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Título da Tarefa</label>
+                                        <input
+                                            value={taskTitle}
+                                            onChange={(e) => setTaskTitle(e.target.value)}
+                                            className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-4 text-sm font-bold text-neutral-900 outline-none focus:border-dmz-accent/40 focus:bg-white transition-all shadow-sm"
+                                            placeholder="Ex: Implementar login social"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Agente Responsável</label>
+                                            <select
+                                                value={taskAgent}
+                                                onChange={(e) => setTaskAgent(e.target.value)}
+                                                className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-3.5 text-xs font-bold text-neutral-900 outline-none focus:border-dmz-accent/40 focus:bg-white transition-all shadow-sm appearance-none"
+                                            >
+                                                {Object.entries(AGENT_MAP).map(([id, info]) => (
+                                                    <option key={id} value={id}>@{info.handle} - {info.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Coluna</label>
+                                            <div className="w-full bg-neutral-100 border border-neutral-150 rounded-2xl px-5 py-3.5 text-xs font-bold text-neutral-400 cursor-not-allowed flex items-center gap-2">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-neutral-300" />
+                                                📝 To Do
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Descrição (Baseada no Chat)</label>
+                                        <textarea
+                                            value={taskDesc}
+                                            onChange={(e) => setTaskDesc(e.target.value)}
+                                            rows={4}
+                                            className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl px-5 py-4 text-xs font-medium text-neutral-600 outline-none focus:border-dmz-accent/40 focus:bg-white transition-all shadow-sm resize-none custom-scrollbar"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="p-6 bg-neutral-50 border-t border-neutral-100 flex items-center justify-end gap-3">
+                                    <button
+                                        onClick={() => setIsTaskModalOpen(false)}
+                                        className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-neutral-500 hover:text-neutral-900 transition-all"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        disabled={isCreatingTask || taskCreatedId !== null}
+                                        onClick={handleCreateTask}
+                                        className={`px-8 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl transition-all active:scale-95 flex items-center gap-2 ${taskCreatedId ? 'bg-green-500 text-white shadow-green-200' : 'bg-neutral-900 hover:bg-black text-white shadow-neutral-200'
+                                            } disabled:opacity-70`}
+                                    >
+                                        {isCreatingTask ? (
+                                            <>
+                                                <Loader2 size={12} className="animate-spin" />
+                                                Criando...
+                                            </>
+                                        ) : taskCreatedId ? (
+                                            <>
+                                                <Check size={12} />
+                                                Task Criada!
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Layout size={12} />
+                                                Adicionar ao Kanban
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );

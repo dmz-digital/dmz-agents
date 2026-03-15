@@ -4,29 +4,60 @@ import { useState } from "react";
 import Link from "next/link";
 import { Lock, ArrowRight, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function ResetPasswordPage() {
     const [loading, setLoading] = useState(false);
+    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const router = useRouter();
     const [formData, setFormData] = useState({ password: "", confirmPassword: "" });
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (formData.password !== formData.confirmPassword) {
+            setMessage({ type: 'error', text: 'As senhas não coincidem.' });
+            return;
+        }
+        if (formData.password.length < 6) {
+            setMessage({ type: 'error', text: 'A senha deve ter pelo menos 6 caracteres.' });
+            return;
+        }
+
         setLoading(true);
-        setTimeout(() => {
+        setMessage(null);
+
+        try {
+            const { error } = await supabase.auth.updateUser({
+                password: formData.password
+            });
+
+            if (error) throw error;
+
+            setMessage({ type: 'success', text: 'Senha atualizada com sucesso! Redirecionando...' });
+            setTimeout(() => {
+                router.push("/sign-in");
+            }, 2000);
+        } catch (error: any) {
+            setMessage({ type: 'error', text: error.message || 'Erro ao redefinir senha.' });
+        } finally {
             setLoading(false);
-            router.push("/sign-in");
-        }, 1500);
+        }
     };
 
     return (
-        <div className="min-h-screen bg-dmz-bg flex items-center justify-center p-6">
+        <div className="min-h-screen bg-dmz-bg flex items-center justify-center p-6 text-neutral-900">
             <div className="w-full max-w-md">
                 <div className="bg-white border border-neutral-100 shadow-2xl rounded-[40px] p-10 md:p-14">
                     <div className="text-center mb-10">
                         <h1 className="text-3xl font-black text-neutral-900 mb-3 tracking-tight">Nova Senha</h1>
                         <p className="text-sm text-neutral-500 font-medium">Crie uma senha forte para proteger seu squad.</p>
                     </div>
+
+                    {message && (
+                        <div className={`mb-6 p-4 rounded-2xl text-xs font-bold text-center ${message.type === 'success' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                            {message.text}
+                        </div>
+                    )}
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="space-y-2">
@@ -64,7 +95,12 @@ export default function ResetPasswordPage() {
                             disabled={loading || formData.password !== formData.confirmPassword || !formData.password}
                             className="w-full bg-dmz-accent text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-orange-500 transition-all shadow-xl shadow-dmz-accent/20 disabled:opacity-50"
                         >
-                            {loading ? "Salvando..." : "Redefinir Senha"}
+                            {loading ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    Salvando...
+                                </div>
+                            ) : "Redefinir Senha"}
                         </button>
                     </form>
                 </div>

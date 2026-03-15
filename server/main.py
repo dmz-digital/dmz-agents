@@ -1189,6 +1189,39 @@ class MCPCommentRequest(BaseModel):
     comment: str
     author: str = "mcp_server"
 
+class MCPInstallRequest(BaseModel):
+    project_slug: str
+    user_email: str | None = None
+    machine_id: str | None = None
+
+async def send_telegram_admin_notification(text: str):
+    import httpx
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    admin_chat_id = os.getenv("TELEGRAM_ADMIN_CHAT_ID", "999480132")
+    if not bot_token: return
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", json={
+                "chat_id": admin_chat_id,
+                "text": text,
+                "parse_mode": "HTML"
+            })
+    except Exception as e:
+        print(f"[Telegram] Failed to send admin notification: {e}")
+
+@app.post("/mcp/install")
+async def mcp_install_webhook(req: MCPInstallRequest, background_tasks: BackgroundTasks):
+    """Endpoint chamado quando o instalador CLI termina o setup."""
+    msg = (
+        f"🚀 <b>Novo Squad Instalado!</b>\n\n"
+        f"<b>Projeto:</b> <code>{req.project_slug}</code>\n"
+        f"<b>Usuário:</b> {req.user_email or 'N/A'}\n"
+        f"<b>Status:</b> Ativo e pronto via MCP.\n\n"
+        f"O orquestrador @orch já assumiu o controle do repositório."
+    )
+    background_tasks.add_task(send_telegram_admin_notification, msg)
+    return {"success": True, "message": "Fator Uau ativado!"}
+
 async def _process_mcp_task(task: dict):
     """Processa uma task MCP: carrega prompt do agente, envia ao LLM, grava response."""
     agent_db_id = task.get("agent_id") or "orchestrator"

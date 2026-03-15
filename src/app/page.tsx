@@ -9,7 +9,7 @@ import {
   ArrowRight, CheckCircle2, Globe, Star, PlayCircle,
   Cpu, Layers, MessageSquare, BarChart3, AppWindow,
   Database, Layout, Workflow, Box, Building2, ShoppingCart,
-  HeartPulse, Landmark, Plane, GraduationCap
+  HeartPulse, Landmark, Plane, GraduationCap, PenTool, Lock, Terminal, Eye, Search, Scale, LineChart
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { PublicHeader, PublicFooter } from "@/components/PublicLayout";
@@ -83,6 +83,11 @@ export default function RootPage() {
 
   useEffect(() => {
     async function checkAuth() {
+      if (typeof window !== 'undefined' && window.location.hash.includes('type=recovery')) {
+        router.replace('/reset-password');
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         router.replace('/app');
@@ -102,118 +107,99 @@ export default function RootPage() {
   }
 
   return (
-    <div className="bg-[#050505] text-white selection:bg-dmz-accent selection:text-white font-jakarta">
+    <div className="bg-[#050505] text-white selection:bg-dmz-accent selection:text-white font-jakarta overflow-x-hidden">
 
       <PublicHeader />
 
       {/* Hero Section */}
-      <section className="relative pt-48 pb-24 px-6 overflow-hidden">
-        {/* Background Gradients */}
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-dmz-accent/20 blur-[150px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-blue-600/10 blur-[150px] rounded-full" />
+      <section className="relative min-h-[90vh] flex items-center justify-center pt-20 overflow-hidden">
+        {/* Video Background */}
+        <div className="absolute inset-0 z-0">
+          <video autoPlay muted loop playsInline className="w-full h-full object-cover opacity-60 scale-105">
+            <source src="/video-bg.mp4" type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 bg-gradient-to-b from-[#050505]/80 via-transparent to-[#050505]" />
+          <div className="absolute inset-0 bg-black/40" />
+        </div>
 
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
-          <div className="relative z-10">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full mb-8"
-            >
-              <Zap size={14} className="text-dmz-accent" />
-              <span className="text-[11px] font-bold tracking-widest text-neutral-300 uppercase">A Revolução AI-Native Chegou</span>
-            </motion.div>
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="text-6xl md:text-8xl font-black mb-8 leading-[1.05] tracking-tighter"
-            >
-              Seu Squad de <br />
-              <span className="text-dmz-accent">AI Experts</span> pronto <br />
-              em segundos.
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-lg text-neutral-400 mb-10 leading-relaxed max-w-lg"
-            >
-              O DMZ OS Agents transforma seu fluxo de trabalho estático em um squad autônomo de 18 especialistas que planejam, criam e auditam seu produto em tempo real.
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="flex flex-col sm:flex-row gap-4"
-            >
-              <Link href="/sign-up" className="bg-dmz-accent text-white px-8 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-orange-500 transition-all shadow-xl shadow-dmz-accent/30 group">
-                Criar Meu Squad <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <button className="bg-white/5 border border-white/10 text-white px-8 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-white/10 transition-all">
-                <PlayCircle size={18} /> Ver Demo
-              </button>
-            </motion.div>
-
-            <div className="mt-12 flex items-center gap-6">
-              <div className="flex -space-x-3">
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="w-10 h-10 rounded-full border-2 border-[#050505] bg-neutral-800 overflow-hidden">
-                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i * 123}`} alt="User" />
-                  </div>
-                ))}
-              </div>
-              <p className="text-sm text-neutral-500">
-                <span className="text-white font-bold">+500 squads</span> criados esta semana
-              </p>
-            </div>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4 }}
-            className="relative"
+        <div className="max-w-7xl mx-auto text-center relative z-10 px-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            className="inline-flex items-center gap-3 bg-white/5 border border-white/10 px-6 py-2 rounded-full mb-12 backdrop-blur-md"
           >
-            <div className="absolute inset-0 bg-dmz-accent/20 blur-[100px] rounded-full scale-75 animate-pulse" />
-            <div className="relative bg-white/5 border border-white/10 p-3 rounded-[48px] backdrop-blur-sm shadow-2xl overflow-hidden">
-              <img
-                src="/hero-dashboard.png"
-                alt="DMZ OS Interface"
-                className="rounded-[40px] border border-white/5 w-full hover:scale-[1.05] transition-transform duration-1000"
-              />
-            </div>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-dmz-accent opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-dmz-accent"></span>
+            </span>
+            <span className="text-[10px] font-bold tracking-[0.3em] text-neutral-300 uppercase">86+ Especialistas Ativos agora</span>
+          </motion.div>
+
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ delay: 0.1 }} 
+            className="text-7xl md:text-9xl font-black mb-10 leading-[0.95] tracking-tightest"
+          >
+            Seu Squad de <br />
+            <span className="bg-gradient-to-r from-dmz-accent to-orange-400 bg-clip-text text-transparent">AI Experts</span> pronto <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40">em segundos.</span>
+          </motion.h1>
+
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ delay: 0.2 }} 
+            className="text-xl text-neutral-400 mb-14 leading-relaxed max-w-3xl mx-auto font-medium"
+          >
+            O DMZ OS transforma seu fluxo de trabalho estático em um squad autônomo de <span className="text-white font-bold">86 agentes especialistas</span> que planejam, criam e auditam seu produto em tempo real na sua IDE.
+          </motion.p>
+
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ delay: 0.3 }} 
+            className="flex flex-col sm:flex-row gap-6 justify-center items-center"
+          >
+            <Link href="/sign-up" className="relative group px-10 py-5 bg-dmz-accent rounded-[24px] font-black text-lg overflow-hidden transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-dmz-accent/40">
+              <span className="relative z-10 flex items-center gap-2">CRIAR MEU SQUAD <ArrowRight size={20} /></span>
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+            </Link>
+            <button className="px-10 py-5 bg-white/5 border border-white/10 rounded-[24px] font-bold text-lg hover:bg-white/10 transition-all flex items-center gap-2">
+              <PlayCircle size={20} /> VER DEMO
+            </button>
           </motion.div>
         </div>
       </section>
 
       {/* Capabilities Section */}
-      <section id="capabilities" className="py-32 px-6">
+      <section id="capabilities" className="py-40 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-24">
-            <h2 className="text-4xl md:text-6xl font-black mb-8 leading-tight">O que você pode <br /><span className="text-dmz-accent">construir hoje?</span></h2>
-            <p className="text-neutral-400 max-w-2xl mx-auto">Dos primeiros requisitos até a escala global. Seu squad gerencia a complexidade técnica para você focar no valor.</p>
+            <h2 className="text-5xl md:text-7xl font-black mb-8 tracking-tighter">O que você pode <br /><span className="text-dmz-accent">construir hoje?</span></h2>
+            <p className="text-neutral-400 text-lg max-w-2xl mx-auto font-medium">Dos primeiros requisitos até a escala global. Seu squad gerencia a complexidade técnica para você focar no valor.</p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <FeatureCard
-              icon={AppWindow}
-              title="SaaS & Web Apps"
-              desc="Da arquitetura Next.js ao deploy em containers com total segurança e performance."
+              icon={MessageSquare}
+              title="Chat Persistente"
+              desc="Conversas que recordam. Memória sagrada compartilhada entre todos os especialistas do seu squad."
             />
             <FeatureCard
-              icon={Database}
-              title="Integrações de Dados"
-              desc="Pipelines de dados, orquestração de APIs e gestão de metadados com auditabilidade nativa."
+              icon={Layout}
+              title="Kanban Inteligente"
+              desc="Gestão de tarefas automática. O @orch cria e move cards conforme o progresso do Squad."
             />
             <FeatureCard
-              icon={Workflow}
-              title="Automação Inteligente"
-              desc="SOPs vivos que transformam processos manuais em fluxos autônomos de agentes."
+              icon={Zap}
+              title="IDE-Native (MCP)"
+              desc="Seus agentes operam direto na sua IDE. Leitura e escrita de código em tempo real via protocolo MCP."
             />
             <FeatureCard
-              icon={Shield}
-              title="Sistemas Críticos"
-              desc="Conformidade LGPD, monitoramento STRIDE e infra blindada por design em cada commit."
+              icon={BarChart3}
+              title="Relatórios Diários"
+              desc="Inteligência de gestão. Receba briefings automáticos sobre o status e a saúde do seu produto."
             />
           </div>
         </div>
@@ -224,11 +210,11 @@ export default function RootPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-3 gap-20 items-center">
             <div className="lg:col-span-1">
-              <h2 className="text-4xl md:text-5xl font-black mb-8 leading-tight">Adaptado para <br /><span className="text-dmz-accent">seu setor.</span></h2>
-              <p className="text-neutral-400 mb-8 leading-relaxed">
+              <h2 className="text-4xl md:text-5xl font-black mb-8 leading-tight tracking-tighter">Adaptado para <br /><span className="text-dmz-accent">seu setor.</span></h2>
+              <p className="text-neutral-400 mb-8 leading-relaxed font-medium">
                 O DMZ OS não é genérico. Nossos agentes entendem as nuances de diferentes indústrias para entregar soluções compliance e performantes.
               </p>
-              <Link href="/sign-up" className="text-dmz-accent font-bold flex items-center gap-2 group">
+              <Link href="/industries" className="text-dmz-accent font-bold flex items-center gap-2 group">
                 Ver todos os casos de uso <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
@@ -246,74 +232,63 @@ export default function RootPage() {
               <IndustryCard
                 icon={ShoppingCart}
                 title="E-commerce & Retail"
-                useCase="Motores de recomendação, gestão de inventário inteligente e chatbots de alta conversão."
+                useCase="Motores de recomendação, gestão de inventory inteligente e chatbots de alta conversão."
               />
               <IndustryCard
                 icon={Code2}
                 title="Software & SaaS"
                 useCase="Aceleração de roadmap, refatoração de legado e QA automatizado em larga escala."
               />
-              <IndustryCard
-                icon={Plane}
-                title="Logística & Travel"
-                useCase="Otimização de rotas, sistemas de reserva e rastreamento de ativos ponta a ponta."
-              />
-              <IndustryCard
-                icon={GraduationCap}
-                title="EdTech"
-                useCase="Personalização de trilhas de aprendizagem e automação de avaliações adaptativas."
-              />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Agents Section */}
-      <section id="agents" className="py-32 px-6">
+      {/* Explore the Ecosystem */}
+      <section id="agents" className="py-40 px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-5xl font-black mb-6">Conheça o Squad</h2>
-            <p className="text-neutral-400 max-w-2xl mx-auto">
-              18 agentes especializados em cada etapa do ciclo de vida de um produto SaaS.
-              Do código à segurança jurídica, eles cuidam de tudo.
+          <div className="text-center mb-24">
+            <h2 className="text-5xl md:text-7xl font-black mb-8 tracking-tighter">Explore the <br /><span className="text-dmz-accent">Ecosystem.</span></h2>
+            <p className="text-neutral-400 text-lg max-w-2xl mx-auto font-medium">
+              Navegue pelas verticais de especialidade do squad. Cada agente é treinado para uma função crítica no ciclo de vida do seu produto.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <FeatureCard
-              icon={Music2}
+              icon={Bot}
               title="@orch - Orchestrator"
               desc="O cérebro da operação. Recebe demandas, cria planos de ação e delega tarefas para os especialistas certos."
             />
             <FeatureCard
               icon={Code2}
               title="@ryan - Developer"
-              desc="Implementação de alta performance em Next.js, Node e Python. Focado em código limpo, escalável e testado."
+              desc="Implementação de alta performance. Focado em código limpo, escalável e testado na sua IDE."
             />
             <FeatureCard
               icon={Shield}
               title="@constantine - Security"
-              desc="Garante que seu código e infraestrutura estão blindados contra ataques e em conformidade com as leis de dados."
+              desc="Garante que seu código e infraestrutura estão blindados contra ataques e em conformidade total."
             />
             <FeatureCard
               icon={Users}
               title="@syd - Squad Manager"
-              desc="Gerencia a comunicação, saúde do squad e alinhamento estratégico entre os agentes especialistas."
+              desc="Gerencia a comunicação e alinhamento estratégico entre os agentes especialistas."
             />
             <FeatureCard
               icon={Rocket}
-              title="@oliver - DevOps"
-              desc="Pipelines CI/CD automatizados, deploy em containers e observabilidade total da sua infra."
+              title="@kanya - Strategist"
+              desc="Identifica oportunidades de mercado e define o unfair advantage do seu produto."
             />
             <FeatureCard
-              icon={Star}
+              icon={Layout}
               title="@aurora - Design Chief"
-              desc="Direção criativa ultra-moderna. Garante que seu produto seja visualmente impactante e coerente."
+              desc="Direção criativa ultra-moderna. Garante que seu produto seja visualmente impactante."
             />
           </div>
           <div className="text-center mt-12">
             <Link href="/sign-up" className="bg-white/5 border border-white/10 px-8 py-4 rounded-2xl font-bold hover:bg-white/10 transition-all inline-flex items-center gap-2">
-              Criar Meu Squad <ArrowRight size={18} />
+              Ver Todos os 86 Agentes <ArrowRight size={18} />
             </Link>
           </div>
         </div>
@@ -350,7 +325,7 @@ export default function RootPage() {
               </div>
             </div>
             <div className="order-1 lg:order-2">
-              <h2 className="text-4xl md:text-5xl font-black mb-8 leading-tight">Um projeto que <br /> <span className="text-dmz-accent">evolui sozinho.</span></h2>
+              <h2 className="text-4xl md:text-5xl font-black mb-8 leading-tight tracking-tighter">Um projeto que <br /> <span className="text-dmz-accent">evolui sozinho.</span></h2>
               <div className="space-y-6">
                 <div className="flex gap-5">
                   <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -378,51 +353,52 @@ export default function RootPage() {
 
       {/* Pricing Section */}
       <section id="pricing" className="py-32 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-5xl font-black mb-6">Planos para todo Squad</h2>
-            <p className="text-neutral-400 max-w-xl mx-auto">Escolha o nível de poder que seu projeto precisa. Sem taxas escondidas, cancele quando quiser.</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 items-start">
-            <PricingCard
-              tier="Starter"
-              price="R$ 0"
-              features={[
-                "3 Agentes ativos (@orch, @ryan, @alex)",
-                "Projetos ilimitados",
-                "Memória de 24h",
-                "Integração Supabase",
-              ]}
-            />
-            <PricingCard
-              tier="Pro"
-              price="R$ 197"
-              recommended={true}
-              features={[
-                "Todos os 18 Agentes",
-                "Memória de Longo Prazo Ilimitada",
-                "Integração com 50+ MCP Tools",
-                "Suporte prioritário via Slack",
-                "Custom Prompts e Personas",
-              ]}
-            />
-            <PricingCard
-              tier="Enterprise"
-              price="Consultar"
-              features={[
-                "Deploy On-Premise (VPC)",
-                "Agentes Customizados",
-                "Governança de Dados Estrita",
-                "SLA de 99.9%",
-                "Treinamento de Equipe",
-              ]}
-            />
-          </div>
+        <div className="max-w-7xl mx-auto text-center mb-24">
+          <h2 className="text-5xl md:text-7xl font-black mb-6 tracking-tighter">Planos para <span className="text-dmz-accent">todo Squad.</span></h2>
+          <p className="text-neutral-400 text-lg">Sem taxas escondidas. Cancele quando quiser.</p>
+        </div>
+        <div className="max-w-7xl mx-auto grid md:grid-cols-3 gap-8">
+          <PricingCard
+            tier="Starter"
+            price="R$ 0"
+            features={[
+              "3 Agentes ativos (@orch, @ryan, @alex)",
+              "Projetos ilimitados",
+              "Memória de 24h",
+              "Integração Supabase",
+            ]}
+          />
+          <PricingCard
+            tier="Pro"
+            price="R$ 197"
+            recommended={true}
+            features={[
+              "Todos os 86 Agentes",
+              "Memória de Longo Prazo Ilimitada",
+              "Integração com 50+ MCP Tools",
+              "Suporte prioritário via Slack",
+              "Custom Prompts e Personas",
+            ]}
+          />
+          <PricingCard
+            tier="Enterprise"
+            price="Consultar"
+            features={[
+              "Deploy On-Premise (VPC)",
+              "Agentes Customizados",
+              "Governança de Dados Estrita",
+              "SLA de 99.9%",
+              "Treinamento de Equipe",
+            ]}
+          />
         </div>
       </section>
 
       <PublicFooter />
+
+      <style jsx>{`
+        .tracking-tightest { letter-spacing: -0.05em; }
+      `}</style>
     </div>
   );
 }
