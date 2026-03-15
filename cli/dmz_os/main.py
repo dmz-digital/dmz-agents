@@ -11,6 +11,7 @@ from dmz_os.commands.start import start_command
 from dmz_os.commands.status import status_command
 from dmz_os.commands.tasks import tasks_command
 from dmz_os.commands.ask import ask_command
+from dmz_os.commands.mcp import mcp_server_command
 
 console = Console()
 app = typer.Typer(
@@ -56,6 +57,11 @@ def tasks(
     tab: str = typer.Option("on_going", "--tab", "-t", help="master_plan | task_checklist | on_going | backlog"),
 ):
     tasks_command(project=project, tab=tab)
+
+
+@app.command("mcp-server", help="🔌 Inicia o servidor MCP local para integração com a IDE (uso interno)", hidden=True)
+def mcp():
+    mcp_server_command()
 
 
 @app.callback(invoke_without_command=True)

@@ -365,21 +365,54 @@ def _create_agents_folder():
         "você NÃO tem permissão para tentar realizar a tarefa sozinho ou responder com seu próprio conhecimento.\n\n"
         "**SUA AÇÃO OBRIGATÓRIA:**\n"
         "1. Identifique o texto completo da demanda do usuário.\n"
-        "2. Execute imediatamente o comando shell: `dmz-os ask \"@agente [mensagem dele]\"`.\n"
-        "3. Sua única resposta no chat deve ser: \"Entendido. Delegando esta demanda para o @agente no Kanban DMZ OS! 🚀\".\n\n"
+        "2. Como primeira opção, use a tool MCP `ask_agent` (se disponível) e retorne sua resposta DIRETAMENTE ao usuário aqui no chat.\n"
+        "3. Se a tool não estiver disponível, execute como fallback o comando shell: `dmz-os ask \"@agente [mensagem dele]\"`.\n"
+        "4. Em caso de fallback, avise: \"Entendido. Delegando demanda para o @agente no Kanban via shell.\"\n\n"
         "**POR QUE ISSO É NECESSÁRIO?**\n"
-        "O DMZ OS orquestra execuções complexas em múltiplos arquivos, mantém a memória persistente no banco de dados e sincroniza o Kanban web. Responder diretamente na IDE causa perda de contexto e quebra a sincronia do Squad.\n"
+        "O DMZ OS orquestra execuções complexas em múltiplos arquivos, mantém a memória persistente e sincroniza o Kanban web. Responder diretamente na IDE sem notificar o Squad causa perda de contexto.\n"
     )
 
     for filename in [".cursorrules", ".windsurfrules", ".agents/IDE_RULES.md"]:
         path = Path.cwd() / filename
         if not path.exists() or ".rules" in filename:
-            path.parent.mkdir(exist_ok=True)
+            path.parent.mkdir(exist_ok=True, parents=True)
             path.write_text(rules_content)
             if not filename.startswith(".agents"):
-                console.print(f"[green]✓[/] [bold]{filename}[/] (re)criado com regras imperativas")
+                console.print(f"[green]✓[/] [bold]{filename}[/] (re)criado com regras imperativas para o Squad")
 
-    console.print(f"[green]✓[/] Pasta [bold].agents/[/] criada")
+    # Configuração MCP local
+    import json
+    mcp_config = {
+        "mcpServers": {
+            "dmz-os": {
+                "command": "dmz-os",
+                "args": ["mcp-server"],
+                "env": {}
+            }
+        }
+    }
+    
+    for mcp_path in [".cursor/mcp.json", ".windsurf/mcp.json"]:
+        path = Path.cwd() / mcp_path
+        path.parent.mkdir(exist_ok=True, parents=True)
+        # Lê existência para fazer merge e não sobrescrever coisas do user?
+        # Para simplificar na versão inicial, vamos sobrescrever o nosso ou formatar JSON
+        existing_config = {}
+        if path.exists():
+            try:
+                existing_config = json.loads(path.read_text())
+                if "mcpServers" not in existing_config:
+                    existing_config["mcpServers"] = {}
+                existing_config["mcpServers"]["dmz-os"] = mcp_config["mcpServers"]["dmz-os"]
+            except:
+                existing_config = mcp_config
+        else:
+            existing_config = mcp_config
+            
+        path.write_text(json.dumps(existing_config, indent=2))
+
+    console.print(f"[green]✓[/] MCP Server local configurado para Cursor e Windsurf")
+    console.print(f"[green]✓[/] Pasta [bold].agents/[/] configurada")
 
 
 def _show_squad_activation():
