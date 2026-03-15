@@ -201,8 +201,17 @@ def _collect_credentials() -> dict:
                 console.print(f"[green]✓ Repositório vinculado: [bold]{db_repo}[/][/]")
 
             # Validar se o repositório local bate com o da plataforma
-            db_repo_norm = re.sub(r"\.git$", "", db_repo).lower()
-            if local_repo and local_repo != db_repo_norm:
+            def _normalize_repo(url):
+                """Remove credentials, .git suffix, trailing slashes and lowercase."""
+                if not url:
+                    return ""
+                url = re.sub(r"https?://[^@]+@", "https://", url)  # strip PAT/credentials
+                url = re.sub(r"\.git$", "", url)
+                return url.rstrip("/").lower()
+            
+            db_repo_norm = _normalize_repo(db_repo)
+            local_repo_norm = _normalize_repo(local_repo) if local_repo else None
+            if local_repo_norm and local_repo_norm != db_repo_norm:
                 console.print(Panel(
                     f"[bold red]CONFLITO DE REPOSITÓRIO[/]\n\n"
                     f"Este projeto está travado no repositório:\n"
