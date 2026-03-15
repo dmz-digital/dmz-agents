@@ -15,8 +15,14 @@
 ### 🔥 Instant Setup (IDE-Native)
 O DMZ OS transforma sua IDE em um centro de comando autônomo em segundos.
 
+**macOS / Linux:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/dmz-digital/dmz-agents/main/install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/dmz-digital/dmz-agents/main/install.ps1 | iex"
 ```
 
 </div>
