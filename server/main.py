@@ -1333,8 +1333,9 @@ from webhook_telegram import handle_telegram_webhook
 @app.post("/webhook/telegram")
 async def telegram_webhook(req: Request, background_tasks: BackgroundTasks):
     """Webhook do Telegram para a Agente Yvi."""
-    # Processamos em background para liberar o Telegram imediatamente
-    background_tasks.add_task(handle_telegram_webhook, req, supabase, get_llm_response, get_sys_prompt)
+    # Consumimos o corpo antes de ir pro background para evitar erro de stream fechada
+    data = await req.json()
+    background_tasks.add_task(handle_telegram_webhook, data, supabase, get_llm_response, get_sys_prompt)
     return {"status": "accepted"}
 
 # ─── Background MCP Poller ──────────────────────────────────────────────────
