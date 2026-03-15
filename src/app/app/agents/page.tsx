@@ -10,7 +10,7 @@ import {
     X, Plus, ExternalLink, Database, GitBranch,
     FileText, Pin, CreditCard, Cloud, Server, Plug, Unplug,
     Package, Palette, Component, Globe, Cpu,
-    BarChart2, Settings,
+    BarChart2, Settings, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -392,6 +392,15 @@ function AgentsContent() {
     const [catFilter, setCatFilter] = useState(initialCategory);
     const [activeFilter, setActiveFilter] = useState("All");
     const [selected, setSelected] = useState<any | null>(null);
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'ranking_score', direction: 'desc' });
+
+    const handleSort = (key: string) => {
+        let direction: 'asc' | 'desc' = 'desc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'desc') {
+            direction = 'asc';
+        }
+        setSortConfig({ key, direction });
+    };
 
     useEffect(() => {
         if (searchParams.get("category")) {
@@ -573,19 +582,54 @@ function AgentsContent() {
                     <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
                         <thead>
                             <tr style={{ background: "#F9FAFB", borderBottom: "1.5px solid #F0F0F0" }}>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Rank</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Agente</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Tasks Concluídas</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Reworks Gerados</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Score de Qualidade</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Patente</th>
+                                <th style={{ padding: "16px 24px", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", cursor: "pointer", userSelect: "none" }} onClick={() => handleSort('ranking_score')}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                        Rank {sortConfig?.key === 'ranking_score' && (sortConfig.direction === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />)}
+                                    </div>
+                                </th>
+                                <th style={{ padding: "16px 24px", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", cursor: "pointer", userSelect: "none" }} onClick={() => handleSort('name')}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                        Agente {sortConfig?.key === 'name' && (sortConfig.direction === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />)}
+                                    </div>
+                                </th>
+                                <th style={{ padding: "16px 24px", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", cursor: "pointer", userSelect: "none" }} onClick={() => handleSort('tasks_completed')}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                        Tasks Concluídas {sortConfig?.key === 'tasks_completed' && (sortConfig.direction === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />)}
+                                    </div>
+                                </th>
+                                <th style={{ padding: "16px 24px", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", cursor: "pointer", userSelect: "none" }} onClick={() => handleSort('total_reworks')}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                        Reworks Gerados {sortConfig?.key === 'total_reworks' && (sortConfig.direction === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />)}
+                                    </div>
+                                </th>
+                                <th style={{ padding: "16px 24px", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", cursor: "pointer", userSelect: "none" }} onClick={() => handleSort('ranking_score')}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                        Score de Qualidade {sortConfig?.key === 'ranking_score' && (sortConfig.direction === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />)}
+                                    </div>
+                                </th>
+                                <th style={{ padding: "16px 24px", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" }}>Patente</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {[...filtered].sort((a, b) => (b.ranking_score || 0) - (a.ranking_score || 0)).map((agent, index) => {
+                            {[...filtered].sort((a, b) => {
+                                if (!sortConfig) return 0;
+                                const { key, direction } = sortConfig;
+                                let aVal: any = a[key] ?? 0;
+                                let bVal: any = b[key] ?? 0;
+
+                                // Custom logic for combined fields
+                                if (key === 'tasks_completed') {
+                                    aVal = a.total_concluded ?? a.tasks_completed ?? 0;
+                                    bVal = b.total_concluded ?? b.tasks_completed ?? 0;
+                                }
+
+                                if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+                                if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+                                return 0;
+                            }).map((agent, index) => {
                                 const cc = CAT_COLORS[agent.category] || "#475569";
                                 const IconComponent = AGENT_ICONS[agent.icon] || Bot;
-                                const isTop3 = index < 3;
+                                const isTop3 = index < 3 && sortConfig?.key === 'ranking_score' && sortConfig.direction === 'desc';
                                 
                                 return (
                                     <tr key={agent.id} style={{ borderBottom: "1px solid #F3F4F6", transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#F9FAFB"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>

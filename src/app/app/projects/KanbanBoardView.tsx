@@ -7,7 +7,7 @@ import {
     RotateCcw, BookOpen, Activity, GripVertical,
     Brain, Key, Copy, Check, Settings, Terminal,
     Users, X, FolderOpen, BadgeCheck, ListTodo, FileText, Play, Volume2, Square,
-    ChevronLeft, ChevronRight, Search, Star
+    ChevronLeft, ChevronRight, Search, Star, Trash
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import AppHeader from "@/components/AppHeader";
@@ -466,10 +466,11 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
     );
 
     return (
-        <div className="dmz-container pt-12 pb-24">
-            <AppHeader />
-            {/* Header */}
-            <div style={{ marginBottom: "24px" }}>
+        <div className="dmz-container pt-12 pb-4" style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ flexShrink: 0 }}>
+                <AppHeader />
+                {/* Header */}
+                <div style={{ marginBottom: "24px" }}>
                 <button onClick={() => router.push("/app/projects")} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", color: "#9CA3AF", fontSize: "13px", fontWeight: 500, marginBottom: "16px" }}>
                     <ArrowLeft size={14} /> Projetos
                 </button>
@@ -575,11 +576,12 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                     </div>
                 </div>
             )}
+            </div>
 
             {/* Kanban Board */}
-            <div style={{ background: "#F1F3F5", borderRadius: "18px", padding: "16px 12px" }}>
-            <div className="kanban-scroll-x">
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(220px, 1fr))", gap: "10px", alignItems: "flex-start" }}>
+            <div style={{ background: "#F1F3F5", borderRadius: "18px", padding: "16px 12px", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            <div className="kanban-scroll-x" style={{ flex: 1, overflowX: "auto", overflowY: "hidden", minHeight: 0 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(280px, 1fr))", gap: "10px", alignItems: "stretch", height: "100%" }}>
                 {COLUMNS.map(col => {
                     const colTasks = getTasksByColumn(col.id);
                     const Icon = col.icon;
@@ -590,15 +592,17 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                             onDragLeave={() => setDragOverColumn(null)}
                             onDrop={() => { if (draggedTask) moveTask(draggedTask, col.id); }}
                             style={{
+                                display: "flex", flexDirection: "column",
                                 background: isDrop ? col.color + "08" : "transparent",
                                 border: isDrop ? `2px dashed ${col.color}50` : "2px solid transparent",
                                 borderRadius: "14px",
-                                padding: "10px 8px",
-                                minHeight: "500px",
+                                padding: "10px 4px 0px 8px",
+                                maxHeight: "100%",
+                                overflow: "hidden",
                                 transition: "all 0.2s"
                             }}>
                             {/* Column Header */}
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", padding: "0 2px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", paddingRight: "6px", flexShrink: 0 }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                     <div style={{ width: 28, height: 28, borderRadius: "8px", background: col.color + "18", display: "flex", alignItems: "center", justifyContent: "center" }}>
                                         <Icon size={14} color={col.color} strokeWidth={2} />
@@ -613,7 +617,7 @@ export default function KanbanBoardView({ slug }: { slug: string }) {
                                 </button>
                             </div>
                             {/* Cards */}
-                            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            <div className="kanban-cards-scroll" style={{ display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto", flex: 1, paddingBottom: "12px", paddingRight: "4px" }}>
                                 {colTasks.map(task => {
                                     const agent = getAgent(task.agent_id);
                                     const dragging = draggedTask === task.id;
@@ -1022,7 +1026,7 @@ function AddAgentsModal({ agents, projectAgents, onToggle, onToggleAll, onClose 
     );
 }
 
-import { Trash, Edit2, Save } from "lucide-react";
+import { Edit2, Save } from "lucide-react";
 
 function SimpleMarkdown({ text }: { text: string }) {
     const lines = text.split("\n");
