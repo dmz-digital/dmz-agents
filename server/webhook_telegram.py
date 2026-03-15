@@ -59,15 +59,6 @@ async def handle_telegram_webhook(data: dict, supabase, get_llm_response, get_sy
                     })
                 return {"status": "ok"}
 
-        # Resposta imediata de "recebido"
-        bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-        if bot_token:
-            async with httpx.AsyncClient() as client:
-                await client.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", json={
-                    "chat_id": chat_id,
-                    "text": f"Claro, {user_first_name}! Vou preparar o relatório do projeto '{current_project_id}' agora mesmo. Só um momento."
-                })
-            
         # Puxa as tasks do projeto ATUAL
         res = supabase.table("dmz_agents_tasks").select("title, status, agent_id, updated_at").eq("project_id", current_project_id).order("updated_at", desc=True).limit(20).execute()
         
@@ -105,12 +96,14 @@ async def handle_telegram_webhook(data: dict, supabase, get_llm_response, get_sy
         resumo_texto = get_llm_response(system_prompt, user_prompt)
 
         # Salva o chat no banco para manter memória do project_id
-        supabase.table("dmz_agents_chat").insert({
-            "session_id": session_id,
-            "role": "user",
-            "content": text,
-            "metadata": {"project_id": current_project_id, "user_first_name": user_first_name}
-        }).execute()
+        try:
+            supabase.table("dmz_agents_chat").insert({
+                "session_id": session_id,
+                "role": "user",
+                "content": text,
+                "metadata": {"project_id": current_project_id, "user_first_name": user_first_name}
+            }).execute()
+        except: pass
         
         # ElevenLabs TTS
         elevenlabs_key = os.getenv("ELEVENLABS_API_KEY")
@@ -142,20 +135,25 @@ async def handle_telegram_webhook(data: dict, supabase, get_llm_response, get_sy
             
             with open(ogg_path, "rb") as audio_file:
                 async with httpx.AsyncClient() as client:
+                    # Envia voz
                     await client.post(f"https://api.telegram.org/bot{bot_token}/sendVoice", data={"chat_id": chat_id}, files={"voice": ("report.ogg", audio_file, "audio/ogg")})
             
-            # Salva resposta da assistente com metadata
-            supabase.table("dmz_agents_chat").insert({
-                "session_id": session_id, "role": "assistant", "content": resumo_texto, "agent_id": "yvi", "metadata": {"project_id": current_project_id}
-            }).execute()
-
             if os.path.exists(mp3_path): os.remove(mp3_path)
             if os.path.exists(ogg_path): os.remove(ogg_path)
+
+            # Salva resposta da assistente no banco (silenciosamente)
+            try:
+                supabase.table("dmz_agents_chat").insert({
+                    "session_id": session_id, "role": "assistant", "content": resumo_texto, "agent_id": "yvi", "metadata": {"project_id": current_project_id}
+                }).execute()
+            except: pass
+
         except Exception as e:
             print(f"[Telegram] Erro TTS: {e}")
+            # Em caso de erro, envia apenas um aviso breve, sem a transcrição completa
             async with httpx.AsyncClient() as client:
                 await client.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", json={
-                    "chat_id": chat_id, "text": f"Ocorreu um erro no áudio. Segue resposta:\n\n{resumo_texto}"
+                    "chat_id": chat_id, "text": "Desculpe, Daniel. Tive um problema técnico ao gerar meu áudio. Poderia tentar novamente em instantes?"
                 })
         
     return {"status": "ok"}
