@@ -1333,7 +1333,11 @@ function ReportsModal({ tasks, project, agents, onClose, confirmAction }: { task
         // Include relevant types requested by user
         if (!["done", "approved", "rework", "on_going", "to_do"].includes(t.type)) return;
         const d = new Date(t.updated_at || t.created_at);
-        const yyyyMmDd = d.toISOString().split("T")[0]; // YYYY-MM-DD
+        // Garante que o agrupamento usa o fuso horário oficial do DMZ OS (America/Sao_Paulo) e não UTC
+        const ptBrStr = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+        const [dd, mm, yyyy] = ptBrStr.split('/');
+        const yyyyMmDd = `${yyyy}-${mm}-${dd}`;
+        
         if (!dateMap.has(yyyyMmDd)) dateMap.set(yyyyMmDd, []);
         dateMap.get(yyyyMmDd)!.push(t);
     });
