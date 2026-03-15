@@ -338,5 +338,166 @@ def get_memory(topico: str = "") -> str:
         return f"Erro ao consultar memória: {str(e)}"
 
 
+@mcp.tool()
+def update_task(task_id: str, coluna: str = "", agente: str = "", prioridade: int = -1, feedback: str = "") -> str:
+    """
+    Atualiza uma tarefa existente no Kanban: move entre colunas, altera agente, prioridade ou feedback.
+    
+    Args:
+        task_id: O ID (UUID) da tarefa. Aceita IDs parciais (mínimo 8 caracteres).
+        coluna: Nova coluna do Kanban (master_plan, to_do, on_going, rework, done). Opcional.
+        agente: Novo agente responsável (ex: orch, architect). Use "none" para remover. Opcional.
+        prioridade: Nova prioridade numérica (maior = mais urgente). Use -1 para não alterar.
+        feedback: Texto de feedback ou comentário a adicionar. Opcional.
+    """
+    try:
+        project_slug = os.environ.get("DMZ_PROJECT_SLUG")
+        if not project_slug:
+            return "Erro: DMZ_PROJECT_SLUG não encontrado no .env.dmz"
+        
+        client = get_supabase()
+        
+        # Resolve ID parcial
+        if len(task_id) < 36:
+            res = client.table("dmz_agents_tasks").select("id, title").eq("project_id", project_slug).like("id", f"{task_id}%").limit(1).execute()
+            if not res.data:
+                return f"Tarefa não encontrada: {task_id}"
+            task_id = res.data[0]["id"]
+            task_title = res.data[0]["title"]
+        else:
+            res = client.table("dmz_agents_tasks").select("title").eq("id", task_id).execute()
+            task_title = res.data[0]["title"] if res.data else "?"
+        
+        VALID_TYPES = ["master_plan", "to_do", "on_going", "rework", "done", "approved"]
+        STATUS_MAP = {"master_plan": "pending", "to_do": "pending", "on_going": "in_progress", "done": "completed", "rework": "in_progress", "approved": "completed"}
+        
+        update_data = {}
+        changes = []
+        
+        if coluna:
+            if coluna not in VALID_TYPES:
+                return f"Coluna inválida: '{coluna}'. Use: {', '.join(VALID_TYPES)}"
+            update_data["type"] = coluna
+            update_data["status"] = STATUS_MAP[coluna]
+            if coluna in ("done", "approved"):
+                from datetime import datetime, timezone
+                update_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+            else:
+                update_data["completed_at"] = None
+            changes.append(f"coluna → {coluna}")
+        
+        if agente:
+            if agente.lower() == "none":
+                update_data["agent_id"] = None
+                changes.append("agente removido")
+            else:
+                agent_id = AGENT_ALIASES.get(agente.lower().replace("@", ""), agente.lower().replace("@", ""))
+                update_data["agent_id"] = agent_id
+                changes.append(f"agente → @{agent_id}")
+        
+        if prioridade >= 0:
+            update_data["priority"] = prioridade
+            changes.append(f"prioridade → {prioridade}")
+        
+        if feedback:
+            update_data["feedback"] = feedback
+            changes.append("feedback atualizado")
+        
+        if not update_data:
+            return "Nenhuma alteração especificada."
+        
+        client.table("dmz_agents_tasks").update(update_data).eq("id", task_id).execute()
+        
+        return f"✅ Tarefa atualizada: {task_title}\nAlterações: {', '.join(changes)}\nID: {task_id}"
+    except Exception as e:
+        return f"Erro ao atualizar tarefa: {str(e)}"
+
+
+@mcp.tool()
+def add_comment(task_id: str, comentario: str, autor: str = "mcp") -> str:
+    """
+    Adiciona um comentário com timestamp ao feedback de uma tarefa.
+    
+    Args:
+        task_id: O ID (UUID) da tarefa. Aceita IDs parciais.
+        comentario: O texto do comentário a adicionar.
+        autor: Nome de quem está comentando (padrão: mcp).
+    """
+    try:
+        project_slug = os.environ.get("DMZ_PROJECT_SLUG")
+        client = get_supabase()
+        
+        # Resolve ID parcial
+        if len(task_id) < 36:
+            res = client.table("dmz_agents_tasks").select("id, title, feedback").eq("project_id", project_slug).like("id", f"{task_id}%").limit(1).execute()
+        else:
+            res = client.table("dmz_agents_tasks").select("id, title, feedback").eq("id", task_id).execute()
+        
+        if not res.data:
+            return f"Tarefa não encontrada: {task_id}"
+        
+        task = res.data[0]
+        current_feedback = task.get("feedback") or ""
+        
+        from datetime import datetime, timezone, timedelta
+        tz_sp = timezone(timedelta(hours=-3))
+        now = datetime.now(tz_sp).strftime("%d/%m %H:%M")
+        
+        new_feedback = f"{current_feedback}\n[{now}] @{autor}: {comentario}".strip()
+        
+        client.table("dmz_agents_tasks").update({"feedback": new_feedback}).eq("id", task["id"]).execute()
+        
+        return f"💬 Comentário adicionado em: {task['title']}\n\n[{now}] @{autor}: {comentario}"
+    except Exception as e:
+        return f"Erro ao comentar: {str(e)}"
+
+
+@mcp.tool()
+def assign_agent(task_id: str, agente: str, role: str = "executor", remover: bool = False) -> str:
+    """
+    Marca ou desmarca um agente como responsável (assignee) de uma tarefa.
+    
+    Args:
+        task_id: O ID (UUID) da tarefa. Aceita IDs parciais.
+        agente: Handle do agente (ex: orch, architect, emma).
+        role: Papel do agente na tarefa (executor, qa, reviewer). Padrão: executor.
+        remover: Se True, remove o agente da tarefa em vez de adicionar.
+    """
+    try:
+        project_slug = os.environ.get("DMZ_PROJECT_SLUG")
+        client = get_supabase()
+        
+        agent_id = AGENT_ALIASES.get(agente.lower().replace("@", ""), agente.lower().replace("@", ""))
+        
+        # Resolve ID parcial
+        if len(task_id) < 36:
+            res = client.table("dmz_agents_tasks").select("id, title").eq("project_id", project_slug).like("id", f"{task_id}%").limit(1).execute()
+        else:
+            res = client.table("dmz_agents_tasks").select("id, title").eq("id", task_id).execute()
+        
+        if not res.data:
+            return f"Tarefa não encontrada: {task_id}"
+        
+        task = res.data[0]
+        
+        if remover:
+            client.table("dmz_agents_task_assignees").delete().eq("task_id", task["id"]).eq("agent_id", agent_id).execute()
+            return f"➖ @{agent_id} removido de: {task['title']}"
+        else:
+            # Verifica se já existe
+            existing = client.table("dmz_agents_task_assignees").select("id").eq("task_id", task["id"]).eq("agent_id", agent_id).execute()
+            if existing.data:
+                return f"@{agent_id} já está atribuído a: {task['title']}"
+            
+            client.table("dmz_agents_task_assignees").insert({
+                "task_id": task["id"],
+                "agent_id": agent_id,
+                "role": role
+            }).execute()
+            return f"➕ @{agent_id} ({role}) atribuído a: {task['title']}"
+    except Exception as e:
+        return f"Erro ao gerenciar assignee: {str(e)}"
+
+
 if __name__ == "__main__":
     mcp.run()

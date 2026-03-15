@@ -1173,6 +1173,179 @@ async def generate_key(req: KeyGenerateRequest):
         print(f"Key generation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ─── MCP Backend Processor ───────────────────────────────────────────────────
+# Processa tasks criadas via MCP Server (source: mcp_server) automaticamente
+
+class MCPUpdateTaskRequest(BaseModel):
+    task_id: str
+    coluna: str | None = None
+    status: str | None = None
+    agent_id: str | None = None
+    priority: int | None = None
+    feedback: str | None = None
+
+class MCPCommentRequest(BaseModel):
+    task_id: str
+    comment: str
+    author: str = "mcp_server"
+
+async def _process_mcp_task(task: dict):
+    """Processa uma task MCP: carrega prompt do agente, envia ao LLM, grava response."""
+    agent_db_id = task.get("agent_id") or "orchestrator"
+    
+    # Marca como in_progress
+    supabase.table("dmz_agents_tasks").update({"status": "in_progress"}).eq("id", task["id"]).execute()
+    
+    # Carrega prompt do agente
+    system_prompt = get_agent_prompt(agent_db_id)
+    
+    # Injeta contexto temporal
+    from datetime import timezone, timedelta
+    tz_sp = timezone(timedelta(hours=-3))
+    now_sp = datetime.now(tz_sp)
+    system_prompt += f"\n\nData atual: {now_sp.strftime('%d/%m/%Y %H:%M')} (GMT-3)"
+    system_prompt += "\n\nVocê está respondendo uma solicitação feita via MCP Server (IDE do desenvolvedor). Seja direto, técnico e executivo na resposta."
+    
+    user_prompt = f"### DEMANDA\n\nTÍTULO: {task['title']}\nDESCRIÇÃO: {task.get('description', 'Sem descrição adicional.')}\n\nResponda de forma completa e técnica."
+    
+    try:
+        response_text = get_llm_response(system_prompt, user_prompt)
+        
+        supabase.table("dmz_agents_tasks").update({
+            "status": "completed",
+            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "response": response_text,
+            "responded_at": datetime.now(timezone.utc).isoformat(),
+            "feedback": f"Processado via Backend (Railway) por @{agent_db_id}",
+        }).eq("id", task["id"]).execute()
+        
+        print(f"[MCP] ✓ Task processada: {task['title'][:60]} → @{agent_db_id}")
+        return True
+    except Exception as e:
+        supabase.table("dmz_agents_tasks").update({
+            "status": "blocked",
+            "response": f"Erro ao processar: {str(e)}",
+            "responded_at": datetime.now(timezone.utc).isoformat(),
+            "feedback": f"Erro Backend: {str(e)}",
+        }).eq("id", task["id"]).execute()
+        print(f"[MCP] ✖ Erro: {task['title'][:40]} — {e}")
+        return False
+
+
+@app.post("/mcp/process")
+async def mcp_process_pending():
+    """Processa tasks MCP pendentes (chamado pelo poller ou manualmente)."""
+    try:
+        # Busca tasks com source: mcp_server que ainda estão pendentes
+        res = supabase.table("dmz_agents_tasks")\
+            .select("*")\
+            .eq("status", "pending")\
+            .is_("response", "null")\
+            .order("created_at")\
+            .limit(5)\
+            .execute()
+        
+        if not res.data:
+            return {"processed": 0, "message": "Nenhuma task MCP pendente"}
+        
+        # Filtra só as que vieram do MCP
+        mcp_tasks = [t for t in res.data if (t.get("metadata") or {}).get("source") == "mcp_server"]
+        
+        if not mcp_tasks:
+            return {"processed": 0, "message": "Nenhuma task MCP pendente"}
+        
+        processed = 0
+        for task in mcp_tasks:
+            success = await _process_mcp_task(task)
+            if success:
+                processed += 1
+        
+        return {"processed": processed, "total_found": len(mcp_tasks)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/mcp/update-task")
+async def mcp_update_task(req: MCPUpdateTaskRequest):
+    """Atualiza uma task do Kanban (coluna, status, agente, prioridade)."""
+    try:
+        update_data = {}
+        STATUS_MAP = {"master_plan": "pending", "to_do": "pending", "on_going": "in_progress", "done": "completed", "rework": "in_progress", "approved": "completed"}
+        
+        if req.coluna:
+            update_data["type"] = req.coluna
+            update_data["status"] = STATUS_MAP.get(req.coluna, "pending")
+            if req.coluna in ("done", "approved"):
+                update_data["completed_at"] = datetime.utcnow().isoformat()
+            else:
+                update_data["completed_at"] = None
+        if req.status:
+            update_data["status"] = req.status
+        if req.agent_id is not None:
+            update_data["agent_id"] = req.agent_id if req.agent_id else None
+        if req.priority is not None:
+            update_data["priority"] = req.priority
+        if req.feedback is not None:
+            update_data["feedback"] = req.feedback
+        
+        if not update_data:
+            return {"error": "Nenhum campo para atualizar"}
+        
+        supabase.table("dmz_agents_tasks").update(update_data).eq("id", req.task_id).execute()
+        return {"success": True, "task_id": req.task_id, "updated_fields": list(update_data.keys())}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/mcp/comment")
+async def mcp_add_comment(req: MCPCommentRequest):
+    """Adiciona um comentário ao feedback de uma task."""
+    try:
+        # Busca feedback atual
+        res = supabase.table("dmz_agents_tasks").select("feedback").eq("id", req.task_id).single().execute()
+        current = res.data.get("feedback") or ""
+        
+        # Append comment com timestamp
+        from datetime import timezone, timedelta
+        tz_sp = timezone(timedelta(hours=-3))
+        now = datetime.now(tz_sp).strftime("%d/%m %H:%M")
+        
+        new_feedback = f"{current}\n[{now}] @{req.author}: {req.comment}".strip()
+        
+        supabase.table("dmz_agents_tasks").update({"feedback": new_feedback}).eq("id", req.task_id).execute()
+        return {"success": True, "task_id": req.task_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─── Background MCP Poller ──────────────────────────────────────────────────
+import asyncio
+import threading
+
+def _mcp_poller_loop():
+    """Background thread que checa tasks MCP pendentes a cada 10 segundos."""
+    import time as _time
+    import requests as _requests
+    
+    port = int(os.getenv("PORT", 8080))
+    _time.sleep(5)  # Espera o server inicializar
+    print("[MCP Poller] Iniciado — checando tasks MCP a cada 10s")
+    
+    while True:
+        try:
+            resp = _requests.post(f"http://localhost:{port}/mcp/process", timeout=120)
+            data = resp.json()
+            if data.get("processed", 0) > 0:
+                print(f"[MCP Poller] Processou {data['processed']} task(s)")
+        except Exception as e:
+            pass  # Silencioso em caso de erro transitório
+        _time.sleep(10)
+
+# Inicia o poller em background ao startar o server
+_poller_thread = threading.Thread(target=_mcp_poller_loop, daemon=True)
+_poller_thread.start()
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8080)))

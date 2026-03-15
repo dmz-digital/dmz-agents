@@ -111,22 +111,34 @@ class OrchestratorEngine:
                 task_context=f"Task Concluída: {task['title']} (ID: {task['id']})"
             )
             
-            # Conclui a task
+            # Conclui a task — preenche TANTO feedback (Kanban visual) QUANTO response (MCP circuit)
+            from datetime import datetime, timezone
+            update_data = {
+                "status": "completed",
+                "completed_at": "now()",
+                "feedback": f"Executado via CLI Local por @{agent_id}",
+                "response": response_text,
+                "responded_at": datetime.now(timezone.utc).isoformat(),
+            }
+            
             self.db.table("dmz_agents_tasks")\
-                .update({
-                    "status": "completed",
-                    "completed_at": "now()",
-                    "feedback": f"Executado via CLI Local por @{agent_id}"
-                })\
+                .update(update_data)\
                 .eq("id", task["id"])\
                 .execute()
+            
+            # Log se veio do MCP
+            metadata = task.get("metadata") or {}
+            if metadata.get("source") == "mcp_server":
+                console.print(f"  [cyan]⚡[/] Resposta MCP enviada para a IDE do cliente")
 
         except Exception as e:
             console.print(f"  [red]✖[/] Erro executando via @{agent_id}: {e}")
             self.db.table("dmz_agents_tasks")\
                 .update({
                     "status": "blocked",
-                    "feedback": f"Erro CLI: {str(e)}"
+                    "feedback": f"Erro CLI: {str(e)}",
+                    "response": f"Erro durante processamento: {str(e)}",
+                    "responded_at": datetime.now(timezone.utc).isoformat() if 'datetime' in dir() else None,
                 })\
                 .eq("id", task["id"])\
                 .execute()
