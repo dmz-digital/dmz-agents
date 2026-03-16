@@ -123,17 +123,6 @@ export default function RootPage() {
         </div>
 
         <div className="max-w-7xl mx-auto text-center relative z-10 px-6">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            className="inline-flex items-center gap-3 bg-white/5 border border-white/10 px-6 py-2 rounded-full mb-12 backdrop-blur-md"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-dmz-accent opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-dmz-accent"></span>
-            </span>
-            <span className="text-[10px] font-bold tracking-[0.3em] text-neutral-300 uppercase">86+ Especialistas Ativos agora</span>
-          </motion.div>
 
           <motion.h1 
             initial={{ opacity: 0, y: 20 }} 

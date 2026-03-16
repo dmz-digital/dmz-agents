@@ -10,7 +10,7 @@ export function PublicHeader() {
                     <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center p-1.5">
                         <img src="/logo.svg" alt="DMZ OS Logo" className="w-full h-full" />
                     </div>
-                    <span className="font-black text-xl tracking-tight text-[#D8663E]">DMZ – OS Agents</span>
+                    <span className="font-black text-xl tracking-tight text-white">DMZ – OS Agents</span>
                 </Link>
 
                 <div className="hidden md:flex items-center gap-8 text-sm font-medium text-neutral-400">
@@ -38,7 +38,7 @@ export function PublicFooter() {
                         <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center p-1.5">
                             <img src="/logo.svg" alt="DMZ OS Logo" className="w-full h-full" />
                         </div>
-                        <span className="font-extrabold text-xl tracking-tight text-[#D8663E]">DMZ – OS Agents</span>
+                        <span className="font-extrabold text-xl tracking-tight text-white">DMZ – OS Agents</span>
                     </div>
                     <p className="text-neutral-500 max-w-sm mb-8">
                         A camada de inteligência organizacional que torna seu repositório vivo.
