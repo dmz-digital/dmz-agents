@@ -8,7 +8,7 @@ export function PublicHeader() {
             <nav className="max-w-7xl mx-auto flex items-center justify-between bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl px-6 py-3">
                 <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                     <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center p-1.5">
-                        <img src="/logo.svg" alt="DMZ OS Logo" className="w-full h-full" />
+                        <img src="/logo-white.svg" alt="DMZ OS Logo" className="w-full h-full" />
                     </div>
                     <span className="font-black text-xl tracking-tight text-white">DMZ – OS Agents</span>
                 </Link>
@@ -36,7 +36,7 @@ export function PublicFooter() {
                 <div className="col-span-2">
                     <div className="flex items-center gap-3 mb-6">
                         <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center p-1.5">
-                            <img src="/logo.svg" alt="DMZ OS Logo" className="w-full h-full" />
+                            <img src="/logo-white.svg" alt="DMZ OS Logo" className="w-full h-full" />
                         </div>
                         <span className="font-extrabold text-xl tracking-tight text-white">DMZ – OS Agents</span>
                     </div>
