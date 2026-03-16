@@ -172,6 +172,8 @@ const AGENT_HANDLE_TO_ID: Record<string, string> = {
 function stripMarkdown(text: string): string {
     if (!text) return "";
     let res = text
+        // Handle literal \n from DB and artifacts properly
+        .replaceAll('\\n', ' ')
         // Remove artifacts first
         .replace(/<dmz_artifact[\s\S]*?(?:<\/dmz_artifact>|$)/gi, '')
         // Remove code blocks
@@ -194,6 +196,8 @@ function stripMarkdown(text: string): string {
         // Remove list markers
         .replace(/^\d+\.\s+/gm, '')
         .replace(/^[-*•]\s+/gm, '')
+        // Replace newlines with spaces for a single line view
+        .replace(/\n/g, ' ')
         // Clean up
         .replace(/\s+/g, ' ')
         .trim();

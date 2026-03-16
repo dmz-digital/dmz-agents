@@ -39,6 +39,7 @@ const PLANNER = "orchestrator";
 function stripMarkdown(text: string) {
     if (!text) return "";
     return text
+        .replaceAll('\\n', ' ')
         .replace(/!\[.*?\]\(.*?\)/g, '')
         .replace(/\[(.*?)\]\(.*?\)/g, '$1')
         .replace(/#{1,6}\s+/g, '')
@@ -49,6 +50,7 @@ function stripMarkdown(text: string) {
         .replace(/```[\s\S]*?```/g, '')
         .replace(/\n\s*-\s/g, ' ')
         .replace(/\n/g, ' ')
+        .replace(/\s+/g, ' ')
         .trim();
 }
 
